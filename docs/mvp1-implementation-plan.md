@@ -33,7 +33,7 @@ The `IDataHubClient` abstraction means the transition from fake → HTTP simulat
 
 ## Build Order
 
-Tasks are ordered by dependency. Each produces a testable result before the next starts. Tasks 1-11 are the settlement core, tasks 13-18 add the customer flow.
+Tasks are ordered by dependency. Each produces a testable result before the next starts. Tasks 1-11 are the settlement core, tasks 13-17 add the customer flow.
 
 ```mermaid
 flowchart TD
@@ -56,11 +56,9 @@ flowchart TD
     M --> P["16. Process\nstate machine"]
     N --> P
     O --> P
-    P --> Q["17. Standalone HTTP\nsimulator"]
-    I --> Q
-    Q --> R["18. Sunshine scenario\nend-to-end test"]
-    K --> R
-    R --> L["12. CI/CD\npipeline"]
+    P --> Q["17. Sunshine scenario\nend-to-end test"]
+    K --> Q
+    Q --> L["12. CI/CD\npipeline"]
 
     F -.->|"parallel"| I
 ```
@@ -82,7 +80,7 @@ flowchart TD
 | 11 | **Golden master tests** | Hand-calculated reference invoices reproduced exactly |
 | 12 | **CI/CD pipeline** | Build + unit tests + integration tests on every push |
 
-### Customer flow (tasks 13-18)
+### Customer flow (tasks 13-17)
 
 | # | Component | What it proves |
 |---|-----------|---------------|
@@ -90,12 +88,11 @@ flowchart TD
 | 14 | **BRS-001 request builder** | Valid CIM JSON produced, sent via IDataHubClient |
 | 15 | **RSM-009 + RSM-007 parsers** | Acknowledgement and master data extraction |
 | 16 | **Process state machine** | BRS-001 lifecycle: Pending → Sent → Acknowledged → Completed |
-| 17 | **Standalone HTTP simulator** | Docker-based DataHub mock with sunshine scenario auto-sequencing |
-| 18 | **Sunshine scenario E2E test** | Full chain: signup → BRS-001 → RSM-007 → RSM-012 → settlement → golden master |
+| 17 | **Sunshine scenario E2E test** | Full chain using FakeDataHubClient: signup → BRS-001 → RSM-007 → RSM-012 → settlement → golden master |
 
 **Parallel tracks:**
 - Track A (settlement): 1 → 2 → 5 → 9 → 10 → 11
-- Track B (customer flow): 3 → 14 + 15 → 13 → 16 → 17 → 18
+- Track B (customer flow): 3 → 14 + 15 → 13 → 16 → 17
 - Track C (independent): 6, 7, 8
 
 ---
@@ -146,32 +143,13 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 
 ---
 
-## Standalone HTTP Simulator (Task 17)
-
-For the sunshine E2E test, the fake upgrades to a standalone HTTP server matching the real DataHub API surface:
-
-| Endpoint | Behavior |
-|----------|----------|
-| `POST /oauth2/v2.0/token` | Returns fake JWT |
-| `POST /v1.0/cim/requestchangeofsupplier` | Accepts BRS-001, returns RSM-009, auto-enqueues RSM-007 + 30 × RSM-012 |
-| `GET /v1.0/cim/Timeseries` | Peek RSM-012 |
-| `GET /v1.0/cim/MasterData` | Peek RSM-007 |
-| `GET /v1.0/cim/Charges` | Peek tariff update |
-| `DELETE /v1.0/cim/dequeue/{id}` | Acknowledge message |
-| `POST /admin/scenario/sunshine` | Load sunshine scenario |
-| `POST /admin/reset` | Clear all state |
-
-ASP.NET Minimal API, runs as a Docker container alongside TimescaleDB.
-
----
-
 ## Test Approach
 
 | Layer | What | Dependencies |
 |-------|------|-------------|
 | Unit tests | CIM parser, settlement engine, auth manager, fake client, state machine | None — pure functions and in-memory |
 | Integration tests | Ingestion pipeline, spot/charges ingestion, portfolio CRUD | FakeDataHubClient + PostgreSQL |
-| End-to-end | Sunshine scenario: signup → BRS-001 → data reception → settlement | Standalone HTTP simulator + PostgreSQL |
+| End-to-end | Sunshine scenario: signup → BRS-001 → data reception → settlement | FakeDataHubClient + PostgreSQL |
 
 **Rounding:** Full precision during hourly calculations, round to 2 decimal DKK on invoice line totals, VAT on the summed subtotal.
 
@@ -181,7 +159,7 @@ ASP.NET Minimal API, runs as a Docker container alongside TimescaleDB.
 
 | MVP | Simulator change |
 |-----|-----------------|
-| 2 | Error responses (rejections, 403). Offboarding scenarios. Aconto flows |
+| 2 | **Standalone HTTP simulator introduced.** Error responses (rejections, 403). Offboarding scenarios. Aconto flows |
 | 3 | Error injection (401, 503, malformed). Correction scenarios. Aggregations queue. Parallel with real Actor Test |
 | 4 | Performance: 80K metering points, realistic timing |
 
@@ -189,19 +167,19 @@ ASP.NET Minimal API, runs as a Docker container alongside TimescaleDB.
 
 ## Exit Criteria
 
-- [ ] `docker compose up` starts TimescaleDB + simulator
+- [ ] `docker compose up` starts TimescaleDB
 - [ ] FakeDataHubClient delivers RSM-012, RSM-007, Charges fixtures
 - [ ] CIM parser handles all fixture files correctly
-- [ ] Ingestion pipeline: 30 days ingested, all messages dequeued, no dead letters
+- [ ] Ingestion pipeline: 31 days ingested, all messages dequeued, no dead letters
 - [ ] Duplicate MessageId skipped (idempotency)
 - [ ] Tariff rates parsed and queryable by grid area + hour
 - [ ] Portfolio: customer + metering point + contract + supply period created
-- [ ] BRS-001 sent → RSM-009 accepted
+- [ ] BRS-001 sent → RSM-009 accepted (via FakeDataHubClient)
 - [ ] RSM-007 → metering point activated, supply period created
 - [ ] State machine: Pending → Sent → Acknowledged → Completed
 - [ ] Settlement golden master #1 (full month) passes
 - [ ] Settlement golden master #2 (partial period) passes
-- [ ] Sunshine scenario E2E: signup → BRS-001 → data → settlement → golden master
+- [ ] Sunshine scenario E2E: signup → BRS-001 → data → settlement → golden master (all via FakeDataHubClient)
 - [ ] All tests green in CI
 
 ---
@@ -213,6 +191,7 @@ ASP.NET Minimal API, runs as a Docker container alongside TimescaleDB.
 | Offboarding (BRS-002, BRS-010) | MVP 2 |
 | Cancellations / rejections (BRS-003, RSM-009 rejected) | MVP 2 |
 | Aconto calculation and settlement | MVP 2 |
+| Standalone HTTP DataHub simulator | MVP 2 |
 | Invoice generation (PDF/document) | MVP 2 |
 | Metering data corrections (delta detection) | MVP 3 |
 | Reconciliation (RSM-014) | MVP 3 |
