@@ -18,14 +18,15 @@ scripts/                       Backlog and utility scripts
 DataHub.Settlement/            .NET 9 solution
 ├── src/
 │   ├── DataHub.Settlement.Domain/          Domain entities and value objects
-│   ├── DataHub.Settlement.Application/     Use cases and interfaces
-│   ├── DataHub.Settlement.Infrastructure/  DB access, CIM parsing, HTTP clients
+│   ├── DataHub.Settlement.Application/     Use cases and interfaces (IDataHubClient)
+│   ├── DataHub.Settlement.Infrastructure/  DB migrations, CIM parsing, HTTP clients
 │   ├── DataHub.Settlement.Worker/          Background services (queue polling, settlement)
-│   └── DataHub.Settlement.Api/             REST API (minimal in MVP 1)
+│   ├── DataHub.Settlement.Api/             REST API (minimal in MVP 1)
+│   └── DataHub.Settlement.Web/             Blazor Server dashboard
 ├── tests/
-│   ├── DataHub.Settlement.UnitTests/
+│   ├── DataHub.Settlement.UnitTests/       Unit tests + FakeDataHubClient
 │   └── DataHub.Settlement.IntegrationTests/
-├── fixtures/                  CIM JSON test fixtures
+├── fixtures/                  CIM JSON test fixtures (planned)
 └── docker-compose.yml         TimescaleDB + Aspire Dashboard
 ```
 
