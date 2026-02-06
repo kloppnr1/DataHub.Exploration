@@ -24,14 +24,14 @@ public class SpotPriceRepositoryTests
     {
         var prices = new List<SpotPriceRow>
         {
-            new("DK1", Utc(2025, 1, 1, 0), 0.00045m),
+            new("DK1", Utc(2025, 1, 1, 0), 45m),
         };
 
         await _sut.StorePricesAsync(prices, CancellationToken.None);
 
         var result = await _sut.GetPriceAsync("DK1", Utc(2025, 1, 1, 0), CancellationToken.None);
 
-        result.Should().Be(0.00045m);
+        result.Should().Be(45m);
     }
 
     [Fact]
@@ -39,10 +39,10 @@ public class SpotPriceRepositoryTests
     {
         var prices = new List<SpotPriceRow>
         {
-            new("DK1", Utc(2025, 1, 1, 0), 0.00045m),
-            new("DK1", Utc(2025, 1, 1, 1), 0.00042m),
-            new("DK1", Utc(2025, 1, 1, 2), 0.00038m),
-            new("DK1", Utc(2025, 1, 1, 3), 0.00040m),
+            new("DK1", Utc(2025, 1, 1, 0), 45m),
+            new("DK1", Utc(2025, 1, 1, 1), 42m),
+            new("DK1", Utc(2025, 1, 1, 2), 38m),
+            new("DK1", Utc(2025, 1, 1, 3), 40m),
         };
 
         await _sut.StorePricesAsync(prices, CancellationToken.None);
@@ -54,8 +54,8 @@ public class SpotPriceRepositoryTests
             CancellationToken.None);
 
         result.Should().HaveCount(2);
-        result[0].PricePerKwh.Should().Be(0.00042m);
-        result[1].PricePerKwh.Should().Be(0.00038m);
+        result[0].PricePerKwh.Should().Be(42m);
+        result[1].PricePerKwh.Should().Be(38m);
     }
 
     [Fact]
@@ -63,20 +63,20 @@ public class SpotPriceRepositoryTests
     {
         var original = new List<SpotPriceRow>
         {
-            new("DK2", Utc(2025, 1, 1, 12), 0.00085m),
+            new("DK2", Utc(2025, 1, 1, 12), 85m),
         };
 
         await _sut.StorePricesAsync(original, CancellationToken.None);
 
         var updated = new List<SpotPriceRow>
         {
-            new("DK2", Utc(2025, 1, 1, 12), 0.00090m),
+            new("DK2", Utc(2025, 1, 1, 12), 90m),
         };
 
         await _sut.StorePricesAsync(updated, CancellationToken.None);
 
         var result = await _sut.GetPriceAsync("DK2", Utc(2025, 1, 1, 12), CancellationToken.None);
 
-        result.Should().Be(0.00090m);
+        result.Should().Be(90m);
     }
 }

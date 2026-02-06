@@ -179,10 +179,10 @@ public class SunshineScenarioTests
             var hour = start.AddHours(i);
             var price = hour.Hour switch
             {
-                >= 0 and <= 5 => 0.45m,
-                >= 6 and <= 15 => 0.85m,
-                >= 16 and <= 19 => 1.25m,
-                _ => 0.55m,
+                >= 0 and <= 5 => 45m,
+                >= 6 and <= 15 => 85m,
+                >= 16 and <= 19 => 125m,
+                _ => 55m,
             };
             prices.Add(new SpotPriceRow("DK1", hour, price));
         }

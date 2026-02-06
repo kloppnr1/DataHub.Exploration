@@ -17,8 +17,8 @@ namespace DataHub.Settlement.UnitTests;
 ///   Hours 20-23 (late):     0.400 kWh each
 ///   Daily total: 13.200 kWh
 ///
-/// Spot prices (same every day):
-///   Night: 0.45, Day: 0.85, Peak: 1.25, Late: 0.55 DKK/kWh
+/// Spot prices (same every day, in øre/kWh as delivered by DDQ):
+///   Night: 45, Day: 85, Peak: 125, Late: 55 øre/kWh
 ///
 /// Tariffs:
 ///   Grid: night 0.06, day 0.18, peak 0.54 DKK/kWh
@@ -42,10 +42,10 @@ public class GoldenMasterTests
 
     private static decimal SpotPriceForHour(int hour) => hour switch
     {
-        >= 0 and <= 5 => 0.45m,
-        >= 6 and <= 15 => 0.85m,
-        >= 16 and <= 19 => 1.25m,
-        _ => 0.55m, // 20-23
+        >= 0 and <= 5 => 45m,
+        >= 6 and <= 15 => 85m,
+        >= 16 and <= 19 => 125m,
+        _ => 55m, // 20-23
     };
 
     private static decimal ConsumptionForHour(int hour) => hour switch

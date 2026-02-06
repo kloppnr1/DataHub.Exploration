@@ -8,7 +8,8 @@ public sealed class SettlementEngine : ISettlementEngine
 
     public SettlementResult Calculate(SettlementRequest request)
     {
-        var spotPriceByHour = request.SpotPrices.ToDictionary(p => p.Hour, p => p.PricePerKwh);
+        // Spot prices are stored in øre/kWh (as delivered by DDQ) — convert to DKK
+        var spotPriceByHour = request.SpotPrices.ToDictionary(p => p.Hour, p => p.PricePerKwh / 100m);
         var gridRateByHour = request.GridTariffRates.ToDictionary(r => r.HourNumber, r => r.PricePerKwh);
 
         decimal totalKwh = 0m;
