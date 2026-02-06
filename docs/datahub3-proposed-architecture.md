@@ -272,6 +272,8 @@ Enkelt indgangspunkt for alle interne og eksterne forbrugere.
 - Rollebaseret adgangskontrol på API-endpoints
 - Auditlog for alle tilstandsændrende operationer
 
+→ Detaljer: [Autentificering og sikkerhed](datahub3-authentication-security.md)
+
 ### Konfiguration
 
 | Indstilling | Formål |

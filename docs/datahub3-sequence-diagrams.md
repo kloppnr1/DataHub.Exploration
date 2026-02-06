@@ -274,5 +274,6 @@ flowchart LR
 - [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
 - [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
 - [Foreslået systemarkitektur](datahub3-proposed-architecture.md)
+- [Autentificering og sikkerhed](datahub3-authentication-security.md)
 - CIM Webservice Interface (Dok. 22/03077-1)
 - CIM EDI Guide (Dok. 15/00718-191)
