@@ -13,11 +13,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.*" />
     <PackageReference Include="Npgsql" Version="9.0.*" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DataHub.Settlement.Infrastructure\DataHub.Settlement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\DataHub.Settlement.Simulator\DataHub.Settlement.Simulator.csproj" />
     <ProjectReference Include="..\..\src\DataHub.Settlement.Worker\DataHub.Settlement.Worker.csproj" />
     <ProjectReference Include="..\DataHub.Settlement.UnitTests\DataHub.Settlement.UnitTests.csproj" />
   </ItemGroup>

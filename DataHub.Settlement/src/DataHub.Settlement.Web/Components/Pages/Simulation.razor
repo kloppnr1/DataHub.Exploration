@@ -4,8 +4,20 @@
 
 <h1>Simulation</h1>
 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-    Walk through the sunshine supplier-switch scenario step by step.
+    Walk through settlement scenarios: onboarding, rejection, aconto billing, cancellation.
 </p>
+
+<div style="margin-bottom: 1rem;">
+    <div class="scenario-selector">
+        @foreach (var scenario in _scenarios)
+        {
+            var css = scenario.Key == _selectedScenario ? "scenario-btn active" : "scenario-btn";
+            <button class="@css" disabled="@_running" @onclick="() => SelectScenario(scenario.Key)">
+                @scenario.Value.Label
+            </button>
+        }
+    </div>
+</div>
 
 <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
     @if (_completed && !_running)
@@ -40,6 +52,7 @@
         {
             StepStatus.Running => "step step-running",
             StepStatus.Completed => "step step-completed",
+            StepStatus.Failed => "step step-failed",
             _ => "step step-pending",
         };
         <div class="@css">
@@ -59,6 +72,9 @@
                         break;
                     case StepStatus.Completed:
                         <span class="badge badge-completed">done</span>
+                        break;
+                    case StepStatus.Failed:
+                        <span class="badge badge-dead-letter">failed</span>
                         break;
                     default:
                         <span class="badge badge-pending" style="background: rgba(156,163,175,0.15); color: var(--text-muted);">pending</span>
@@ -94,7 +110,7 @@
 }
 
 @code {
-    private enum StepStatus { Pending, Running, Completed }
+    private enum StepStatus { Pending, Running, Completed, Failed }
 
     private sealed class StepViewModel
     {
@@ -106,19 +122,60 @@
 
     private record LogEntry(DateTime Timestamp, string StepName, string Details);
 
-    private readonly List<StepViewModel> _steps = new()
+    private record ScenarioDefinition(string Label, string[] StepNames, int? FailedStep);
+
+    private static readonly Dictionary<string, ScenarioDefinition> _scenarios = new()
     {
-        new() { Number = 1, Name = "Seed Reference Data" },
-        new() { Number = 2, Name = "Create Customer & Product" },
-        new() { Number = 3, Name = "Create Metering Point" },
-        new() { Number = 4, Name = "Submit BRS-001" },
-        new() { Number = 5, Name = "DataHub Acknowledges" },
-        new() { Number = 6, Name = "Receive RSM-007" },
-        new() { Number = 7, Name = "Complete Process" },
-        new() { Number = 8, Name = "Receive RSM-012" },
-        new() { Number = 9, Name = "Run Settlement" },
+        ["sunshine"] = new("Sunshine", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Submit BRS-001",
+            "DataHub Acknowledges",
+            "Receive RSM-007",
+            "Complete Process",
+            "Receive RSM-012",
+            "Run Settlement",
+            "Incoming BRS-001",
+            "Receive Final RSM-012",
+            "Run Final Settlement",
+        ], null),
+        ["rejection"] = new("Rejection & Retry", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Submit BRS-001",
+            "DataHub Rejects",
+            "Retry with New BRS-001",
+            "DataHub Acknowledges Retry",
+            "Process Completes",
+        ], 5),
+        ["aconto"] = new("Aconto Billing", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Activate Metering Point",
+            "Estimate Q1 Aconto",
+            "Receive January Metering",
+            "Receive February Metering",
+            "Receive March Metering",
+            "Run Q1 Settlement",
+            "Aconto Reconciliation",
+            "Combined Invoice",
+        ], null),
+        ["cancellation"] = new("Cancellation", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Submit BRS-001",
+            "DataHub Acknowledges",
+            "Cancel Before Effectuation",
+            "Verify Clean State",
+        ], null),
     };
 
+    private string _selectedScenario = "sunshine";
+    private readonly List<StepViewModel> _steps = new();
     private readonly List<LogEntry> _log = new();
     private bool _running;
     private bool _completed;
@@ -126,6 +183,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BuildStepList();
+
         var alreadySeeded = await Simulator.IsAlreadySeededAsync();
         if (alreadySeeded)
         {
@@ -138,22 +197,34 @@
         }
     }
 
+    private void SelectScenario(string scenario)
+    {
+        if (_running) return;
+        _selectedScenario = scenario;
+        _completed = false;
+        _errorMessage = null;
+        _log.Clear();
+        BuildStepList();
+    }
+
+    private void BuildStepList()
+    {
+        _steps.Clear();
+        var def = _scenarios[_selectedScenario];
+        for (var i = 0; i < def.StepNames.Length; i++)
+        {
+            _steps.Add(new StepViewModel { Number = i + 1, Name = def.StepNames[i] });
+        }
+    }
+
     private async Task ResetAndRunAsync()
     {
-        // Reset UI state
-        foreach (var step in _steps)
-        {
-            step.Status = StepStatus.Pending;
-            step.Details = null;
-        }
         _log.Clear();
         _completed = false;
+        _errorMessage = null;
+        BuildStepList();
         StateHasChanged();
 
-        // Truncate all tables
-        await Simulator.ResetAsync();
-
-        // Run the simulation
         await StartAsync();
     }
 
@@ -161,18 +232,22 @@
     {
         _running = true;
         _errorMessage = null;
-
-        // Mark step 1 as running
         _steps[0].Status = StepStatus.Running;
         StateHasChanged();
 
+        await Simulator.ResetAsync();
+
+        var failedStep = _scenarios[_selectedScenario].FailedStep;
+
         try
         {
-            await Simulator.RunAsync(step =>
+            Func<SimulationStep, Task> onStep = step =>
             {
                 var vm = _steps[step.Number - 1];
-                vm.Status = StepStatus.Completed;
                 vm.Details = step.Details;
+
+                // Mark failed step with Failed status, all others as Completed
+                vm.Status = (step.Number == failedStep) ? StepStatus.Failed : StepStatus.Completed;
 
                 _log.Insert(0, new LogEntry(DateTime.Now, step.Name, step.Details));
 
@@ -183,8 +258,23 @@
 
                 StateHasChanged();
                 return Task.CompletedTask;
+            };
 
-            }, CancellationToken.None);
+            switch (_selectedScenario)
+            {
+                case "sunshine":
+                    await Simulator.RunSunshineAsync(onStep, CancellationToken.None);
+                    break;
+                case "rejection":
+                    await Simulator.RunRejectionRetryAsync(onStep, CancellationToken.None);
+                    break;
+                case "aconto":
+                    await Simulator.RunAcontoQuarterlyAsync(onStep, CancellationToken.None);
+                    break;
+                case "cancellation":
+                    await Simulator.RunCancellationAsync(onStep, CancellationToken.None);
+                    break;
+            }
 
             _completed = true;
         }

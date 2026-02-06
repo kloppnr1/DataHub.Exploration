@@ -42,6 +42,7 @@ public sealed class TestDatabase : IAsyncLifetime
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = """
             TRUNCATE
+                billing.aconto_payment,
                 settlement.settlement_line,
                 settlement.settlement_run,
                 settlement.billing_period,

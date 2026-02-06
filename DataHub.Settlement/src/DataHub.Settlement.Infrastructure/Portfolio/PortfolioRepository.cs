@@ -156,4 +156,76 @@ public sealed class PortfolioRepository : IPortfolioRepository
         return await conn.QuerySingleOrDefaultAsync<Product>(
             new CommandDefinition(sql, new { ProductId = productId }, cancellationToken: ct));
     }
+
+    public async Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.metering_point
+            SET deactivated_at = @DeactivatedAt, connection_status = 'disconnected', updated_at = now()
+            WHERE gsrn = @Gsrn
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Gsrn = gsrn, DeactivatedAt = deactivatedAtUtc }, cancellationToken: ct));
+    }
+
+    public async Task EndSupplyPeriodAsync(string gsrn, DateOnly endDate, string endReason, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.supply_period
+            SET end_date = @EndDate, end_reason = @EndReason
+            WHERE gsrn = @Gsrn AND end_date IS NULL
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Gsrn = gsrn, EndDate = endDate, EndReason = endReason }, cancellationToken: ct));
+    }
+
+    public async Task EndContractAsync(string gsrn, DateOnly endDate, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.contract
+            SET end_date = @EndDate, updated_at = now()
+            WHERE gsrn = @Gsrn AND end_date IS NULL
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Gsrn = gsrn, EndDate = endDate }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, gsrn, start_date, end_date
+            FROM portfolio.supply_period
+            WHERE gsrn = @Gsrn
+            ORDER BY start_date
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<SupplyPeriod>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task UpdateMeteringPointGridAreaAsync(string gsrn, string newGridAreaCode, string newPriceArea, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.metering_point
+            SET grid_area_code = @NewGridAreaCode, price_area = @NewPriceArea, updated_at = now()
+            WHERE gsrn = @Gsrn
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Gsrn = gsrn, NewGridAreaCode = newGridAreaCode, NewPriceArea = newPriceArea }, cancellationToken: ct));
+    }
 }

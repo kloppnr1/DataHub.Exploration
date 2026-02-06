@@ -104,7 +104,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .step-pending .step-number { background: var(--border); color: var(--text-muted); }
 .step-running .step-number { background: var(--accent); color: white; animation: pulse 1.5s infinite; }
 .step-completed .step-number { background: var(--green); color: white; }
+.step-failed .step-number { background: var(--red); color: white; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* Scenario selector */
+.scenario-selector { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.scenario-btn { padding: 0.5rem 1rem; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.scenario-btn:hover { color: var(--text); border-color: var(--text-muted); }
+.scenario-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+.scenario-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Button */
 .btn { padding: 0.6rem 1.25rem; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }

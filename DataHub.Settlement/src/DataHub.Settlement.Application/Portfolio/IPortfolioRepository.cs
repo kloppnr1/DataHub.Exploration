@@ -11,4 +11,9 @@ public interface IPortfolioRepository
     Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct);
     Task<Product?> GetProductAsync(Guid productId, CancellationToken ct);
     Task EnsureGridAreaAsync(string code, string gridOperatorGln, string gridOperatorName, string priceArea, CancellationToken ct);
+    Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct);
+    Task EndSupplyPeriodAsync(string gsrn, DateOnly endDate, string endReason, CancellationToken ct);
+    Task EndContractAsync(string gsrn, DateOnly endDate, CancellationToken ct);
+    Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct);
+    Task UpdateMeteringPointGridAreaAsync(string gsrn, string newGridAreaCode, string newPriceArea, CancellationToken ct);
 }

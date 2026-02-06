@@ -4,10 +4,12 @@ public sealed class ProcessStateMachine
 {
     private static readonly Dictionary<string, HashSet<string>> ValidTransitions = new()
     {
-        ["pending"] = ["sent_to_datahub"],
+        ["pending"] = ["sent_to_datahub", "cancelled"],
         ["sent_to_datahub"] = ["acknowledged", "rejected"],
         ["acknowledged"] = ["effectuation_pending"],
-        ["effectuation_pending"] = ["completed"],
+        ["effectuation_pending"] = ["completed", "cancelled"],
+        ["completed"] = ["offboarding"],
+        ["offboarding"] = ["final_settled"],
     };
 
     private readonly IProcessRepository _repository;
@@ -40,6 +42,34 @@ public sealed class ProcessStateMachine
     public async Task MarkCompletedAsync(Guid requestId, CancellationToken ct)
     {
         await TransitionAsync(requestId, "completed", null, "completed", ct);
+    }
+
+    public async Task MarkRejectedAsync(Guid requestId, string? reason, CancellationToken ct)
+    {
+        await TransitionAsync(requestId, "rejected", null, "rejected", ct);
+        if (reason != null)
+        {
+            await _repository.AddEventAsync(requestId, "rejection_reason", reason, "datahub", ct);
+        }
+    }
+
+    public async Task MarkCancelledAsync(Guid requestId, string? reason, CancellationToken ct)
+    {
+        await TransitionAsync(requestId, "cancelled", null, "cancelled", ct);
+        if (reason != null)
+        {
+            await _repository.AddEventAsync(requestId, "cancellation_reason", reason, "system", ct);
+        }
+    }
+
+    public async Task MarkOffboardingAsync(Guid requestId, CancellationToken ct)
+    {
+        await TransitionAsync(requestId, "offboarding", null, "offboarding_started", ct);
+    }
+
+    public async Task MarkFinalSettledAsync(Guid requestId, CancellationToken ct)
+    {
+        await TransitionAsync(requestId, "final_settled", null, "final_settled", ct);
     }
 
     private async Task TransitionAsync(Guid requestId, string newStatus, string? correlationId, string eventType, CancellationToken ct)

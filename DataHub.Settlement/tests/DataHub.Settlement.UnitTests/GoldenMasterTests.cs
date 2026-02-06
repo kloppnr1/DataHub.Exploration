@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
@@ -165,6 +166,54 @@ public class GoldenMasterTests
         result.Subtotal.Should().Be(327.49m);
         result.VatAmount.Should().Be(81.87m);
         result.Total.Should().Be(409.36m);
+    }
+
+    /// <summary>
+    /// Golden Master #3: Aconto quarterly settlement (Jan 2025)
+    ///
+    /// Actual settlement identical to GM#1: 793.14 DKK
+    /// Aconto paid for January: 700.00 DKK
+    /// Difference (underpayment): 93.14 DKK
+    /// New quarterly estimate: 800.00 DKK
+    /// Total due on combined invoice: 893.14 DKK
+    /// </summary>
+    [Fact]
+    public void Aconto_quarterly_settlement_matches_golden_master()
+    {
+        var request = BuildRequest(new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1));
+        var acontoService = new AcontoSettlementService(Engine);
+
+        var result = acontoService.CalculateQuarterlyInvoice(
+            request, totalAcontoPaid: 700.00m, newQuarterlyEstimate: 800.00m);
+
+        result.PreviousQuarter.ActualSettlement.Total.Should().Be(793.14m);
+        result.PreviousQuarter.TotalAcontoPaid.Should().Be(700.00m);
+        result.PreviousQuarter.Difference.Should().Be(93.14m);
+        result.PreviousQuarter.NewQuarterlyEstimate.Should().Be(800.00m);
+        result.NewAcontoAmount.Should().Be(800.00m);
+        result.TotalDue.Should().Be(893.14m);
+    }
+
+    /// <summary>
+    /// Golden Master #4: Final settlement at offboarding (Jan 16 - Feb 1)
+    ///
+    /// Actual settlement identical to GM#2: 409.36 DKK
+    /// Aconto paid (pro-rata): 300.00 DKK
+    /// Difference: 109.36 DKK
+    /// Total due: 109.36 DKK (only the difference, no next-quarter aconto)
+    /// </summary>
+    [Fact]
+    public void Final_settlement_at_offboarding_matches_golden_master()
+    {
+        var request = BuildRequest(new DateOnly(2025, 1, 16), new DateOnly(2025, 2, 1));
+        var finalService = new FinalSettlementService(Engine);
+
+        var result = finalService.CalculateFinal(request, acontoPaid: 300.00m);
+
+        result.Settlement.Total.Should().Be(409.36m);
+        result.AcontoPaid.Should().Be(300.00m);
+        result.AcontoDifference.Should().Be(109.36m);
+        result.TotalDue.Should().Be(109.36m);
     }
 
     private static void AssertLine(SettlementResult result, string chargeType, decimal expectedAmount)

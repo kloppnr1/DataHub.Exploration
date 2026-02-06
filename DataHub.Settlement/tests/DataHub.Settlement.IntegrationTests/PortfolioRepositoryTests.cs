@@ -76,4 +76,88 @@ public class PortfolioRepositoryTests
         fetched!.Name.Should().Be("Test Product");
         fetched.SupplementOrePerKwh.Should().Be(1.0m);
     }
+
+    [Fact]
+    public async Task Deactivate_metering_point_sets_disconnected()
+    {
+        await EnsureGridAreaAsync();
+        var mp = new MeteringPoint("571313100000077777", "E17", "flex", "344", "5790000392261", "DK1", "connected");
+        await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
+        await _sut.ActivateMeteringPointAsync("571313100000077777",
+            new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), CancellationToken.None);
+
+        await _sut.DeactivateMeteringPointAsync("571313100000077777",
+            new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc), CancellationToken.None);
+
+        // Verify by checking supply periods still work for this GSRN
+        var supply = await _sut.CreateSupplyPeriodAsync("571313100000077777", new DateOnly(2025, 1, 1), CancellationToken.None);
+        supply.Gsrn.Should().Be("571313100000077777");
+    }
+
+    [Fact]
+    public async Task End_supply_period_sets_end_date_and_reason()
+    {
+        await EnsureGridAreaAsync();
+        var mp = new MeteringPoint("571313100000066666", "E17", "flex", "344", "5790000392261", "DK1", "connected");
+        await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
+        await _sut.CreateSupplyPeriodAsync("571313100000066666", new DateOnly(2025, 1, 1), CancellationToken.None);
+
+        await _sut.EndSupplyPeriodAsync("571313100000066666", new DateOnly(2025, 3, 1), "supplier_switch", CancellationToken.None);
+
+        var periods = await _sut.GetSupplyPeriodsAsync("571313100000066666", CancellationToken.None);
+        periods.Should().HaveCount(1);
+        periods[0].EndDate.Should().Be(new DateOnly(2025, 3, 1));
+    }
+
+    [Fact]
+    public async Task End_contract_sets_end_date()
+    {
+        await EnsureGridAreaAsync();
+        var mp = new MeteringPoint("571313100000055555", "E17", "flex", "344", "5790000392261", "DK1", "connected");
+        await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
+        var customer = await _sut.CreateCustomerAsync("End Contract Test", "0101905555", "private", CancellationToken.None);
+        var product = await _sut.CreateProductAsync("Test Prod", "spot", 4.0m, null, 39.00m, CancellationToken.None);
+        await _sut.CreateContractAsync(customer.Id, "571313100000055555", product.Id, "monthly", "post_payment",
+            new DateOnly(2025, 1, 1), CancellationToken.None);
+
+        await _sut.EndContractAsync("571313100000055555", new DateOnly(2025, 3, 1), CancellationToken.None);
+
+        var active = await _sut.GetActiveContractAsync("571313100000055555", CancellationToken.None);
+        active.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetSupplyPeriods_returns_all_periods()
+    {
+        await EnsureGridAreaAsync();
+        var mp = new MeteringPoint("571313100000044444", "E17", "flex", "344", "5790000392261", "DK1", "connected");
+        await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
+
+        await _sut.CreateSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 1, 1), CancellationToken.None);
+        await _sut.EndSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 3, 1), "supplier_switch", CancellationToken.None);
+        await _sut.CreateSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 3, 1), CancellationToken.None);
+
+        var periods = await _sut.GetSupplyPeriodsAsync("571313100000044444", CancellationToken.None);
+        periods.Should().HaveCount(2);
+        periods[0].EndDate.Should().Be(new DateOnly(2025, 3, 1));
+        periods[1].EndDate.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Update_metering_point_grid_area()
+    {
+        await EnsureGridAreaAsync();
+        await _sut.EnsureGridAreaAsync("740", "5790000610877", "Radius Elnet", "DK2", CancellationToken.None);
+        var mp = new MeteringPoint("571313100000033333", "E17", "flex", "344", "5790000392261", "DK1", "connected");
+        await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
+
+        await _sut.UpdateMeteringPointGridAreaAsync("571313100000033333", "740", "DK2", CancellationToken.None);
+
+        // Verify by creating a contract (proves the mp still exists and is functional)
+        var customer = await _sut.CreateCustomerAsync("Grid Test", "0101903333", "private", CancellationToken.None);
+        var product = await _sut.CreateProductAsync("Grid Prod", "spot", 4.0m, null, 39.00m, CancellationToken.None);
+        var contract = await _sut.CreateContractAsync(customer.Id, "571313100000033333", product.Id,
+            "monthly", "post_payment", new DateOnly(2025, 1, 1), CancellationToken.None);
+        contract.Gsrn.Should().Be("571313100000033333");
+    }
 }

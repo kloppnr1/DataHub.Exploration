@@ -1,6 +1,5 @@
 using DataHub.Settlement.Infrastructure.Database;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Xunit;
@@ -11,20 +10,14 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Integration tests that verify the database schema after migrations.
 /// Requires TimescaleDB running via docker compose.
 /// </summary>
+[Collection("Database")]
 public class DatabaseSchemaTests : IAsyncLifetime
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=5432;Database=datahub_settlement_test;Username=settlement;Password=settlement";
-
     private NpgsqlConnection _connection = null!;
 
     public async Task InitializeAsync()
     {
-        // Run migrations against the test database
-        var logger = NullLoggerFactory.Instance.CreateLogger("TestMigrator");
-        DatabaseMigrator.Migrate(ConnectionString, logger);
-
-        _connection = new NpgsqlConnection(ConnectionString);
+        _connection = new NpgsqlConnection(TestDatabase.ConnectionString);
         await _connection.OpenAsync();
     }
 
@@ -175,7 +168,7 @@ public class DatabaseSchemaTests : IAsyncLifetime
     {
         // Running migrations a second time should succeed without errors
         var logger = NullLoggerFactory.Instance.CreateLogger("TestMigrator");
-        var act = () => DatabaseMigrator.Migrate(ConnectionString, logger);
+        var act = () => DatabaseMigrator.Migrate(TestDatabase.ConnectionString, logger);
         act.Should().NotThrow("DbUp journal prevents re-execution of already-applied scripts");
     }
 }
