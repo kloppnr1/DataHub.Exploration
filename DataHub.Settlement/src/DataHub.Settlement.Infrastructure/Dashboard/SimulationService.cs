@@ -1,4 +1,5 @@
 using Dapper;
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Portfolio;
@@ -46,7 +47,18 @@ public sealed class SimulationService
         await conn.OpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = """
+            CREATE SCHEMA IF NOT EXISTS billing;
+            CREATE TABLE IF NOT EXISTS billing.aconto_payment (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                gsrn TEXT NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                amount NUMERIC(12,2) NOT NULL,
+                paid_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
             TRUNCATE
+                billing.aconto_payment,
                 settlement.settlement_line,
                 settlement.settlement_run,
                 settlement.billing_period,
@@ -257,5 +269,103 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(9, "Run Settlement",
             $"Settlement complete — subtotal {result.Subtotal:N2} DKK, VAT {result.VatAmount:N2} DKK, total {result.Total:N2} DKK"));
+        await Task.Delay(1500, ct);
+
+        // ── Step 10: Receive RSM-004 (Grid Area Change) ──
+        await portfolio.EnsureGridAreaAsync("740", "5790000610877", "Radius Elnet", "DK2", ct);
+        await portfolio.UpdateMeteringPointGridAreaAsync(Gsrn, "740", "DK2", ct);
+
+        await using (var msgConn = new NpgsqlConnection(_connectionString))
+        {
+            await msgConn.OpenAsync(ct);
+            await msgConn.ExecuteAsync("""
+                INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
+                VALUES ('msg-rsm004-sim', 'RSM-004', NULL, 'MasterData', 'processed', 512)
+                """);
+        }
+
+        await onStepCompleted(new SimulationStep(10, "Receive RSM-004",
+            "Grid area changed from 344 (DK1) to 740 (DK2)"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 11: Incoming BRS-001 (Another Supplier) ──
+        // Another supplier requests this metering point — triggers offboarding
+        await stateMachine.MarkOffboardingAsync(processRequest.Id, ct);
+
+        await onStepCompleted(new SimulationStep(11, "Incoming BRS-001",
+            "Another supplier requested the metering point — offboarding started"));
+        await Task.Delay(2000, ct);
+
+        // ── Step 12: Receive Final RSM-012 ──
+        var finalStart = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var finalRows = new List<MeteringDataRow>();
+        for (var i = 0; i < 360; i++) // ~15 days
+        {
+            var ts = finalStart.AddHours(i);
+            finalRows.Add(new MeteringDataRow(ts, "PT1H", 0.55m, "A01", "msg-rsm012-final-sim"));
+        }
+        await meteringRepo.StoreTimeSeriesAsync(Gsrn, finalRows, ct);
+
+        await using (var msgConn = new NpgsqlConnection(_connectionString))
+        {
+            await msgConn.OpenAsync(ct);
+            await msgConn.ExecuteAsync("""
+                INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
+                VALUES ('msg-rsm012-final-sim', 'RSM-012', NULL, 'Timeseries', 'processed', 25000)
+                """);
+        }
+
+        await onStepCompleted(new SimulationStep(12, "Receive Final RSM-012",
+            "360 hourly readings (Feb 1-16), final metering data before departure"));
+        await Task.Delay(1500, ct);
+
+        // ── Step 13: Run Final Settlement ──
+        var finalConsumption = await meteringRepo.GetConsumptionAsync(Gsrn,
+            new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
+
+        // Extend spot prices for February
+        var febPrices = new List<SpotPriceRow>();
+        for (var i = 0; i < 360; i++)
+        {
+            var hour = finalStart.AddHours(i);
+            var price = hour.Hour switch
+            {
+                >= 0 and <= 5 => 45m,
+                >= 6 and <= 15 => 85m,
+                >= 16 and <= 19 => 125m,
+                _ => 55m,
+            };
+            febPrices.Add(new SpotPriceRow("DK2", hour, price));
+        }
+        await spotPriceRepo.StorePricesAsync(febPrices, ct);
+
+        var finalSpotPrices = await spotPriceRepo.GetPricesAsync("DK2",
+            new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
+
+        var finalEngine = new SettlementEngine();
+        var finalService = new FinalSettlementService(finalEngine);
+        var finalRequest = new SettlementRequest(
+            Gsrn,
+            new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16),
+            finalConsumption, finalSpotPrices,
+            ratesForCalc, 0.054m, 0.049m, electricityTax,
+            gridSub,
+            product.MarginOrePerKwh / 100m,
+            (product.SupplementOrePerKwh ?? 0m) / 100m,
+            product.SubscriptionKrPerMonth);
+
+        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+
+        // End supply period and contract
+        await portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), "supplier_switch", ct);
+        await portfolio.EndContractAsync(Gsrn, new DateOnly(2025, 2, 16), ct);
+        await portfolio.DeactivateMeteringPointAsync(Gsrn,
+            new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
+        await stateMachine.MarkFinalSettledAsync(processRequest.Id, ct);
+
+        await onStepCompleted(new SimulationStep(13, "Run Final Settlement",
+            $"Final settlement — total {finalResult.TotalDue:N2} DKK, customer offboarded"));
     }
 }

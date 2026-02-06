@@ -4,7 +4,7 @@
 
 <h1>Simulation</h1>
 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-    Walk through the sunshine supplier-switch scenario step by step.
+    Walk through the full customer lifecycle: onboarding, settlement, offboarding.
 </p>
 
 <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
@@ -117,6 +117,10 @@
         new() { Number = 7, Name = "Complete Process" },
         new() { Number = 8, Name = "Receive RSM-012" },
         new() { Number = 9, Name = "Run Settlement" },
+        new() { Number = 10, Name = "Receive RSM-004" },
+        new() { Number = 11, Name = "Incoming BRS-001" },
+        new() { Number = 12, Name = "Receive Final RSM-012" },
+        new() { Number = 13, Name = "Run Final Settlement" },
     };
 
     private readonly List<LogEntry> _log = new();

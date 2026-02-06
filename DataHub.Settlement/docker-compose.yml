@@ -16,6 +16,17 @@ services:
       timeout: 3s
       retries: 5
 
+  datahub-simulator:
+    build:
+      context: .
+      dockerfile: src/DataHub.Settlement.Simulator/Dockerfile
+    container_name: settlement-simulator
+    ports:
+      - "5100:8080"
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+    restart: unless-stopped
+
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
     container_name: settlement-dashboard

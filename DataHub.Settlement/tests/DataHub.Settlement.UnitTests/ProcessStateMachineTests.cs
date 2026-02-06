@@ -68,8 +68,97 @@ public class ProcessStateMachineTests
         events.Should().HaveCount(5); // created, sent, acknowledged, awaiting_effectuation, completed
     }
 
+    [Fact]
+    public async Task Rejection_from_sent_to_datahub_transitions_correctly()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
+
+        await sut.MarkRejectedAsync(request.Id, "E16: Invalid GSRN", CancellationToken.None);
+
+        var after = await _repo.GetAsync(request.Id, CancellationToken.None);
+        after!.Status.Should().Be("rejected");
+
+        var events = await _repo.GetEventsAsync(request.Id, CancellationToken.None);
+        events.Should().Contain(e => e.EventType == "rejected");
+        events.Should().Contain(e => e.EventType == "rejection_reason");
+    }
+
+    [Fact]
+    public async Task Cancellation_from_pending_transitions_correctly()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+
+        await sut.MarkCancelledAsync(request.Id, "Customer withdrew", CancellationToken.None);
+
+        var after = await _repo.GetAsync(request.Id, CancellationToken.None);
+        after!.Status.Should().Be("cancelled");
+    }
+
+    [Fact]
+    public async Task Cancellation_from_effectuation_pending_transitions_correctly()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
+        await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+
+        await sut.MarkCancelledAsync(request.Id, "BRS-003 cancel before activation", CancellationToken.None);
+
+        var after = await _repo.GetAsync(request.Id, CancellationToken.None);
+        after!.Status.Should().Be("cancelled");
+    }
+
+    [Fact]
+    public async Task Offboarding_from_completed_transitions_correctly()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
+        await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sut.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        await sut.MarkOffboardingAsync(request.Id, CancellationToken.None);
+
+        var after = await _repo.GetAsync(request.Id, CancellationToken.None);
+        after!.Status.Should().Be("offboarding");
+    }
+
+    [Fact]
+    public async Task Final_settled_from_offboarding_transitions_correctly()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
+        await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sut.MarkCompletedAsync(request.Id, CancellationToken.None);
+        await sut.MarkOffboardingAsync(request.Id, CancellationToken.None);
+
+        await sut.MarkFinalSettledAsync(request.Id, CancellationToken.None);
+
+        var after = await _repo.GetAsync(request.Id, CancellationToken.None);
+        after!.Status.Should().Be("final_settled");
+
+        var events = await _repo.GetEventsAsync(request.Id, CancellationToken.None);
+        events.Should().Contain(e => e.EventType == "final_settled");
+    }
+
+    [Fact]
+    public async Task Cannot_offboard_from_pending()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+
+        var act = () => sut.MarkOffboardingAsync(request.Id, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Invalid transition*");
+    }
+
     /// <summary>In-memory implementation of IProcessRepository for unit testing.</summary>
-    private sealed class InMemoryProcessRepository : IProcessRepository
+    internal sealed class InMemoryProcessRepository : IProcessRepository
     {
         private readonly Dictionary<Guid, ProcessRequest> _requests = new();
         private readonly List<ProcessEvent> _events = new();

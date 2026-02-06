@@ -1,0 +1,20 @@
+{
+  "MarketDocument": {
+    "mRID": "msg-reject-001",
+    "type": "E59",
+    "Process": { "ProcessType": "E65" },
+    "Sender_MarketParticipant": {
+      "mRID": "5790001330552",
+      "MarketRole": { "type": "DGL" }
+    },
+    "Receiver_MarketParticipant": {
+      "mRID": "5790002000000",
+      "MarketRole": { "type": "DDQ" }
+    },
+    "createdDateTime": "2025-01-02T10:00:00Z",
+    "Reason": {
+      "code": "E16",
+      "text": "Invalid GSRN checksum"
+    }
+  }
+}

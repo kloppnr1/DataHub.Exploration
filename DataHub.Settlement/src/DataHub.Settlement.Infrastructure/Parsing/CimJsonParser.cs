@@ -104,6 +104,41 @@ public sealed class CimJsonParser : ICimParser
         return new ParsedMasterData(messageId, gsrn, type, settlementMethod, gridAreaCode, gridOperatorGln, priceArea, supplyStart);
     }
 
+    public Rsm004Result ParseRsm004(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement.GetProperty("MarketDocument");
+
+        var activity = root.GetProperty("MktActivityRecord");
+        var mp = activity.GetProperty("MarketEvaluationPoint");
+
+        var gsrn = mp.GetProperty("mRID").GetString()!;
+
+        string? newGridAreaCode = null;
+        if (mp.TryGetProperty("linkedMarketEvaluationPoint", out var linkedMp))
+        {
+            newGridAreaCode = linkedMp.GetProperty("mRID").GetString();
+        }
+
+        string? newSettlementMethod = null;
+        if (mp.TryGetProperty("settlementMethod", out var sm))
+        {
+            var code = sm.GetString()!;
+            newSettlementMethod = SettlementMethodMap.GetValueOrDefault(code, code);
+        }
+
+        string? newConnectionStatus = null;
+        if (mp.TryGetProperty("connectionState", out var cs))
+        {
+            newConnectionStatus = cs.GetString();
+        }
+
+        var effectiveDate = DateTimeOffset.Parse(
+            activity.GetProperty("Period").GetProperty("timeInterval").GetProperty("start").GetString()!);
+
+        return new Rsm004Result(gsrn, newGridAreaCode, newSettlementMethod, newConnectionStatus, effectiveDate);
+    }
+
     private static TimeSpan GetStep(string resolution, DateTimeOffset periodStart, DateTimeOffset periodEnd)
     {
         if (ResolutionMap.TryGetValue(resolution, out var step))
