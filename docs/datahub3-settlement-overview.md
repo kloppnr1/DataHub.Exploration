@@ -256,3 +256,4 @@ Three core services:
 | [Class diagram](datahub3-class-diagram.md) | Domain model with entities and relations |
 | [Database model](datahub3-database-model.md) | PostgreSQL/TimescaleDB schema with DDL |
 | [Edge cases and error handling](datahub3-edge-cases.md) | Corrections, cancellations, reconciliation discrepancies, system errors |
+| [CIS platform and external systems](datahub3-cis-and-external-systems.md) | ERP, customer portal, payment services, market data integrations |

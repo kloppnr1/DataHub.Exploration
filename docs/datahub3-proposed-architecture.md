@@ -248,6 +248,8 @@ Single entry point for all internal and external consumers.
 | Rates | View current tariffs, upload product margins |
 | Admin | System health, queue lag, dead-letter review |
 
+> Details: [CIS platform and external systems](datahub3-cis-and-external-systems.md) — API contracts per consumer, integration patterns, event-driven architecture
+
 ---
 
 ## Cross-cutting Concerns
@@ -509,7 +511,7 @@ Notes:
 
 - **Development environments** (actor test, preprod) — multiply by 0.5-0.7x per environment (smaller instances)
 - **Personnel/development costs** — by far the dominant cost
-- **Billing/ERP integration** — depends on target system
+- **Billing/ERP integration** — depends on target system (see [CIS and external systems](datahub3-cis-and-external-systems.md))
 - **Customer portal hosting** — if separate from backoffice
 - **Data transfer (egress)** — Azure charges for outbound data, but volumes are small (~1 GB/mo. DataHub traffic)
 - **Disaster recovery / geo-redundancy** — adds ~50% to database costs with zone-redundant HA
