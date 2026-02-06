@@ -35,46 +35,20 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 
 ## System Boundary
 
-```mermaid
-flowchart LR
-    subgraph customer_facing["Customer-Facing Systems"]
-        Portal["Customer Portal"]
-        ERP["ERP / Accounting"]
-        CRM["CRM / Sales"]
-        PBS["Payment Service (PBS)"]
-        eBoks["Digital Post (e-Boks)"]
-        Inkasso["Debt Collection (inkasso)"]
-    end
-
-    subgraph our_system["Our System"]
-        SE["Settlement Engine"]
-        CPS["Customer &\nPortfolio Service"]
-        DHI["DataHub\nIntegration Service"]
-    end
-
-    subgraph market["Market / Regulatory"]
-        DH["DataHub 3\n(Energinet)"]
-        NP["Nord Pool\n(spot prices)"]
-        EL["Eloverblik\n(GSRN lookup)"]
-    end
-
-    SE -- "consumption data,\ninvoice data" --> Portal
-    SE -- "settlement results,\ninvoice lines" --> ERP
-    ERP -- "payment status" --> CPS
-    CRM -- "new customer" --> CPS
-    CPS -- "portfolio status" --> CRM
-    PBS -- "payment received" --> DHI
-    DHI -- "payment request" --> PBS
-    DHI -- "invoice PDF" --> eBoks
-    DHI -- "overdue invoices" --> Inkasso
-    Inkasso -- "payment / write-off" --> DHI
-
-    DH -- "kWh (RSM-012),\ntariffs, RSM-014" --> SE
-    DH -- "RSM-007, RSM-004,\nBRS responses" --> DHI
-    DHI -- "BRS-001/002/009\netc." --> DH
-    NP -- "hourly spot prices\n(DK1/DK2)" --> SE
-    EL -- "GSRN data,\nhistorical consumption" --> CPS
-```
+| External system | Direction | Our system | Data exchanged |
+|-----------------|-----------|------------|----------------|
+| **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-007/004 (master data), BRS responses, tariffs |
+| **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/009/010 requests |
+| **Nord Pool** | **→** we receive | Settlement Engine | Hourly spot prices (DK1/DK2) |
+| **Eloverblik** | **→** we receive | Customer & Portfolio | GSRN data, historical consumption (onboarding) |
+| **ERP / Accounting** | **←** we send | Settlement Engine | Settlement results, invoice lines |
+| **ERP / Accounting** | **→** we receive | Customer & Portfolio | Payment status |
+| **Customer Portal** | **←** we send | Settlement Engine | Consumption data, invoice data |
+| **CRM / Sales** | **→** we receive | Customer & Portfolio | New customer + GSRN |
+| **CRM / Sales** | **←** we send | Customer & Portfolio | Portfolio status, process status |
+| **Payment Service** (PBS) | **←→** bidirectional | DataHub Integration | Payment requests out, payment confirmations in |
+| **Digital Post** (e-Boks) | **←** we send | DataHub Integration | Invoice PDFs |
+| **Debt Collection** (inkasso) | **←→** bidirectional | DataHub Integration | Overdue invoices out, payment/write-off in |
 
 ### What our system owns
 
