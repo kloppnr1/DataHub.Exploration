@@ -36,7 +36,7 @@ public class CimJsonParserRsm004Tests
         var result = _sut.ParseRsm004(json);
 
         result.Gsrn.Should().Be("571313100000012345");
-        result.NewGridAreaCode.Should().Be("740");
+        result.NewGridAreaCode.Should().Be("391");
     }
 
     [Fact]

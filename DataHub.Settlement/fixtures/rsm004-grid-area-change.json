@@ -16,7 +16,7 @@
       "MarketEvaluationPoint": {
         "mRID": "571313100000012345",
         "linkedMarketEvaluationPoint": {
-          "mRID": "740"
+          "mRID": "391"
         },
         "settlementMethod": "E02"
       },

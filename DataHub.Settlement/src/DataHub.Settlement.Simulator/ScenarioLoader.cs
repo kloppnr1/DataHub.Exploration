@@ -162,7 +162,7 @@ public static class ScenarioLoader
                     MarketEvaluationPoint = new
                     {
                         mRID = "571313100000012345",
-                        linkedMarketEvaluationPoint = new { mRID = "740" },
+                        linkedMarketEvaluationPoint = new { mRID = "391" },
                         settlementMethod = "E02",
                     },
                     Period = new { timeInterval = new { start = "2025-03-01T00:00:00Z" } },

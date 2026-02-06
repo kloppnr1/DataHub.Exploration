@@ -271,28 +271,11 @@ public sealed class SimulationService
             $"Settlement complete — subtotal {result.Subtotal:N2} DKK, VAT {result.VatAmount:N2} DKK, total {result.Total:N2} DKK"));
         await Task.Delay(1500, ct);
 
-        // ── Step 10: Receive RSM-004 (Grid Area Change) ──
-        await portfolio.EnsureGridAreaAsync("740", "5790000610877", "Radius Elnet", "DK2", ct);
-        await portfolio.UpdateMeteringPointGridAreaAsync(Gsrn, "740", "DK2", ct);
-
-        await using (var msgConn = new NpgsqlConnection(_connectionString))
-        {
-            await msgConn.OpenAsync(ct);
-            await msgConn.ExecuteAsync("""
-                INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                VALUES ('msg-rsm004-sim', 'RSM-004', NULL, 'MasterData', 'processed', 512)
-                """);
-        }
-
-        await onStepCompleted(new SimulationStep(10, "Receive RSM-004",
-            "Grid area changed from 344 (DK1) to 740 (DK2)"));
-        await Task.Delay(1000, ct);
-
-        // ── Step 11: Incoming BRS-001 (Another Supplier) ──
+        // ── Step 10: Incoming BRS-001 (Another Supplier) ──
         // Another supplier requests this metering point — triggers offboarding
         await stateMachine.MarkOffboardingAsync(processRequest.Id, ct);
 
-        await onStepCompleted(new SimulationStep(11, "Incoming BRS-001",
+        await onStepCompleted(new SimulationStep(10, "Incoming BRS-001",
             "Another supplier requested the metering point — offboarding started"));
         await Task.Delay(2000, ct);
 
@@ -315,11 +298,11 @@ public sealed class SimulationService
                 """);
         }
 
-        await onStepCompleted(new SimulationStep(12, "Receive Final RSM-012",
+        await onStepCompleted(new SimulationStep(11, "Receive Final RSM-012",
             "360 hourly readings (Feb 1-16), final metering data before departure"));
         await Task.Delay(1500, ct);
 
-        // ── Step 13: Run Final Settlement ──
+        // ── Step 12: Run Final Settlement ──
         var finalConsumption = await meteringRepo.GetConsumptionAsync(Gsrn,
             new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
@@ -365,7 +348,7 @@ public sealed class SimulationService
             new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
         await stateMachine.MarkFinalSettledAsync(processRequest.Id, ct);
 
-        await onStepCompleted(new SimulationStep(13, "Run Final Settlement",
+        await onStepCompleted(new SimulationStep(12, "Run Final Settlement",
             $"Final settlement — total {finalResult.TotalDue:N2} DKK, customer offboarded"));
     }
 }
