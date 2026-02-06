@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Phased plan for building the DataHub settlement system. Testing against DataHub is the biggest technical risk — this plan prioritizes building a local DataHub simulator early and validating against Energinet's test environments progressively.
+An agile, MVP-driven plan for building the DataHub settlement system. Each MVP delivers a working, demonstrable result — not a layer of infrastructure. Testing against DataHub is the biggest technical risk, so the DataHub simulator grows incrementally alongside the MVPs.
 
 ---
 
@@ -23,11 +23,36 @@ Energinet provides test environments (Actor Test, Preprod), but:
 
 ---
 
+## Approach: MVPs, Not Phases
+
+Instead of building the system in horizontal layers (first all integration, then all portfolio, then all settlement), we build **vertical slices** that each deliver a working end-to-end result.
+
+```
+Traditional (waterfall)              Our approach (MVP)
+──────────────────────               ──────────────────
+Phase 1: Integration                 MVP 1: One correct invoice
+Phase 2: Portfolio                     (OAuth → RSM-012 → settlement → result)
+Phase 3: Settlement                  MVP 2: Full customer lifecycle
+Phase 4: Lifecycle                     (onboarding → operation → offboarding)
+Phase 5: Reconciliation              MVP 3: Production pilot
+Phase 6: Validation                    (real customers, ERP, billing)
+                                     MVP 4: Full operation
+                                       (reconciliation, portal, scale)
+```
+
+**Why this matters:**
+- Each MVP is **demo-able** — you can show a stakeholder a calculated invoice after MVP 1, not after 20 weeks
+- **Feedback loops are short** — if the settlement calculation is wrong, you discover it in MVP 1
+- **Risk is front-loaded** — the biggest unknowns (DataHub communication + correct settlement) are resolved first
+- The simulator and test suite **grow with each MVP** — build what you need, when you need it
+
+---
+
 ## Testing Strategy: The DataHub Simulator
 
 ### What the simulator must replicate
 
-The simulator is a lightweight HTTP server that mimics the DataHub B2B API — just enough for our system to believe it is talking to the real DataHub.
+The simulator is a lightweight HTTP server that mimics the DataHub B2B API — just enough for our system to believe it is talking to the real DataHub. It starts small (MVP 1: one queue, one message type) and grows with each MVP.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -62,25 +87,33 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Simulator grows with each MVP
+
+| MVP | Simulator capabilities |
+|-----|----------------------|
+| **MVP 1** | OAuth2 token endpoint. Timeseries queue (RSM-012 only). Charges queue. Dequeue. In-process fake (`FakeDataHubClient`) for unit tests |
+| **MVP 2** | + MasterData queue (RSM-007, RSM-004). + BRS-001/002/003/009/010/042/044 request endpoints. + Scenario engine ("full onboarding", "offboarding", "rejection"). Standalone HTTP simulator (Docker) |
+| **MVP 3** | + Realistic timing and error injection (401, 503, empty queues). + Actor Test validation in parallel |
+| **MVP 4** | + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Performance scenarios (80K metering points) |
+
 ### Test fixture library
 
-The simulator is powered by **CIM JSON fixture files** — real-format messages that exercise specific scenarios:
+The simulator is powered by **CIM JSON fixture files** — real-format messages that exercise specific scenarios. Fixtures are added as each MVP needs them:
 
-| Fixture set | Contents | Tests |
-|-------------|----------|-------|
-| `rsm012-single-day.json` | One day of hourly consumption for one GSRN | Basic ingestion pipeline |
-| `rsm012-correction.json` | Same GSRN + period as above, different quantities | Correction detection + delta calculation |
-| `rsm012-multi-day.json` | 30 days of hourly data | Full monthly settlement |
-| `rsm012-production-e18.json` | Production data for a solar metering point | E18 handling, net settlement |
-| `rsm012-missing-hours.json` | Data with gaps (quality A02) | Incomplete data handling |
-| `rsm012-pt15m.json` | 15-minute resolution data | Future PT15M support |
-| `rsm007-activation.json` | Master data snapshot (E17, flex, grid area 344) | Metering point activation |
-| `rsm007-electrical-heating.json` | Master data with heating flag | Elvarme threshold tracking |
-| `rsm004-grid-area-change.json` | Master data change — grid area changed | Tariff reassignment |
-| `rsm014-aggregation.json` | Aggregated wholesale data for a grid area | Reconciliation |
-| `charges-tariff-update.json` | New grid tariff rates with validity dates | Rate table update |
-| `brs001-receipt-accepted.json` | RSM-009 acceptance of a supplier switch | Onboarding flow |
-| `brs001-receipt-rejected.json` | RSM-009 rejection (CPR mismatch) | Error handling |
+| Fixture set | Introduced in | Tests |
+|-------------|---------------|-------|
+| `rsm012-single-day.json` | MVP 1 | Basic ingestion pipeline |
+| `rsm012-multi-day.json` | MVP 1 | Full monthly settlement |
+| `rsm012-correction.json` | MVP 1 | Correction detection + delta calculation |
+| `charges-tariff-update.json` | MVP 1 | Rate table update |
+| `rsm007-activation.json` | MVP 2 | Metering point activation |
+| `rsm004-grid-area-change.json` | MVP 2 | Tariff reassignment |
+| `brs001-receipt-accepted.json` | MVP 2 | Onboarding flow |
+| `brs001-receipt-rejected.json` | MVP 2 | Error handling |
+| `rsm012-production-e18.json` | MVP 3 | E18 handling, net settlement |
+| `rsm012-missing-hours.json` | MVP 3 | Incomplete data handling |
+| `rsm007-electrical-heating.json` | MVP 3 | Elvarme threshold tracking |
+| `rsm014-aggregation.json` | MVP 4 | Reconciliation |
 
 **Where do fixtures come from?**
 
@@ -93,22 +126,10 @@ The simulator is powered by **CIM JSON fixture files** — real-format messages 
 
 | Approach | Effort | Fidelity | Recommendation |
 |----------|--------|----------|----------------|
-| **In-process fake (recommended for phase 1)** | Low | Medium | Implement `IDataHubClient` interface with an in-memory fake. No HTTP, no simulator process. Tests run fast. |
-| **Standalone HTTP server (recommended for phase 2+)** | Medium | High | ASP.NET Minimal API that serves fixture files from disk. Docker container. Closest to real DataHub behavior. |
+| **In-process fake (MVP 1)** | Low | Medium | Implement `IDataHubClient` interface with an in-memory fake. No HTTP, no simulator process. Tests run fast. |
+| **Standalone HTTP server (MVP 2+)** | Medium | High | ASP.NET Minimal API that serves fixture files from disk. Docker container. Closest to real DataHub behavior. |
 | **WireMock / Mountebank** | Low | Medium | Record/replay HTTP stubs. Good for contract tests. Less flexible for scenario-based testing. |
 | **Energinet's own test tools** | Unknown | Unknown | Check if Energinet provides a simulator or sandbox. (WARNING: VERIFY — as of 2025, no public simulator is known) |
-
-**Recommended progression:**
-
-```
-Phase 1: In-process fake (IDataHubClient)
-  ↓
-Phase 2: Standalone simulator (Docker container)
-  ↓
-Phase 3+: Simulator + Actor Test environment (parallel)
-  ↓
-Production: Real DataHub only
-```
 
 ---
 
@@ -182,200 +203,98 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 ---
 
-## Phased Implementation
+## MVP 1: One Correct Invoice
 
-### Phase 0: Foundation (weeks 1-3)
+**Goal:** Prove the entire chain works end-to-end — from DataHub connection to a verifiable settlement result for one metering point.
 
-**Goal:** Project skeleton, CI/CD, and the DataHub simulator — before writing any business logic.
+**Delivered outcome:** A calculated invoice you can put next to a hand-calculated reference and confirm they match.
 
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| Create .NET solution structure | API Gateway, DataHub Integration, Settlement Engine, Portfolio Service projects | — |
-| Set up CI/CD pipeline | Build, test, containerize on every push | GitHub Actions or Azure DevOps |
-| Set up PostgreSQL + TimescaleDB | Docker Compose for local dev, migration tool (EF Core or Flyway) | Verify container starts |
-| **Build in-process DataHub fake** | `IDataHubClient` interface + `FakeDataHubClient` with in-memory queues | Unit tests against fake |
-| **Create first CIM JSON fixtures** | `rsm012-single-day.json`, `rsm007-activation.json` from Energinet docs | Validate against CIM schema |
-| **Build standalone DataHub simulator** | ASP.NET Minimal API, Docker container, load fixtures, admin API | Smoke test: peek → dequeue cycle |
-| Apply for Actor Test access | Contact Energinet, register in actor portal, create test credentials | — |
+### What to build
 
-**Exit criteria:**
-- `docker compose up` starts the simulator, database, and our services
-- A test can enqueue an RSM-012 in the simulator, and our poller picks it up
-- CI/CD runs unit tests on every push
+| Area | Task | Test approach |
+|------|------|---------------|
+| **Foundation** | .NET solution structure, CI/CD pipeline, Docker Compose (PostgreSQL + TimescaleDB) | Verify container starts, CI runs |
+| **Simulator** | In-process `FakeDataHubClient` + first CIM JSON fixtures (`rsm012-single-day`, `rsm012-multi-day`, `charges-tariff-update`) | Unit tests against fake |
+| **Auth** | OAuth2 Auth Manager — token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint |
+| **Ingestion** | Queue Poller (Timeseries), CIM JSON Parser (RSM-012), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
+| **Idempotency** | Track MessageId, skip duplicates, dead-letter on parse failure | Integration: enqueue twice → stored once. Malformed → dead-letter |
+| **Corrections** | Compare incoming RSM-012 against stored data, calculate delta | Unit: stored + new → delta per interval |
+| **Spot prices** | Fetch and store Nord Pool prices (DK1/DK2) | Integration: mock market data → stored prices |
+| **Charges** | Parse tariff updates from Charges queue | Unit: fixture files |
+| **Settlement** | `kWh × (spot + margin)` per hour, grid tariff (time-differentiated), system/transmission tariff, elafgift, subscriptions (pro rata), VAT (25%) | Unit: **golden master tests** |
+| **Actor Test access** | Apply for access to Energinet's test environment (can run in parallel with development) | — |
 
-### Phase 1: DataHub Connection + Metering Data (weeks 4-8)
+### Golden master tests (introduced here, expanded in later MVPs)
 
-**Goal:** Receive, parse, and store RSM-012 metering data.
+Hand-calculated reference invoices that the settlement engine must reproduce exactly:
 
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| **OAuth2 Auth Manager** | Token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint. Integration: simulator token endpoint. E2E: real Azure AD (when credentials arrive) |
-| **Queue Poller** | Poll Timeseries queue, configurable interval, graceful backoff on 204 | Integration: simulator with messages + empty queue |
-| **CIM JSON Parser (RSM-012)** | Deserialize CIM JSON → domain model (MeteringPointId, period, Point[]) | Unit: parse fixture files, assert fields. Fuzz: malformed JSON → dead-letter |
-| **Time series storage** | `metering_data` hypertable, composite index on (gsrn, timestamp) | Integration: parse → store → query roundtrip |
-| **Idempotent dequeue** | Track MessageId, skip duplicates | Integration: enqueue twice → stored once |
-| **Dead-letter handling** | Failed parse/validation → dead-letter table, dequeue to free queue | Integration: malformed message → dead-letter entry |
-| **Correction detection** | Compare incoming RSM-012 against stored data, calculate delta | Unit: stored data + new data → delta per interval. Integration: original → correction via simulator |
+```
+Golden Master #1: Simple spot customer, one month
+  Input: 720 hours consumption + spot prices + grid tariffs + margin 0.04 DKK/kWh
+  Expected: hand-calculated energy + tariff + tax + subscription + VAT lines
 
-**Key testing milestone:** CIM JSON parser tests. These are the most fragile — if the real DataHub produces slightly different JSON than our fixtures, parsing breaks.
+Golden Master #2: Correction (delta settlement)
+  Input: original data + corrected data for same period
+  Expected: credit/debit note with correct delta amounts
 
-**Mitigation:**
-- Build the parser to be **tolerant** of unknown fields (ignore, don't fail)
-- Test against multiple fixture variants (different grid companies, resolutions, quality codes)
-- As soon as Actor Test access arrives: capture a real RSM-012, add it to fixtures, run parser tests
+Golden Master #3: Partial period (mid-month start)
+  Input: 15 days of data, pro rata subscriptions
+  Expected: correctly prorated amounts
+```
 
-**Exit criteria:**
-- Simulator sends RSM-012 → our system stores it in the database
+### Exit criteria
+
+- `docker compose up` starts the database and services
+- Simulator RSM-012 → parsed → stored → settlement run → invoice lines match golden master
 - Correction detection works: original + correction → delta calculated
 - Dead-letter handles malformed messages
+- CI/CD runs unit tests on every push
 - Actor Test: successfully authenticate and peek at least one message (if access granted)
-
-### Phase 2: Portfolio + Master Data (weeks 9-14)
-
-**Goal:** Receive master data, manage metering points, handle supplier switch lifecycle.
-
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| **CIM JSON Parser (RSM-007, RSM-004)** | Deserialize master data snapshots and changes | Unit: fixture files |
-| **MasterData queue poller** | Poll MasterData queue, route RSM-007 vs RSM-004 | Integration: simulator with both message types |
-| **Portfolio service** | Metering point CRUD, supply period tracking, grid area assignment | Unit: domain logic. Integration: DB roundtrip |
-| **BRS-001 request builder** | Build CIM JSON for supplier switch request | Unit: assert CIM structure. Integration: simulator validates format |
-| **BRS-001 response handler** | Parse RSM-009 acceptance/rejection | Unit: fixture files |
-| **State machine** | Metering point lifecycle states (pending → active → inactive) | Unit: state transition rules |
-| **Tariff assignment** | Grid area from RSM-007 → load correct tariff rates | Integration: master data + charges → correct rate mapping |
-| **Customer record** | CPR/CVR, contact info, product association | Unit + integration |
-
-**Simulator enhancements:**
-- MasterData queue support
-- BRS-001 inbound endpoint (validate format, return RSM-009)
-- Scenario: "full onboarding" — BRS-001 accepted → RSM-007 → first RSM-012
-
-**Exit criteria:**
-- Full onboarding scenario works against simulator: switch request → master data → first metering data
-- BRS-001 submitted to Actor Test and accepted (if access granted)
-
-### Phase 3: Settlement Engine (weeks 15-22)
-
-**Goal:** Calculate what customers owe for a billing period.
-
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| **Settlement calculation** | kWh × (spot + margin) per hour, summed per period | Unit: known inputs → known outputs (golden master tests) |
-| **Tariff application** | kWh × grid tariff rate per hour (time-differentiated) | Unit: day/night/peak rates correctly applied |
-| **Subscription proration** | Fixed fees prorated to billing period | Unit: partial periods |
-| **Electricity tax (elafgift)** | kWh × statutory rate | Unit: standard + reduced rate (elvarme) |
-| **VAT calculation** | 25% of all lines | Unit: rounding |
-| **Invoice line generation** | Aggregate hourly results into invoice lines | Unit: sums match |
-| **Spot price ingestion** | Fetch and store Nord Pool prices (DK1/DK2) | Integration: mock market data → stored prices |
-| **Charges queue parser** | Deserialize tariff updates from Charges queue | Unit: fixture files. Integration: simulator |
-| **Settlement run orchestration** | Trigger for all active metering points in a grid area | Integration: seeded DB → run → verify results |
-| **Billing export API** | Settlement results exposed for ERP consumption | Integration: API returns correct settlement data |
-
-**Critical test suite: "Golden master" settlement tests**
-
-These are the highest-value tests in the entire system. Create hand-calculated reference invoices and verify the engine reproduces them exactly:
-
-```
-Golden Master Test #1: Simple spot customer
-  Input:
-    - 720 hours of consumption (kWh per hour from fixture)
-    - 720 hours of spot prices (DKK/kWh from fixture)
-    - Grid tariff rates (day/night/peak from fixture)
-    - Supplier margin: 0.04 DKK/kWh
-    - Subscription: 39 DKK/month
-    - Elafgift: 0.008 DKK/kWh
-  Expected output:
-    - Energy line: [hand-calculated]
-    - Grid tariff line: [hand-calculated]
-    - System tariff line: [hand-calculated]
-    - Transmission tariff line: [hand-calculated]
-    - Elafgift line: [hand-calculated]
-    - Subscription lines: [hand-calculated]
-    - VAT: [hand-calculated]
-    - Total: [hand-calculated]
-
-Golden Master Test #2: Aconto customer (quarterly)
-Golden Master Test #3: Correction (delta settlement)
-Golden Master Test #4: Partial period (mid-month start)
-Golden Master Test #5: Elvarme customer crossing 4,000 kWh
-Golden Master Test #6: Solar customer with E18 production
-```
-
-**Exit criteria:**
-- All golden master tests pass
-- Full pipeline: simulator metering data → settlement run → invoice lines match expected
-- Charges queue parsed and rates applied correctly
-
-### Phase 4: Full Lifecycle (weeks 23-28)
-
-**Goal:** Handle all BRS processes — cancellations, reversals, moves, terminations.
-
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| **BRS-002 (end of supply)** | Build request, handle response | Unit + simulator |
-| **BRS-003 (cancel switch)** | Cancel before effective date | Unit: state machine transition |
-| **BRS-009 (move-in)** | Initiate move-in | Unit + simulator |
-| **BRS-010 (move-out)** | Handle move-out | Unit + simulator |
-| **BRS-042 (erroneous switch)** | Reverse a switch, credit invoices | Integration: full reversal flow |
-| **BRS-044 (cancel termination)** | Cancel supply termination | Unit: state machine |
-| **Final settlement** | Partial period + aconto settlement at offboarding | Unit: golden master |
-| **Credit/debit notes** | Generate correction invoice after reversal | Integration |
-
-**Simulator enhancements:**
-- All BRS request endpoints
-- Scenario: "full lifecycle" — onboarding → operation → offboarding → final settlement
-
-**Exit criteria:**
-- All offboarding scenarios work against simulator
-- State machine handles all BRS transitions correctly
-- Final settlement and aconto settlement produce correct results
-
-### Phase 5: Wholesale Reconciliation + Charges (weeks 29-34)
-
-**Goal:** Reconcile our settlement against DataHub's wholesale settlement.
-
-| Task | Detail | Test approach |
-|------|--------|---------------|
-| **RSM-014 parser** | Deserialize aggregated wholesale data | Unit: fixtures |
-| **Reconciliation engine** | Compare own settlement vs. DataHub aggregation | Unit: matching + discrepancy scenarios |
-| **RSM-015 request** | Request historical validated data | Integration: simulator |
-| **RSM-016 request** | Request detailed aggregated data | Integration: simulator |
-| **Discrepancy analysis** | Identify deviating metering points | Unit |
-| **Charges queue (full)** | Parse all tariff/charge types, validity periods | Unit + integration |
-
-**Simulator enhancements:**
-- Aggregations queue with RSM-014 fixtures
-- RSM-015/016 response endpoints
-- Scenario: "reconciliation with discrepancy" — own settlement differs from RSM-014
-
-**Exit criteria:**
-- Reconciliation detects discrepancies and identifies affected metering points
-- Missing data triggers RSM-015 request → historical data received → recalculation
-
-### Phase 6: Actor Test Validation + Hardening (weeks 35-40)
-
-**Goal:** Validate everything against Energinet's real test environment.
-
-| Task | Detail |
-|------|--------|
-| **Actor Test: full flow** | BRS-001 → RSM-007 → RSM-012 → settlement → BRS-002 |
-| **Capture real messages** | Save real CIM JSON from Actor Test → add to fixture library |
-| **Parser hardening** | Fix any parsing failures discovered with real messages |
-| **Edge case discovery** | Document differences between simulator and real DataHub |
-| **Performance test** | Simulate 80K metering points against local simulator |
-| **Preprod validation** | Final validation against production-like environment |
-| **Security audit** | GDPR compliance, secret management, audit logging |
-
-**This phase is about discovering what the simulator got wrong.** Every real message that breaks our parser is a fixture added to the test suite.
 
 ---
 
-## DataHub Simulator: Detailed Scenarios
+## MVP 2: Full Customer Lifecycle
 
-Predefined test scenarios that exercise complete workflows:
+**Goal:** Handle a customer from onboarding to offboarding — all BRS processes, all state transitions. A customer can be signed up, activated, operated, and terminated through the system.
 
-### Scenario 1: Happy path onboarding
+**Delivered outcome:** Run the "full lifecycle" simulator scenario — a customer goes through every phase and the system handles each step correctly.
 
+### What to build
+
+| Area | Task | Test approach |
+|------|------|---------------|
+| **Simulator** | Upgrade to standalone HTTP server (Docker). MasterData queue. All BRS request endpoints. Scenario engine | Integration: full lifecycle scenario |
+| **Master data** | CIM JSON Parser (RSM-007, RSM-004). MasterData queue poller | Unit: fixtures. Integration: simulator |
+| **Portfolio** | Metering point CRUD, supply period tracking, grid area assignment, tariff assignment | Unit: domain logic. Integration: DB roundtrip |
+| **Customer** | Customer record (CPR/CVR, contact, product association). Eloverblik GSRN lookup at onboarding | Unit + integration |
+| **Onboarding** | BRS-001 request builder + RSM-009 response handler. BRS-043 (short notice). BRS-009 (move-in). BRS-015 (customer master data) | Unit: CIM structure. Integration: simulator validates format, returns response |
+| **State machine** | ProcessRequest lifecycle: Pending → SentToDataHub → Acknowledged → EffectuationPending → Completed (and Rejected, Cancelled) | Unit: state transition rules |
+| **Cancellation** | BRS-003 (cancel switch before effective date) | Unit: state machine. Integration: simulator |
+| **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer) | Unit + integration: simulator |
+| **Erroneous processes** | BRS-042 (erroneous switch — reverse and credit). BRS-011 (erroneous move — adjust dates and recalculate) | Integration: full reversal flow |
+| **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
+| **Credit/debit notes** | Generate correction invoices after reversals or corrections | Integration |
+| **Aconto** | Aconto estimation (new customer from Eloverblik data, existing from 12-month history). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
+
+### New golden master tests
+
+```
+Golden Master #4: Aconto customer, quarterly settlement
+  Input: 3 months data, aconto payments, combined invoice
+  Expected: settlement part + aconto difference + new aconto estimate
+
+Golden Master #5: Final settlement at offboarding (partial quarter)
+  Input: 6 weeks of data (mid-quarter departure), aconto paid
+  Expected: prorated settlement, aconto difference, final invoice
+
+Golden Master #6: Erroneous switch reversal
+  Input: 2 months of data for an erroneous period
+  Expected: all invoices credited, metering point reversed
+```
+
+### Simulator scenarios
+
+**Scenario: Happy path onboarding**
 ```
 1. System sends BRS-001 (supplier switch)
    → Simulator returns RSM-009 (accepted)
@@ -388,19 +307,7 @@ Predefined test scenarios that exercise complete workflows:
 6. System runs settlement → produces invoice lines
 ```
 
-### Scenario 2: Correction
-
-```
-1. Simulator enqueues RSM-012 (original: 1.5 kWh for hour 14:00)
-2. System stores data
-3. System runs settlement → original invoice
-4. Simulator enqueues RSM-012 (correction: 2.0 kWh for hour 14:00)
-5. System detects delta (+0.5 kWh), calculates financial impact
-6. System generates credit/debit note
-```
-
-### Scenario 3: Rejection and retry
-
+**Scenario: Rejection and retry**
 ```
 1. System sends BRS-001 with incorrect CPR
    → Simulator returns RSM-009 (rejected, reason: CPR mismatch)
@@ -409,8 +316,73 @@ Predefined test scenarios that exercise complete workflows:
    → Simulator returns RSM-009 (accepted)
 ```
 
-### Scenario 4: Token expiry during polling
+**Scenario: Full lifecycle (onboarding → operation → offboarding)**
+```
+1. BRS-001 → accepted → RSM-007 → RSM-012 (30 days)
+2. Settlement run → invoice
+3. Incoming BRS-001 from another DDQ (customer leaving)
+4. Final RSM-012 (up to switch date)
+5. Mark metering point inactive
+6. Final settlement (partial period) + aconto settlement
+7. Final invoice generated
+```
 
+**Scenario: Cancellation before activation**
+```
+1. BRS-001 → accepted
+2. Customer withdraws → BRS-003 sent
+3. Simulator confirms cancellation
+4. State machine: Acknowledged → Cancelled
+5. Billing plans cleaned up
+```
+
+### Exit criteria
+
+- Full lifecycle scenario works end-to-end against simulator (onboarding → operation → offboarding → final invoice)
+- All BRS processes can be submitted and responses handled
+- State machine handles all transitions correctly (including error paths: rejection, cancellation, reversal)
+- Aconto quarterly cycle works (estimation → payment → settlement → combined invoice)
+- Final settlement and aconto settlement produce correct results (golden masters pass)
+- BRS-001 submitted to Actor Test and accepted (if access granted)
+
+---
+
+## MVP 3: Production Pilot
+
+**Goal:** Bill real customers through the system. A small batch (10-50 metering points) runs through the full flow with real DataHub communication and real ERP integration.
+
+**Delivered outcome:** First real invoices sent to customers, calculated and verified by the system.
+
+### What to build
+
+| Area | Task | Test approach |
+|------|------|---------------|
+| **Actor Test validation** | Full flow against real DataHub: BRS-001 → RSM-007 → RSM-012 → settlement → BRS-002 | E2E: real messages, real responses |
+| **Parser hardening** | Fix any parsing failures discovered with real messages. Add every real CIM JSON to fixture library | Capture → fixture → regression test |
+| **ERP integration** | Settlement results → ERP export (invoice generation, receivables). Domain events: `settlement.completed`, `customer.activated` | Integration: API returns correct data |
+| **Payment services** | Betalingsservice (PBS) integration for recurring payments | Integration: payment file generation |
+| **Digital post** | e-Boks integration for invoice delivery | Integration: document format + delivery |
+| **Error injection** | Simulator: 401 (token expiry), 503 (unavailable), empty queues, malformed messages | Integration: system recovers gracefully |
+| **Elvarme** | Electrical heating threshold tracking (4,000 kWh, split rate) | Unit: golden master |
+| **Solar** | E18 production metering points, hourly net settlement, production credit | Unit: golden master |
+| **Monitoring** | Health checks, alerting, audit logging (CorrelationId, GDPR compliance) | — |
+| **Pilot migration** | Onboard 10-50 real customers, verify first settlement against manual calculation | Manual verification |
+
+### New golden master tests
+
+```
+Golden Master #7: Elvarme customer crossing 4,000 kWh threshold
+  Input: cumulative consumption crossing threshold mid-period
+  Expected: split rate (standard below, reduced above)
+
+Golden Master #8: Solar customer with E18 production
+  Input: E17 consumption + E18 production per hour
+  Expected: net settlement per hour, production credit at spot price
+```
+
+### Simulator scenarios
+
+**Scenario: Token expiry during polling**
 ```
 1. Simulator issues token with 5-second TTL
 2. System starts polling → first peek succeeds
@@ -419,8 +391,7 @@ Predefined test scenarios that exercise complete workflows:
 5. System fetches new token → retries → succeeds
 ```
 
-### Scenario 5: DataHub unavailable
-
+**Scenario: DataHub unavailable**
 ```
 1. Simulator configured to return 503 for all requests
 2. System retries with exponential backoff
@@ -429,8 +400,7 @@ Predefined test scenarios that exercise complete workflows:
 5. No messages lost (at-least-once guarantee)
 ```
 
-### Scenario 6: Malformed message
-
+**Scenario: Malformed message**
 ```
 1. Simulator enqueues invalid CIM JSON (missing required fields)
 2. System attempts to parse → fails
@@ -439,20 +409,38 @@ Predefined test scenarios that exercise complete workflows:
 5. Next message (valid) is processed normally
 ```
 
-### Scenario 7: Full offboarding (aconto customer)
+### Exit criteria
 
-```
-1. Metering point is active with 2 months of data
-2. Simulator sends notification: incoming BRS-001 from another DDQ
-3. Simulator enqueues final RSM-012 (up to switch date)
-4. System marks metering point inactive
-5. System runs final settlement (partial period)
-6. System calculates aconto settlement (actual vs. paid)
-7. Final invoice generated
-```
+- Full flow works against Energinet Actor Test with real messages
+- Every real CIM JSON that broke the parser is now a fixture in the test suite
+- ERP receives settlement results and generates invoices
+- 10-50 real customers billed through the system
+- First invoices verified against manual calculation
+- Monitoring and alerting in place
 
-### Scenario 8: Wholesale reconciliation discrepancy
+---
 
+## MVP 4: Full Operation
+
+**Goal:** The system runs the entire business. Full portfolio migration, wholesale reconciliation, customer portal, and scale.
+
+**Delivered outcome:** All customers billed through the system. Wholesale reconciliation runs monthly. Self-service portal live.
+
+### What to build
+
+| Area | Task | Test approach |
+|------|------|---------------|
+| **Wholesale reconciliation** | RSM-014 parser. Compare own settlement vs. DataHub aggregation. Discrepancy analysis | Unit: matching + discrepancy. Integration: simulator |
+| **Historical data requests** | RSM-015 (request validated data). RSM-016 (request aggregated data) | Integration: simulator |
+| **Customer portal** | Consumption graphs, invoice history, contract details, contact info | Integration + E2E |
+| **Full portfolio migration** | Migrate all customers from existing system | Migration scripts + verification |
+| **Preprod validation** | Final validation against production-like environment | E2E |
+| **Performance** | Load test: 80K metering points, daily ingestion, monthly settlement | Simulator at scale |
+| **Security audit** | GDPR compliance review, secret management, ISAE 3402 requirements | — |
+
+### Simulator scenarios
+
+**Scenario: Wholesale reconciliation discrepancy**
 ```
 1. System has completed settlement for grid area 344, January
 2. Simulator enqueues RSM-014 with aggregated data that differs by 50 kWh
@@ -465,6 +453,14 @@ Predefined test scenarios that exercise complete workflows:
 9. System recalculates and the discrepancy resolves
 ```
 
+### Exit criteria
+
+- All customers migrated and billed through the system
+- Wholesale reconciliation runs monthly and discrepancies are identified and resolved
+- Customer portal live
+- Performance validated at full portfolio scale
+- Security audit passed
+
 ---
 
 ## Risk Register
@@ -472,12 +468,12 @@ Predefined test scenarios that exercise complete workflows:
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
 | **Real CIM JSON differs from our fixtures** | Parser breaks in Actor Test | High | Capture real messages early. Build parser to tolerate unknown fields. Add every failing message to fixture library |
-| **Actor Test access delayed** | Cannot validate against real DataHub | Medium | Simulator covers most cases. Apply for access in Phase 0 |
+| **Actor Test access delayed** | Cannot validate against real DataHub | Medium | Simulator covers most cases. Apply for access in MVP 1 |
 | **Correction detection misses edge cases** | Incorrect invoices | Medium | Comprehensive unit tests. Golden master tests. Compare against manual calculation |
 | **Settlement rounding differs from DataHub** | Reconciliation discrepancies | High | Test with real RSM-014 data. Match DataHub's rounding rules (WARNING: VERIFY) |
 | **Queue behavior differs from documentation** | Poller fails in production | Medium | Actor Test validation. Test peek/dequeue sequencing |
 | **Rate changes mid-period** | Incorrect tariff application | Medium | Time-differentiated rate lookup with `valid_from`/`valid_to`. Unit tests with rate changes |
-| **PT15M transition** | 4x data volume, different resolution handling | Low (future) | Phase 6. Parser already supports PT15M. Load test with simulator |
+| **PT15M transition** | 4x data volume, different resolution handling | Low (future) | Parser already supports PT15M. Load test with simulator |
 | **OAuth2 token edge cases** | Authentication failures | Low | Simulator tests for expiry, renewal, concurrent requests |
 | **CIM schema version change** | Parser breaks after DataHub update | Medium | Monitor Energinet release notes. Fixture versioning. Parser tolerance for unknown fields |
 | **Spot price provider unavailable** | Settlement cannot run | Low | Alert + retry. Settlement engine halts gracefully for missing prices |
@@ -502,8 +498,8 @@ IDataHubClient
 ```
 
 Three implementations:
-- `FakeDataHubClient` — in-memory, for unit/domain tests
-- `SimulatorDataHubClient` — points to Docker simulator, for integration tests
+- `FakeDataHubClient` — in-memory, for unit/domain tests (MVP 1)
+- `SimulatorDataHubClient` — points to Docker simulator, for integration tests (MVP 2+)
 - `RealDataHubClient` — points to DataHub (Actor Test / Preprod / Prod)
 
 Switching between them is a configuration change, not a code change.
@@ -563,28 +559,23 @@ Push to main
 
 ---
 
-## Timeline Summary
+## MVP Summary
 
-| Phase | Weeks | Focus | Key deliverable |
-|-------|-------|-------|----------------|
-| 0 | 1-3 | Foundation + simulator | Docker Compose with simulator, DB, CI/CD |
-| 1 | 4-8 | Metering data ingestion | RSM-012 → parsed → stored. Correction detection |
-| 2 | 9-14 | Portfolio + master data | BRS-001 lifecycle. Metering point management |
-| 3 | 15-22 | Settlement engine | Golden master tests pass. Invoice lines correct |
-| 4 | 23-28 | Full lifecycle | All BRS processes. Final settlement |
-| 5 | 29-34 | Wholesale reconciliation | RSM-014 comparison. Discrepancy resolution |
-| 6 | 35-40 | Actor Test validation | Real DataHub messages. Parser hardening |
+| MVP | Focus | Key deliverable | Depends on |
+|-----|-------|----------------|------------|
+| **1** | One correct invoice | DataHub connection → RSM-012 ingestion → settlement → verified result | — |
+| **2** | Full customer lifecycle | All BRS processes. Onboarding → operation → offboarding → final settlement | MVP 1 |
+| **3** | Production pilot | Real customers (10-50). ERP integration. Real DataHub. Parser hardening | MVP 2 + Actor Test access |
+| **4** | Full operation | All customers. Wholesale reconciliation. Portal. Scale | MVP 3 |
 
-**Total:** ~40 weeks for a working system validated against Energinet's test environment.
-
-**Critical path:** Actor Test access. Apply in Phase 0. If access is delayed, Phase 6 shifts but Phases 0-5 proceed against the simulator.
+**Critical path:** Actor Test access. Apply during MVP 1. If access is delayed, MVP 2 proceeds against the simulator, and Actor Test validation shifts to MVP 3.
 
 ---
 
 ## Sources
 
 - [Settlement overview](datahub3-settlement-overview.md) — what settlement is and how it works
-- [System architecture](datahub3-proposed-architecture.md) — phased rollout, technology choices, cost estimates
+- [System architecture](datahub3-proposed-architecture.md) — technology choices, cost estimates
 - [Customer lifecycle](datahub3-customer-lifecycle.md) — phases from onboarding to closing
 - [RSM-012 reference](rsm-012-datahub3-measure-data.md) — CIM message format, API endpoints, correction flow
 - [Authentication and security](datahub3-authentication-security.md) — OAuth2, test environments, credentials
