@@ -11,7 +11,7 @@ Pilretning: `→` = vi sender til DataHub, `←` = vi modtager fra DataHub.
 ```
 FASE 1: ONBOARDING                                              ~15 hverdage
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kontrakt underskrevet — kunde vælger Verdo som leverandør
+Trigger:      Kontrakt underskrevet — kunde vælger os som leverandør
 DataHub:      → BRS-001 (leverandørskifte) med GSRN + ønsket dato + CPR/CVR
               → BRS-043 (kort varsel) eller → BRS-009 (tilflytning)
               → BRS-015 (indsend kundestamdata)
@@ -37,7 +37,7 @@ Trigger:      Første faktureringsperiode afsluttet
 DataHub:      ← RSM-012 (løbende timemåledata — dagligt for flex)
               ← RSM-014 (aggregerede data til afstemning)
 Fakturering:  Afregningskørsel pr. time for hele perioden:
-                energi        = kWh × (Nordpool spot + Verdo-margin)
+                energi        = kWh × (Nordpool spot + leverandørmargin)
                 nettarif      = kWh × tarifsats (tidsdiff. dag/nat/spids)
                 produktmargin = kWh × produktsats
                 + abonnement (dagssats) + elafgift (kWh) + moms (25%)
@@ -124,25 +124,25 @@ SÆRTILFÆLDE (kan forekomme i enhver fase)
 
 En faktura beregnes pr. time (flexafregning) for hele faktureringsperioden. Hver time har sit eget forbrug (kWh fra RSM-012) og sin egen spotpris fra Nordpool.
 
-### Energi (Nordpool spot + Verdo-margin)
+### Energi (Nordpool spot + leverandørmargin)
 
 Energiprisen pr. time sammensættes af to dele:
 
 | Komponent | Kilde | Beskrivelse |
 |-----------|-------|-------------|
 | Nordpool spotpris | Elbørsen via markedsdata | Timepris i DKK/kWh, varierer time for time |
-| Verdo-margin (tillæg) | Produktplan / kontraktvilkår | Fast øre/kWh-tillæg oven på spotprisen |
+| leverandørmargin (tillæg) | Produktplan / kontraktvilkår | Fast øre/kWh-tillæg oven på spotprisen |
 
 ```
-Energi pr. time = kWh × (spotpris + Verdo-margin)
+Energi pr. time = kWh × (spotpris + leverandørmargin)
 ```
 
 I Xellent er dette forudberegnet:
 - `PowerExchangePrice` = ren Nordpool spotpris
-- `CalculatedPrice` = spotpris + Verdo-margin (allerede sammenlagt)
+- `CalculatedPrice` = spotpris + leverandørmargin (allerede sammenlagt)
 - `TimeValue` = kWh forbrugt i timen
 
-Verdo-marginen er den fortjeneste Verdo tager pr. kWh oven på indkøbsprisen fra Nordpool. Størrelsen afhænger af kundens produktplan (f.eks. fast tillæg på X øre/kWh).
+Leverandørmarginen er den fortjeneste leverandøren tager pr. kWh oven på indkøbsprisen fra Nordpool. Størrelsen afhænger af kundens produktplan (f.eks. fast tillæg på X øre/kWh).
 
 ### Nettariffer (transport)
 
@@ -173,7 +173,7 @@ Produktmargin pr. time = kWh × produktsats
 | Gebyr | Kilde | Beregning |
 |-------|-------|-----------|
 | Netabonnement | Netvirksomhed | Fast månedligt beløb, fordelt pr. dag |
-| Eget abonnement (Verdo) | Produktplan | Fast månedligt beløb, fordelt pr. dag |
+| Eget abonnement (leverandør) | Produktplan | Fast månedligt beløb, fordelt pr. dag |
 
 ### Afgifter og moms
 
@@ -186,7 +186,7 @@ Produktmargin pr. time = kWh × produktsats
 
 ```
 For hver time i faktureringsperioden:
-  energi        = kWh × (Nordpool spotpris + Verdo-margin)
+  energi        = kWh × (Nordpool spotpris + leverandørmargin)
   nettarif      = kWh × tarifsats_for_timen
   produktmargin = kWh × produktsats
   elafgift      = kWh × afgiftssats
@@ -201,7 +201,7 @@ Fakturatotal  = sum af alle linjer + moms
 
 1. Hent RSM-012-måledata for perioden (kWh pr. time)
 2. Hent Nordpool-spotpriser for samme timer
-3. Bekræft at `CalculatedPrice ≈ spotpris + aftalt Verdo-margin` for hver time
+3. Bekræft at `CalculatedPrice ≈ spotpris + aftalt leverandørmargin` for hver time
 4. Hent gældende tarifsatser fra netvirksomheden for perioden
 5. Beregn hver komponent pr. time og summér
 6. Sammenlign med engrosopgørelse (RSM-014 / BRS-027) for afstemning

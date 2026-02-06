@@ -6,14 +6,14 @@ Hvad bestemmer en privatkunde's faktura? Denne guide gennemgår alle parametre d
 
 ## Kundens produkt = en samling af prisparametre
 
-Når en privatkunde tegner en aftale, vælger de et **produkt** (f.eks. "Verdo Spot", "Verdo Grøn", "Verdo Fast"). Produktet bestemmer de variable parametre vi selv kontrollerer. Resten er bestemt af eksterne parter.
+Når en privatkunde tegner en aftale, vælger de et **produkt** (f.eks. "Spot", "Grøn", "Fastpris"). Produktet bestemmer de variable parametre vi selv kontrollerer. Resten er bestemt af eksterne parter.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  PRODUKTET (det vi selv bestemmer)                           │
 │                                                              │
 │  • Energimodel:      Spot / fast pris / blanding            │
-│  • Verdo-margin:     X øre/kWh oven på spotpris             │
+│  • Leverandørmargin: X øre/kWh oven på spotpris             │
 │  • Produkttillæg:    Ekstra øre/kWh (f.eks. grøn energi)   │
 │  • Abonnement:       Fast månedligt gebyr (kr./md.)         │
 │  • Faktureringsfrekvens:  Månedligt / kvartalsvist          │
@@ -54,7 +54,7 @@ En typisk månedsfaktura for en privatkunde på spotprodukt (bagudbetaling):
 │  Elforsyning (spot + margin)          450 kWh × gns. 0,92 kr.  414,00│
 │                                                                       │
 │  TRANSPORT OG SYSTEMOMKOSTNINGER                                      │
-│  Nettarif (N1/Radius/Verdo Net)       450 kWh × gns. 0,14 kr.   63,00│
+│  Nettarif (netvirksomhed)              450 kWh × gns. 0,14 kr.   63,00│
 │  Systemtarif (Energinet)              450 kWh × 0,054 kr.        24,30│
 │  Transmissionstarif (Energinet)       450 kWh × 0,049 kr.        22,05│
 │                                                                       │
@@ -62,8 +62,8 @@ En typisk månedsfaktura for en privatkunde på spotprodukt (bagudbetaling):
 │  Elafgift                             450 kWh × 0,008 kr.         3,60│
 │                                                                       │
 │  ABONNEMENTER                                                         │
-│  Netabonnement (N1/Radius/Verdo Net)                               49,00│
-│  Verdo abonnement                                                  39,00│
+│  Netabonnement (netvirksomhed)                                    49,00│
+│  Leverandørabonnement                                             39,00│
 │                                                                       │
 │  ────────────────────────────────────────────────────────────         │
 │  Subtotal                                                     614,95│
@@ -80,13 +80,13 @@ For acontokunder: denne beregning sker bag scenen. Kunden ser den først som del
 
 | # | Fakturalinje | Beregning | Hvem bestemmer prisen | Variabel/fast |
 |---|-------------|-----------|----------------------|---------------|
-| 1 | **Elforsyning** | kWh × (spotpris + Verdo-margin) pr. time, summeret | Nordpool + os | Variabel (time for time) |
+| 1 | **Elforsyning** | kWh × (spotpris + leverandørmargin) pr. time, summeret | Nordpool + os | Variabel (time for time) |
 | 2 | **Nettarif** | kWh × netvirksomhedens sats pr. time | Netvirksomheden | Variabel (tidsdifferentieret) |
 | 3 | **Systemtarif** | kWh × Energinets sats | Energinet | Variabel (kWh-baseret, men sats sjældent ændres) |
 | 4 | **Transmissionstarif** | kWh × Energinets sats | Energinet | Variabel (kWh-baseret, men sats sjældent ændres) |
 | 5 | **Elafgift** | kWh × lovbestemt sats | Staten | Variabel (kWh-baseret, sats ændres årligt) |
 | 6 | **Netabonnement** | Fast kr./måned | Netvirksomheden | Fast |
-| 7 | **Verdo abonnement** | Fast kr./måned | Os | Fast |
+| 7 | **Leverandørabonnement** | Fast kr./måned | Os | Fast |
 | 8 | **Moms** | 25% af linje 1-7 | Staten | Beregnet |
 
 **Nøglepointe:** Linje 1-5 er alle `kWh × sats` — det er derfor RSM-012 (forbrugsdata) er så central. Uden kWh-data kan vi ikke beregne 5 ud af 8 linjer.
@@ -97,10 +97,10 @@ For acontokunder: denne beregning sker bag scenen. Kunden ser den først som del
 
 Det vigtigste produktvalg er **energimodellen** — hvordan spotprisen håndteres:
 
-| Model | Hvad kunden betaler | Verdos risiko | Typisk for |
+| Model | Hvad kunden betaler | Leverandørens risiko | Typisk for |
 |-------|--------------------|--------------| -----------|
 | **Spot** | Nordpool-timepris + fast margin (f.eks. +4 øre/kWh) | Ingen — kunden bærer prisrisiko | De fleste privatkunder |
-| **Fastpris** | Aftalt fast pris pr. kWh (f.eks. 0,95 kr.) for en periode | Verdo bærer prisrisiko (hedging nødvendig) | Kunder der vil have forudsigelighed |
+| **Fastpris** | Aftalt fast pris pr. kWh (f.eks. 0,95 kr.) for en periode | Leverandøren bærer prisrisiko (hedging nødvendig) | Kunder der vil have forudsigelighed |
 | **Blanding** | Del spot, del fast — eller spotpris med prisloft | Delt risiko | Nicheprodukt |
 
 For spot-modellen beregnes energilinjen pr. time:
@@ -145,7 +145,7 @@ En privatkunde kan typisk vælge mellem to betalingsmodeller. Valget påvirker *
 | **Faktureringsfrekvens** | Kvartalsvis (4 fakturaer/år) | Månedlig (12 fakturaer/år) |
 | **Opgørelse** | Hvert kvartal: faktisk forbrug vs. aconto | Ingen opgørelse nødvendig — fakturaen ER endelig |
 | **Betalingstidspunkt** | Forud (betaler for kommende periode) | Bagud (betaler for afsluttet periode) |
-| **For Verdo** | Jævn, forudsigelig cash flow | Verdo lægger ud for net/afgifter inden kundens betaling |
+| **For leverandøren** | Jævn, forudsigelig cash flow | Leverandøren lægger ud for net/afgifter inden kundens betaling |
 | **For kunden** | Færre fakturaer, men periodevis opgørelse | Fuld gennemsigtighed, ingen overraskelser |
 | **Betalingsgebyr** | 4 × gebyr pr. år | 12 × gebyr pr. år |
 
@@ -163,7 +163,7 @@ Alle fire kvartaler følger **samme cyklus** — der er ingen særlig årlig opg
 
 ### Hvorfor aconto?
 
-Acontos primære formål er **cash flow for Verdo**:
+Acontos primære formål er **cash flow for leverandøren**:
 
 - Vi modtager penge **forud** uanset sæsonudsving i forbrug og spotpriser
 - Under engrosmodellen betaler vi netvirksomhed, Energinet og stat for kunden — aconto sikrer at vi har likviditet til dette
@@ -184,7 +184,7 @@ Estimeret årsforbrug (kWh)                    ← Fra DataHub, eller standardes
                                                   Lejlighed: ~2.500 kWh/år
                                                   Hus:       ~4.000 kWh/år
 × forventet gennemsnitspris (alle komponenter)← Spot + margin + tariffer + afgifter
-+ abonnementer (net + Verdo, 12 måneder)
++ abonnementer (net + leverandør, 12 måneder)
 + moms (25%)
 = Estimeret årsomkostning
 ÷ 4 kvartaler
@@ -229,7 +229,7 @@ Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
 │    Transmissionstarif (Energinet)                        66,15 kr.    │
 │    Elafgift                                              10,80 kr.    │
 │    Netabonnement (3 × 49 kr.)                           147,00 kr.    │
-│    Verdo abonnement (3 × 39 kr.)                        117,00 kr.    │
+│    Leverandørabonnement (3 × 39 kr.)                     117,00 kr.    │
 │    Moms (25%)                                           488,21 kr.    │
 │    ───────────────────────────────────────────────                    │
 │    Total faktisk omkostning Q1:                       2.441,06 kr.    │
@@ -351,14 +351,14 @@ Det betyder:
 |-----------|-------|-----------------|----------|
 | Kundens forbrug (kWh/time) | RSM-012 fra DataHub | Dagligt | Alt kWh-baseret |
 | Nordpool spotpris | Ekstern markedsdata | Time for time | Energilinje |
-| Verdo-margin | Produktplan/kontrakt | Ved kontraktændring | Energilinje |
+| Leverandørmargin | Produktplan/kontrakt | Ved kontraktændring | Energilinje |
 | Produkttillæg | Produktplan | Ved produktskift | Energilinje |
 | Nettarif | Charges-kø (netvirksomhed) | 1-2x årligt | Nettariflinje |
 | Systemtarif | Charges-kø (Energinet) | 1-2x årligt | Systemtariflinje |
 | Transmissionstarif | Charges-kø (Energinet) | 1-2x årligt | Transmissionslinje |
 | Elafgift | Lovgivning | Årligt (1. jan) | Afgiftslinje |
 | Netabonnement | Charges-kø (netvirksomhed) | 1-2x årligt | Abonnementslinje |
-| Verdo abonnement | Produktplan | Ved kontraktændring | Abonnementslinje |
+| Leverandørabonnement | Produktplan | Ved kontraktændring | Abonnementslinje |
 | Moms | Lovgivning | Sjældent | Momslinje |
 | Netområde | RSM-007 (ved aktivering) | Ved flytning | Bestemmer hvilke tariffer |
 | Faktureringsfrekvens | Kontrakt | Ved kontraktændring | Periodeinddeling |

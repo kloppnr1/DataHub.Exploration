@@ -1,6 +1,6 @@
 # Foreslået arkitektur: Afregningssystem til DataHub 3
 
-Overordnet arkitektur for et nyt afregningssystem der opererer som elleverandør (DDQ) i Energinet DataHub 3, med ca. 80.000 kunder.
+Overordnet arkitektur for et open source-afregningssystem der opererer som elleverandør (DDQ) i Energinet DataHub 3. Eksemplerne nedenfor er dimensioneret til ~80.000 kunder.
 
 ## Datavolumen-estimater
 

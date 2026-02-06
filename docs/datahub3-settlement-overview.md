@@ -2,7 +2,7 @@
 
 ## Hvad handler projektet om?
 
-Vi er en elleverandør (DDQ) med ~80.000 kunder. Vi skal bygge et system der:
+Vi er en elleverandør (DDQ). Vi skal bygge et open source-system der:
 
 1. **Modtager data** fra Energinets centrale datahub (DataHub 3)
 2. **Beregner fakturaer** ud fra forbrug, markedspriser og tariffer
@@ -16,7 +16,7 @@ Alt foregår via en REST API med JSON-køer, sikret med OAuth2.
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐
-│ Netvirksomhed│     │   DataHub    │     │    Verdo     │     │  Kunde   │
+│ Netvirksomhed│     │   DataHub    │     │  Leverandør  │     │  Kunde   │
 │ (måler strøm)│────→│ (central hub)│────→│ (os/systemet)│────→│          │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────┘
   Aflæser målere       Validerer og         Beregner og          Modtager
@@ -25,7 +25,7 @@ Alt foregår via en REST API med JSON-køer, sikret med OAuth2.
 
 - **Netvirksomheden** ejer elnettet og aflæser målerne. Vi styrer dem ikke.
 - **DataHub** er Energinets centrale platform. Al markedskommunikation går igennem den.
-- **Verdo (os)** modtager data og fakturerer kunden.
+- **Leverandøren (os)** modtager data og fakturerer kunden.
 - Vi kommunikerer **aldrig direkte** med netvirksomheden — DataHub er altid mellemmand.
 
 ---
@@ -97,7 +97,7 @@ En faktura består af disse lag — hver med sin egen priskilde:
 | **Netvirksomheden** (DDM) | Nettarif (transport i lokalt net) + netabonnement | Charges-kø via DataHub |
 | **Energinet** (TSO) | Systemtarif + transmissionstarif | Charges-kø via DataHub |
 | **Staten** | Elafgift + moms (25%) | Lovgivning — vi vedligeholder satserne manuelt |
-| **Os selv** (Verdo) | Verdo-margin + produkttillæg + eget abonnement | Kontraktvilkår / produktplan |
+| **Os selv** (leverandøren) | Leverandørmargin + produkttillæg + eget abonnement | Kontraktvilkår / produktplan |
 
 Alle kWh-baserede priser ganges med det **samme forbrug** fra RSM-012.
 
