@@ -1,6 +1,8 @@
-# MVP 1 Implementation Plan
+# MVP 1: Sunshine Scenario — Implementation Plan
 
-One correct invoice: DataHub → ingestion → settlement → verifiable result for a single metering point. Happy path only.
+Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch (BRS-001), metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
+
+**Delivered outcome:** A customer is signed up, the switch is accepted, master data and metering data arrive, and the settlement run produces an invoice that matches a hand-calculated golden master.
 
 ---
 
@@ -9,48 +11,107 @@ One correct invoice: DataHub → ingestion → settlement → verifiable result 
 MVP 1 uses an **in-process fake** (`FakeDataHubClient`) behind the same `IDataHubClient` interface the real client will implement. No HTTP server, no Docker networking — just fixture-loaded queues in memory.
 
 The fake supports:
-- Timeseries queue (RSM-012 messages from fixture files)
+- Timeseries queue (RSM-012 from fixture files)
+- MasterData queue (RSM-007 from fixture files)
 - Charges queue (tariff rate fixtures)
 - Peek / dequeue semantics matching the real DataHub API
+- Outbound BRS-001 acceptance (returns RSM-009 accepted)
 - Fake token endpoint (returns a hardcoded JWT)
 - State reset between tests
 
-The fake does **not** support MasterData, Aggregations, outbound BRS requests, error injection, or HTTP transport. Those come in MVP 2-3.
+The fake does **not** support Aggregations, error injection (401, 503, rejections), or HTTP transport. Those come in MVP 2-3.
 
-The `IDataHubClient` abstraction means the transition from fake → HTTP simulator → real DataHub is a configuration change, not a rewrite.
+The `IDataHubClient` abstraction means the transition from fake → HTTP simulator → real DataHub is a configuration change, not a rewrite. Three implementations over time:
+
+| Implementation | MVP | Description |
+|---------------|-----|-------------|
+| `FakeDataHubClient` | 1 | In-process, fixture-loaded. No HTTP. Fast. |
+| `SimulatorDataHubClient` | 2 | HTTP client pointing at standalone Docker simulator |
+| `RealDataHubClient` | 3 | HTTP client pointing at DataHub B2B API with OAuth2 |
 
 ---
 
 ## Build Order
 
-Each step produces a testable result before the next one starts.
+Tasks are ordered by dependency. Each produces a testable result before the next starts. Tasks 1-11 are the settlement core, tasks 13-18 add the customer flow.
+
+```mermaid
+flowchart TD
+    A["1. Solution structure\n+ Docker Compose"] --> B["2. Database schema"]
+    B --> C["3. IDataHubClient\ninterface + fake"]
+    C --> D["4. CIM JSON parser\n(RSM-012)"]
+    D --> E["5. Metering data\nstorage"]
+    C --> F["6. OAuth2\nAuth Manager"]
+    B --> G["7. Spot price\nfetcher"]
+    B --> H["8. Charges parser\n+ tariff storage"]
+    E --> I["9. Queue Poller\n+ idempotency"]
+    E --> J["10. Settlement\nengine"]
+    G --> J
+    H --> J
+    J --> K["11. Golden master\ntests"]
+
+    B --> M["13. Portfolio\nmanagement"]
+    C --> N["14. BRS-001 request\nbuilder"]
+    C --> O["15. RSM-007/009\nparsers"]
+    M --> P["16. Process\nstate machine"]
+    N --> P
+    O --> P
+    P --> Q["17. Standalone HTTP\nsimulator"]
+    I --> Q
+    Q --> R["18. Sunshine scenario\nend-to-end test"]
+    K --> R
+    R --> L["12. CI/CD\npipeline"]
+
+    F -.->|"parallel"| I
+```
+
+### Settlement core (tasks 1-12)
 
 | # | Component | What it proves |
 |---|-----------|---------------|
-| 1 | **Solution structure + database** | Docker Compose starts PostgreSQL/TimescaleDB, schema migrations run, CI pipeline builds on push |
-| 2 | **IDataHubClient + FakeDataHubClient** | Peek/dequeue lifecycle works in-process with fixture data |
-| 3 | **CIM JSON fixtures** | Realistic RSM-012 and Charges messages with hand-calculable values for golden master tests |
-| 4 | **CIM parser (RSM-012)** | Raw JSON → domain model extraction (GSRN, period, resolution, points with quantity/quality) |
-| 5 | **Auth Manager** | Token caching, proactive renewal, thread-safe concurrent access |
-| 6 | **Ingestion pipeline** | Queue poller → parse → store in TimescaleDB → dequeue. Idempotency via MessageId. Dead-lettering on parse failure |
-| 7 | **Spot price ingestion** | Mock/file-based Nord Pool prices stored and queryable by hour |
-| 8 | **Charges ingestion** | Tariff rates parsed from Charges queue, stored with grid area + time-of-day + validity period |
-| 9 | **Settlement engine** | Pure calculation: consumption + spot prices + tariffs + product plan → invoice lines. Verified against hand-calculated golden masters |
-| 10 | **End-to-end pipeline test** | Full chain: fake → ingest 30 days → settle January → result matches golden master exactly |
+| 1 | **Solution structure + Docker Compose** | .NET solution builds, TimescaleDB starts, CI pipeline runs |
+| 2 | **Database schema (MVP 1 subset)** | Migrations create all needed tables, hypertable enabled |
+| 3 | **IDataHubClient + FakeDataHubClient** | Peek/dequeue lifecycle works, BRS-001 accepted, fixture loading |
+| 4 | **CIM JSON parser (RSM-012)** | Raw CIM JSON → domain model (GSRN, period, resolution, points) |
+| 5 | **Metering data storage** | Parsed data persisted in hypertable, upsert for corrections |
+| 6 | **OAuth2 Auth Manager** | Token caching, proactive renewal, thread-safe access |
+| 7 | **Spot price fetcher** | Nordpool prices stored and queryable by hour (seed or Energi Data Service) |
+| 8 | **Charges parser + tariff storage** | Grid/system/transmission tariffs stored with time-of-day + validity |
+| 9 | **Queue Poller + idempotency** | BackgroundService polls → parses → stores → dequeues. Duplicate MessageId skipped. Dead-letter on failure |
+| 10 | **Settlement engine** | Pure calculation: consumption + spot + tariffs + product plan → invoice lines |
+| 11 | **Golden master tests** | Hand-calculated reference invoices reproduced exactly |
+| 12 | **CI/CD pipeline** | Build + unit tests + integration tests on every push |
+
+### Customer flow (tasks 13-18)
+
+| # | Component | What it proves |
+|---|-----------|---------------|
+| 13 | **Portfolio management** | Customer, metering point, contract, supply period CRUD |
+| 14 | **BRS-001 request builder** | Valid CIM JSON produced, sent via IDataHubClient |
+| 15 | **RSM-009 + RSM-007 parsers** | Acknowledgement and master data extraction |
+| 16 | **Process state machine** | BRS-001 lifecycle: Pending → Sent → Acknowledged → Completed |
+| 17 | **Standalone HTTP simulator** | Docker-based DataHub mock with sunshine scenario auto-sequencing |
+| 18 | **Sunshine scenario E2E test** | Full chain: signup → BRS-001 → RSM-007 → RSM-012 → settlement → golden master |
+
+**Parallel tracks:**
+- Track A (settlement): 1 → 2 → 5 → 9 → 10 → 11
+- Track B (customer flow): 3 → 14 + 15 → 13 → 16 → 17 → 18
+- Track C (independent): 6, 7, 8
 
 ---
 
 ## Test Fixtures
 
-All fixtures are version-controlled. Values are chosen for hand-calculability (round numbers).
+All fixtures are version-controlled. Values chosen for hand-calculability.
 
 | Fixture | Content |
 |---------|---------|
-| `rsm012-single-day.json` | 1 metering point, 1 day, 24 × 1.000 kWh, PT1H, quality A01 |
-| `rsm012-multi-day/` (31 files) | Same metering point, full January = 744 kWh total |
-| `charges-grid-tariff.json` | Grid area 344: day 0.15, night 0.05 DKK/kWh, subscription 49 DKK/month |
+| `rsm012-single-day.json` | 1 GSRN, 1 day, 24 hours, PT1H, quality A01 |
+| `rsm012-multi-day/` (31 files) | Same GSRN, full January |
+| `rsm007-activation.json` | GSRN activation, grid area 344, flex settlement |
+| `charges-grid-tariff.json` | Grid area 344: day/night/peak rates, subscription 49 DKK/month |
 | `charges-system-tariff.json` | System 0.054, transmission 0.049 DKK/kWh |
-| `spot-prices-january.json` | 744 hours, all 0.50 DKK/kWh |
+| `spot-prices-january.json` | 744 hours with time-differentiated prices |
 
 Fixtures follow the CIM EDI Guide structure (Dok. 15/00718-191) and are cross-referenced with Energinet's [opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) test data.
 
@@ -58,24 +119,49 @@ Fixtures follow the CIM EDI Guide structure (Dok. 15/00718-191) and are cross-re
 
 ## Golden Master: Full Month Settlement
 
-The core verification that MVP 1 works. All inputs are deterministic, all expected outputs are hand-calculated.
+The core verification. All inputs are deterministic, all outputs are hand-calculated.
 
-**Input:** January 2025, 744 hours, 1.000 kWh every hour, spot 0.50 DKK/kWh, margin 0.04 DKK/kWh.
+**Setup:** Spot customer, GSRN `571313100000012345`, grid area 344 (DK1), margin 4 øre/kWh, supplier subscription 39 DKK/month. January 2025, 744 hours.
 
-| Invoice line | Calculation | Expected |
-|-------------|-------------|----------|
-| Energy | 744 × (0.50 + 0.04) | 401.76 DKK |
-| Grid tariff | 465 day-hours × 0.15 + 279 night-hours × 0.05 | 83.70 DKK |
-| System tariff | 744 × 0.054 | 40.18 DKK |
-| Transmission tariff | 744 × 0.049 | 36.46 DKK |
-| Electricity tax | 744 × 0.008 | 5.95 DKK |
-| Grid subscription | 49.00/month | 49.00 DKK |
-| Supplier subscription | 39.00/month | 39.00 DKK |
-| **Subtotal** | | **656.05 DKK** |
-| VAT (25%) | | **164.01 DKK** |
-| **Total** | | **820.06 DKK** |
+**Consumption:** 3 patterns — night 0.3 kWh/h, day 0.5 kWh/h, peak 1.2 kWh/h, late night 0.4 kWh/h. Total: 412.3 kWh.
 
-A second golden master covers a partial period (mid-month start) to verify pro-rata subscription handling.
+**Spot prices:** Night 0.45, day 0.85, peak 1.25, late night 0.55 DKK/kWh.
+
+**Tariffs:** Grid night 0.06, day 0.18, peak 0.54. System 0.054, transmission 0.049, elafgift 0.008 DKK/kWh. Grid subscription 49 DKK/month.
+
+| Invoice line | Amount (DKK) |
+|-------------|-------------|
+| Energy (spot + margin) | 392.99 |
+| Grid tariff (time-differentiated) | 116.62 |
+| System tariff | 22.26 |
+| Transmission tariff | 20.20 |
+| Electricity tax | 3.30 |
+| Grid subscription | 49.00 |
+| Supplier subscription | 39.00 |
+| **Subtotal** | **643.37** |
+| VAT (25%) | **160.84** |
+| **Total** | **804.21** |
+
+A second golden master covers a partial period (16 days, mid-month start) to verify pro-rata subscription handling. Expected total: 415.08 DKK.
+
+---
+
+## Standalone HTTP Simulator (Task 17)
+
+For the sunshine E2E test, the fake upgrades to a standalone HTTP server matching the real DataHub API surface:
+
+| Endpoint | Behavior |
+|----------|----------|
+| `POST /oauth2/v2.0/token` | Returns fake JWT |
+| `POST /v1.0/cim/requestchangeofsupplier` | Accepts BRS-001, returns RSM-009, auto-enqueues RSM-007 + 30 × RSM-012 |
+| `GET /v1.0/cim/Timeseries` | Peek RSM-012 |
+| `GET /v1.0/cim/MasterData` | Peek RSM-007 |
+| `GET /v1.0/cim/Charges` | Peek tariff update |
+| `DELETE /v1.0/cim/dequeue/{id}` | Acknowledge message |
+| `POST /admin/scenario/sunshine` | Load sunshine scenario |
+| `POST /admin/reset` | Clear all state |
+
+ASP.NET Minimal API, runs as a Docker container alongside TimescaleDB.
 
 ---
 
@@ -83,13 +169,11 @@ A second golden master covers a partial period (mid-month start) to verify pro-r
 
 | Layer | What | Dependencies |
 |-------|------|-------------|
-| Unit tests | CIM parser, settlement engine, auth manager, fake client | None — pure functions and in-memory |
-| Integration tests | Ingestion pipeline, spot/charges ingestion | FakeDataHubClient + PostgreSQL |
-| End-to-end | Full pipeline from fake through settlement | Everything wired together |
+| Unit tests | CIM parser, settlement engine, auth manager, fake client, state machine | None — pure functions and in-memory |
+| Integration tests | Ingestion pipeline, spot/charges ingestion, portfolio CRUD | FakeDataHubClient + PostgreSQL |
+| End-to-end | Sunshine scenario: signup → BRS-001 → data reception → settlement | Standalone HTTP simulator + PostgreSQL |
 
-Target: ~60 tests, all under 30 seconds in CI.
-
-**Rounding:** Define once, test explicitly. Full precision during hourly calculations, round to 2 decimal DKK on invoice line totals, VAT on the summed subtotal.
+**Rounding:** Full precision during hourly calculations, round to 2 decimal DKK on invoice line totals, VAT on the summed subtotal.
 
 ---
 
@@ -97,7 +181,7 @@ Target: ~60 tests, all under 30 seconds in CI.
 
 | MVP | Simulator change |
 |-----|-----------------|
-| 2 | Standalone HTTP server (ASP.NET Minimal API). MasterData queue, BRS request endpoints, scenario engine |
+| 2 | Error responses (rejections, 403). Offboarding scenarios. Aconto flows |
 | 3 | Error injection (401, 503, malformed). Correction scenarios. Aggregations queue. Parallel with real Actor Test |
 | 4 | Performance: 80K metering points, realistic timing |
 
@@ -105,25 +189,45 @@ Target: ~60 tests, all under 30 seconds in CI.
 
 ## Exit Criteria
 
-- [ ] Docker Compose starts PostgreSQL/TimescaleDB
-- [ ] FakeDataHubClient peek/dequeue lifecycle works
+- [ ] `docker compose up` starts TimescaleDB + simulator
+- [ ] FakeDataHubClient delivers RSM-012, RSM-007, Charges fixtures
 - [ ] CIM parser handles all fixture files correctly
 - [ ] Ingestion pipeline: 30 days ingested, all messages dequeued, no dead letters
-- [ ] Duplicate MessageId is skipped (idempotency)
+- [ ] Duplicate MessageId skipped (idempotency)
 - [ ] Tariff rates parsed and queryable by grid area + hour
-- [ ] Settlement golden master (full month) passes
-- [ ] Settlement golden master (partial period) passes
-- [ ] End-to-end test: ingest → settle → result matches golden master
+- [ ] Portfolio: customer + metering point + contract + supply period created
+- [ ] BRS-001 sent → RSM-009 accepted
+- [ ] RSM-007 → metering point activated, supply period created
+- [ ] State machine: Pending → Sent → Acknowledged → Completed
+- [ ] Settlement golden master #1 (full month) passes
+- [ ] Settlement golden master #2 (partial period) passes
+- [ ] Sunshine scenario E2E: signup → BRS-001 → data → settlement → golden master
 - [ ] All tests green in CI
+
+---
+
+## What MVP 1 Does NOT Include
+
+| Feature | Deferred to |
+|---------|-------------|
+| Offboarding (BRS-002, BRS-010) | MVP 2 |
+| Cancellations / rejections (BRS-003, RSM-009 rejected) | MVP 2 |
+| Aconto calculation and settlement | MVP 2 |
+| Invoice generation (PDF/document) | MVP 2 |
+| Metering data corrections (delta detection) | MVP 3 |
+| Reconciliation (RSM-014) | MVP 3 |
+| Elvarme / solar (E18) | MVP 3 |
+| Real DataHub communication (Actor Test) | MVP 3 |
+| ERP integration, customer portal | MVP 4 |
 
 ---
 
 ## Sources
 
-- [Proposed architecture](datahub3-proposed-architecture.md)
-- [RSM-012 reference](rsm-012-datahub3-measure-data.md)
-- [Settlement overview](datahub3-settlement-overview.md)
-- [Product structure and billing](datahub3-product-and-billing.md)
-- [Authentication and security](datahub3-authentication-security.md)
-- [Edge cases](datahub3-edge-cases.md)
-- [Implementation plan](datahub3-implementation-plan.md)
+- [Implementation plan](datahub3-implementation-plan.md) — MVP overview and testing strategy
+- [Database model](datahub3-database-model.md) — full PostgreSQL/TimescaleDB schema
+- [Class diagram](datahub3-class-diagram.md) — domain model
+- [Product structure and billing](datahub3-product-and-billing.md) — invoice lines, energy models, aconto
+- [RSM-012 reference](rsm-012-datahub3-measure-data.md) — CIM JSON format and business rules
+- [Proposed architecture](datahub3-proposed-architecture.md) — technology choices, services, data architecture
+- [Settlement overview](datahub3-settlement-overview.md) — the three data streams, settlement calculation
