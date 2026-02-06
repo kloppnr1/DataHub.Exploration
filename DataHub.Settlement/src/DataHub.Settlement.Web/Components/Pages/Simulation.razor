@@ -225,7 +225,6 @@
         BuildStepList();
         StateHasChanged();
 
-        await Simulator.ResetAsync();
         await StartAsync();
     }
 
@@ -235,6 +234,8 @@
         _errorMessage = null;
         _steps[0].Status = StepStatus.Running;
         StateHasChanged();
+
+        await Simulator.ResetAsync();
 
         var failedStep = _scenarios[_selectedScenario].FailedStep;
 
