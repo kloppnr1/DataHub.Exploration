@@ -38,12 +38,12 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 | External system | Direction | Our system | Data exchanged |
 |-----------------|-----------|------------|----------------|
 | **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-007/004 (master data), BRS responses, tariffs |
-| **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/009/010 requests |
+| **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/005/009/010/015/042/043/044 requests, RSM-015/016 data requests |
 | **Nord Pool** | **→** we receive | Settlement Engine | Hourly spot prices (DK1/DK2) |
 | **Eloverblik** | **→** we receive | Customer & Portfolio | GSRN data, historical consumption (onboarding) |
 | **ERP / Accounting** | **←** we send | Settlement Engine | Settlement results, invoice lines |
 | **ERP / Accounting** | **→** we receive | Customer & Portfolio | Payment status |
-| **Customer Portal** | **←** we send | Settlement Engine | Consumption data, invoice data |
+| **Customer Portal** | **←** we send | Settlement Engine + Customer & Portfolio | Consumption data, invoice data, contract details, aconto |
 | **CRM / Sales** | **→** we receive | Customer & Portfolio | New customer + GSRN |
 | **CRM / Sales** | **←** we send | Customer & Portfolio | Portfolio status, process status |
 | **Payment Service** (PBS) | **←** we send | Settlement Engine | Payment requests (amounts, due dates, PBS agreement no.) |
@@ -189,7 +189,7 @@ Customer Portal                     Our system (API)
 | `/api/portal/notifications` | GET | Alerts (e.g. unusual consumption, rate changes) |
 
 **Design considerations:**
-- **Authentication:** The portal authenticates the customer (NemID/MitID or email/password) and maps to a customer record in our system. Our API validates the customer's access to their own data only
+- **Authentication:** The portal authenticates the customer (MitID or email/password) and maps to a customer record in our system. Our API validates the customer's access to their own data only
 - **Read-heavy:** The portal is almost entirely read-only from our system's perspective
 - **Aggregation:** Raw hourly data should be pre-aggregated for daily/weekly/monthly views to keep the portal fast
 - **Legal requirement:** The Electricity Supply Order (elleveringsbekendtgørelsen) §9 requires monthly access to consumption data — the portal satisfies this
@@ -416,28 +416,26 @@ Before we are the active supplier on a metering point, we do **not** receive any
 **The onboarding flow with Eloverblik:**
 
 ```
-Customer                CRM / Sales              Our system              Eloverblik API
-    │                       │                        │                        │
-    │ Signs contract,       │                        │                        │
-    │ provides GSRN         │                        │                        │
-    ├──────────────────────►│                        │                        │
-    │                       │                        │                        │
-    │                       ├── Create customer ────►│                        │
-    │                       │   + GSRN               │                        │
-    │                       │                        │                        │
-    │                       │                        ├── Lookup GSRN ────────►│
-    │                       │                        │◄── Metering point      │
-    │                       │                        │    data + historical   │
-    │                       │                        │    consumption         │
-    │                       │                        │                        │
-    │                       │                        │ Validate GSRN          │
-    │                       │                        │ Pre-assign grid area   │
-    │                       │                        │ Calculate aconto       │
-    │                       │                        │ estimate               │
-    │                       │                        │                        │
-    │                       │                        ├── BRS-001 ────────────►│ (DataHub,
-    │                       │                        │   (supplier switch)    │  not Eloverblik)
-    │                       │                        │                        │
+Customer          CRM / Sales         Our system          Eloverblik       DataHub
+    │                 │                    │                    │               │
+    │ Signs contract, │                    │                    │               │
+    │ provides GSRN   │                    │                    │               │
+    ├────────────────►│                    │                    │               │
+    │                 │                    │                    │               │
+    │                 ├── Create ─────────►│                    │               │
+    │                 │   customer + GSRN  │                    │               │
+    │                 │                    │                    │               │
+    │                 │                    ├── Lookup GSRN ────►│               │
+    │                 │                    │◄── Metering point ─┤               │
+    │                 │                    │    data + history  │               │
+    │                 │                    │                    │               │
+    │                 │                    │ Validate GSRN      │               │
+    │                 │                    │ Pre-assign tariffs │               │
+    │                 │                    │ Calculate aconto   │               │
+    │                 │                    │                    │               │
+    │                 │                    ├── BRS-001 ─────────┼──────────────►│
+    │                 │                    │   (supplier switch) │               │
+    │                 │                    │                    │               │
 ```
 
 **After activation:** Once we are the active supplier, we receive all data through DataHub's B2B API (RSM-007 for master data, RSM-012 for metering data). Eloverblik is no longer needed for day-to-day operations, but remains available for dispute resolution where customers can independently verify their data.
@@ -506,7 +504,7 @@ For real-time integrations, the system publishes domain events that external sys
 | `settlement.correction` | A correction recalculates a historical period | ERP (create credit/debit note) |
 | `customer.activated` | Metering point becomes active (supplier switch complete) | CRM (update status), portal (enable access) |
 | `customer.offboarded` | Supply ends (switch, move-out, termination) | ERP (final invoice), CRM (update status), portal (disable access) |
-| `payment.received` | Payment confirmation from PBS/payment service | Settlement (update balance), CRM (clear warning) |
+| `payment.received` | Payment confirmation from PBS/payment service | Customer & Portfolio (update balance), CRM (clear warning) |
 | `payment.overdue` | Invoice exceeds payment deadline | ERP (trigger reminder), debt collection (if escalated) |
 | `process.status_changed` | A DataHub process changes state | CRM (update process tracker) |
 
