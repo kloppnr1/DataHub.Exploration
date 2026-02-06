@@ -593,6 +593,10 @@ Source: CIM EDI Guide page 256
 - [CIM EDI Guide (latest)](https://energinet.dk/media/xk2p3ngh/edi-transaktioner-for-danske-elmarkede-cim-ver15.pdf) — Latest CIM transaction guide
 - [Forskrift H1 Vejledning](https://energinet.dk/media/ptpjjsaa/forskrift-h1-vejledning.pdf) — Market regulation guidance
 
+### Related Documentation
+
+- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md) — Edge cases for BRS-003, BRS-011, BRS-042, BRS-044 m.fl.
+
 ### GitHub
 
 - [Energinet-DataHub/opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) — Open-source EDI implementation
