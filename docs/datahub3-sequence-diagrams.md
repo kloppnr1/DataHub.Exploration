@@ -271,6 +271,7 @@ flowchart LR
 ## Kilder
 
 - [Kundelivscyklus: Onboarding til offboarding](datahub3-customer-lifecycle.md)
+- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md)
 - [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
 - [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
 - [Foreslået systemarkitektur](datahub3-proposed-architecture.md)

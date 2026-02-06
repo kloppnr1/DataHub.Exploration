@@ -172,6 +172,10 @@ RSM-012 can be delegated:
 3. Will the Timeseries peek endpoint remain stable after Phase 3?
 4. What happens to the old GLN's message queue after Phase 3?
 
+## Related Documentation
+
+- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#1-korrektioner-af-måledata) — detektionslogik, korrektionsformler, systemdesign-implikationer
+
 ## Sources
 
 ### Official Energinet Documents (in repo `docs/`)

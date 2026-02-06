@@ -448,81 +448,13 @@ Hvis kunden også **tilflytter** en ny adresse vi leverer til, kører fraflytnin
 
 Uanset offboarding-årsag er afslutningsprocessen den samme:
 
-### Slutafregning
+1. Modtag endelige RSM-012-måledata fra DataHub (op til slutdato)
+2. Kør afregning for den delvise faktureringsperiode
+3. For acontokunder: beregn slutopgørelse (faktisk forbrug vs. acontobetalinger)
+4. Udsted slutfaktura inden 4 uger (jf. elleveringsbekendtgørelsen §17)
+5. Arkivér kundepost, bevar måledata jf. opbevaringspolitik
 
-1. Modtag endelige RSM-012-måledata fra DataHub (dækker den sidste delvise periode)
-2. Kør afregning for den delvise faktureringsperiode (periodens start → leverancens slutdato)
-3. Beregn alle komponenter: energi, nettarif, abonnementer (forholdsmæssigt), afgifter
-
-### For acontokunder: slutopgørelse
-
-1. Beregn faktisk forbrug fra kvartalets start til leverancens slutdato (delvis periode)
-2. Sammenlign med acontobetalinger modtaget for denne periode
-3. Generér slutfaktura med afstemning:
-   - Hvis kunden har betalt for meget → kreditnota / tilbagebetaling
-   - Hvis kunden har betalt for lidt → slutfaktura med restbeløb
-4. Frist: inden 4 uger efter leverancens ophør (jf. elleveringsbekendtgørelsen)
-
-### Slutfaktura
-
-| Linje | Beskrivelse |
-|-------|-------------|
-| Energi + margin | Faktisk forbrug × satser for den delvise periode |
-| Nettarif | Faktisk forbrug × tarifsatser, forholdsmæssigt |
-| Abonnement (eget) | Forholdsmæssigt til leverancens slutdato |
-| Abonnement (net) | Forholdsmæssigt til leverancens slutdato |
-| Afgifter og gebyrer | Pr. kWh på faktisk forbrug |
-| Acontoopgørelse (hvis relevant) | Difference mellem betalte estimater og faktisk total |
-| Udestående saldo | Eventuelle ubetalte tidligere fakturaer |
-| **Skyldig / tilgodehavende** | Nettobeløb |
-
-### Efter slutfaktura
-
-1. Send slutfaktura til kunden
-2. Ved kreditsaldo → initiér tilbagebetaling til kundens bankkonto
-3. Ved debitsaldo → normale betalingsvilkår, derefter inkasso hvis ubetalt
-4. Arkivér kundepost (bevar i lovpligtig periode — 5 år ⚠ VERIFICÉR)
-5. Måledata bevares jf. opbevaringspolitik (3+ år ⚠ VERIFICÉR)
-6. Kundeportaladgang deaktiveres efter endelig betaling
-
----
-
-## Særtilfælde
-
-### Fejlagtigt leverandørskifte (BRS-042)
-
-Hvis det opdages at et leverandørskifte er sket ved en fejl (f.eks. forkert målepunkt, kunden har ikke accepteret):
-
-1. DDQ → DataHub: **BRS-042** tilbageførselsanmodning
-2. DataHub tilbagefører skiftet, genindsætter den gamle leverandør
-3. Alle måledata og afregning for den fejlagtige periode skal tilbageføres
-4. Eventuelle udstedte fakturaer skal krediteres
-5. Tidsfrist: inden for 20 hverdage efter ikrafttrædelse ⚠ VERIFICÉR
-
-### Fejlagtig flytning (BRS-011)
-
-Hvis en til- eller fraflytningsdato var forkert:
-
-1. DDQ → DataHub: **BRS-011** med den rettede dato
-2. DataHub justerer leveranceperioden
-3. Måledata og afregning for den berørte periode skal genberegnes
-4. Fakturajusteringer udstedes som kredit-/debitnotaer
-
-### Efterfølgende måledataopdateringer
-
-Netvirksomhed indsender opdaterede måleraflæsninger for en tidligere periode (BRS-021 → RSM-012):
-
-1. Ny RSM-012 modtages med data for en allerede afregnet periode
-2. Afregningsmotor genberegner den berørte periode
-3. Differencen udstedes som kredit- eller debitnota på næste faktura (eller som selvstændig regulering)
-
-### Kunde bestrider faktura
-
-1. Kunden kontakter support
-2. Vi kan anmode om historiske validerede data fra DataHub (RSM-015) for verifikation
-3. Vi kan anmode om aggregerede data (RSM-016) til krydskontrol
-4. Hvis måledata var forkerte → netvirksomhed indsender rettelse (BRS-021)
-5. Hvis vores beregning var forkert → genberegn og udsted kredit-/debitnota
+→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#4-slutafregning-ved-offboarding)
 
 ---
 

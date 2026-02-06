@@ -141,13 +141,9 @@ sequenceDiagram
 
 ## Korrektioner — den vigtigste edge case
 
-Netvirksomheden kan indsende **rettede målinger** for en allerede faktureret periode. Når det sker:
+Netvirksomheden kan indsende **rettede målinger** for en allerede faktureret periode. Der er **ingen eksplicit markering** — systemet skal selv sammenligne med gemte data og beregne differencen.
 
-1. Vi modtager en ny RSM-012 for samme målepunkt + periode
-2. Der er **ingen markering** der siger "dette er en korrektion" — vi skal selv sammenligne med det vi har gemt
-3. Vi beregner differencen og udsteder en kredit- eller debitnota
-
-Dette er en kernekompleksitet i systemet: enhver RSM-012 kan potentielt være en korrektion.
+→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#1-korrektioner-af-måledata) (detektionslogik, formler, årsager)
 
 ---
 
@@ -258,3 +254,4 @@ Tre kerneservices:
 | [Autentificering og sikkerhed](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, auditlog |
 | [Klassediagram](datahub3-class-diagram.md) | Domænemodel med entiteter og relationer |
 | [Databasemodel](datahub3-database-model.md) | PostgreSQL/TimescaleDB-skema med DDL |
+| [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md) | Korrektioner, annulleringer, afstemningsafvigelser, systemfejl |

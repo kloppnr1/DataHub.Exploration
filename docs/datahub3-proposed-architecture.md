@@ -267,6 +267,8 @@ Enkelt indgangspunkt for alle interne og eksterne forbrugere.
 | Forretningsvalideringsfejl | Log + gem til gennemgang, dequeue |
 | Afregningsberegningsfejl | Fejl kørslen, alarmér, bevar delresultater til fejlfinding |
 
+→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#7-systemfejl-og-genopretning)
+
 ### Sikkerhed
 
 - OAuth2 client credentials gemt i vault (Azure Key Vault el.lign.)
@@ -501,5 +503,6 @@ Ved disse volumener er infrastrukturomkostningen ubetydelig sammenlignet med for
 
 - [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
 - [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
+- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md)
 - CIM Webservice Interface (Dok. 22/03077-1)
 - CIM EDI Guide (Dok. 15/00718-191)
