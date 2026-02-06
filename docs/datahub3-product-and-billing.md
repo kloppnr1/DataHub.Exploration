@@ -312,7 +312,7 @@ sequenceDiagram
 
 ### Slutafregning ved offboarding
 
-Når en kunde forlader os (skifte, fraflytning, opsigelse), laves en **slutafregning** for den delvise periode:
+Når en kunde forlader os (leverandørskifte eller fraflytning), laves en **slutafregning** for den delvise periode:
 
 1. Afregn faktisk forbrug fra kvartalets start til slutdato
 2. Beregn difference mod indbetalte acontobeløb for perioden
