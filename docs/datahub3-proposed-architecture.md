@@ -538,6 +538,8 @@ At these volumes, infrastructure cost is negligible compared to business value. 
 | 5 | Wholesale settlement (engrosopgørelse) + charges | BRS-027/028/029/030, RSM-014/016/017, Charges queue |
 | 6 | PT15M migration | Re-partition time series store, update settlement engine, load test at 7.68M points/day |
 
+> Details: [Implementation plan](datahub3-implementation-plan.md) — detailed tasks per phase, DataHub simulator, testing strategy
+
 ---
 
 ## Sources
