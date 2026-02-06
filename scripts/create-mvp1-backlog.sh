@@ -13,7 +13,7 @@
 # What it does:
 #   1. Creates the "mvp-1" milestone
 #   2. Creates labels (mvp-1, foundation, integration, settlement, infrastructure, portfolio)
-#   3. Creates 18 issues — one per task from docs/mvp1-implementation-plan.md
+#   3. Creates 17 issues — one per task from docs/mvp1-implementation-plan.md
 #
 set -euo pipefail
 
@@ -1063,103 +1063,43 @@ echo "  #16: Process state machine → $ISSUE_16"
 
 # --- Issue 17 ---
 ISSUE_17=$(gh issue create \
-  --title "Task 17: Standalone HTTP simulator" \
-  --milestone "MVP 1: Sunshine Scenario" \
-  --label "mvp-1,foundation,integration" \
-  --body "$(cat <<'BODY'
-## What
-
-Upgrade from in-process fake to a standalone HTTP server (Docker) that mimics the DataHub B2B API. Supports the sunshine scenario.
-
-## Endpoints
-
-```
-POST /oauth2/v2.0/token              → returns fake JWT
-GET  /v1.0/cim/Timeseries            → peek RSM-012 from queue
-GET  /v1.0/cim/MasterData            → peek RSM-007 from queue
-GET  /v1.0/cim/Charges               → peek tariff update from queue
-DELETE /v1.0/cim/dequeue/{id}        → acknowledge message
-POST /v1.0/cim/requestchangeofsupplier → accept BRS-001, return RSM-009
-
-POST /admin/scenario/sunshine        → load sunshine scenario
-POST /admin/enqueue                  → add message to any queue
-POST /admin/reset                    → clear all state
-GET  /admin/requests                 → inspect received BRS requests
-```
-
-## Sunshine scenario behavior
-
-1. System sends BRS-001 to `/cim/requestchangeofsupplier`
-2. Simulator validates format, returns RSM-009 (accepted) synchronously
-3. Simulator auto-enqueues RSM-007 on MasterData queue
-4. Simulator auto-enqueues 30 × RSM-012 (one per day) on Timeseries queue
-5. System polls queues → processes all messages
-
-## Implementation
-
-ASP.NET Minimal API, Docker container, reads fixture files from disk.
-
-## Dependencies
-
-- Depends on: #9 (Queue Poller — needs to work against HTTP), #16 (State machine — needs the full flow)
-
-## Acceptance criteria
-
-- [ ] `docker compose up` starts simulator alongside TimescaleDB
-- [ ] Simulator serves OAuth2 token endpoint
-- [ ] Sunshine scenario: BRS-001 → auto-enqueues RSM-007 + 30 × RSM-012
-- [ ] Admin API: `/admin/scenario/sunshine`, `/admin/reset`, `/admin/requests`
-- [ ] Integration test: full sunshine flow against HTTP simulator
-
-## Estimated effort
-
-Medium (2 days)
-
-## Reference
-
-[MVP 1 implementation plan — Task 17](../docs/mvp1-implementation-plan.md#task-17-standalone-http-simulator)
-BODY
-)" 2>&1 | tail -1)
-echo "  #17: Standalone HTTP simulator → $ISSUE_17"
-
-# --- Issue 18 ---
-ISSUE_18=$(gh issue create \
-  --title "Task 18: Sunshine scenario end-to-end test" \
+  --title "Task 17: Sunshine scenario end-to-end test" \
   --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,settlement" \
   --body "$(cat <<'BODY'
 ## What
 
-The capstone test — runs the entire sunshine scenario and verifies the result matches the golden master.
+The capstone test — runs the entire sunshine scenario using `FakeDataHubClient` and verifies the result matches the golden master.
 
 ## Test flow
 
 ```
 1. Seed: product, tariffs, spot prices, electricity tax in DB
-2. Act: create customer + contract via portfolio service
-3. Act: submit BRS-001 → simulator accepts
-4. Assert: process state = Acknowledged
-5. Act: poll MasterData queue → RSM-007 → activate metering point
-6. Assert: metering point activated, supply period created, process state = Completed
-7. Act: poll Timeseries queue → 30 × RSM-012 → store metering data
-8. Assert: 30 days × 24 hours = 720 rows in metering_data (or 744 for Jan)
-9. Act: run settlement engine for the period
-10. Assert: settlement lines match Golden Master #1 exactly
+2. Arrange: load FakeDataHubClient with RSM-009 (accepted), RSM-007, 31 × RSM-012 fixtures
+3. Act: create customer + contract via portfolio service
+4. Act: submit BRS-001 → FakeDataHubClient returns accepted
+5. Assert: process state = Acknowledged
+6. Act: poll MasterData queue → RSM-007 → activate metering point
+7. Assert: metering point activated, supply period created, process state = Completed
+8. Act: poll Timeseries queue → 31 × RSM-012 → store metering data
+9. Assert: 744 rows in metering_data (31 days × 24 hours for January)
+10. Act: run settlement engine for the period
+11. Assert: settlement lines match Golden Master #1 exactly
 ```
 
 ## This test validates the full chain
 
-CRM → portfolio → BRS-001 → simulator → RSM-009 → RSM-007 → RSM-012 → settlement → golden master
+CRM → portfolio → BRS-001 → FakeDataHubClient → RSM-009 → RSM-007 → RSM-012 → settlement → golden master
 
 ## Dependencies
 
-- Depends on: #11 (Golden master tests), #17 (Standalone simulator)
+- Depends on: #11 (Golden master tests), #16 (Process state machine)
 
 ## Acceptance criteria
 
 - [ ] End-to-end test passes with Golden Master #1 amounts
-- [ ] Test runs against standalone HTTP simulator (Docker)
-- [ ] Test is idempotent (can re-run with `/admin/reset`)
+- [ ] Test uses `FakeDataHubClient` with fixture files (no HTTP, no Docker dependency)
+- [ ] Test is deterministic and fast (< 5 seconds)
 - [ ] Test is part of the integration test suite in CI/CD
 
 ## Estimated effort
@@ -1168,13 +1108,13 @@ Small (1 day)
 
 ## Reference
 
-[MVP 1 implementation plan — Task 18](../docs/mvp1-implementation-plan.md#task-18-sunshine-scenario-end-to-end-test)
+[MVP 1 implementation plan — Task 17](../docs/mvp1-implementation-plan.md#task-17-sunshine-scenario-end-to-end-test)
 BODY
 )" 2>&1 | tail -1)
-echo "  #18: Sunshine scenario E2E test → $ISSUE_18"
+echo "  #17: Sunshine scenario E2E test → $ISSUE_17"
 
 echo ""
-echo "Done! Created 18 issues in milestone 'MVP 1: Sunshine Scenario'."
+echo "Done! Created 17 issues in milestone 'MVP 1: Sunshine Scenario'."
 echo ""
 echo "View the backlog:"
 echo "  gh issue list --milestone 'MVP 1: Sunshine Scenario'"

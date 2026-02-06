@@ -91,8 +91,8 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 
 | MVP | Simulator capabilities |
 |-----|----------------------|
-| **MVP 1** | OAuth2 token endpoint. Timeseries queue (RSM-012). Charges queue. MasterData queue (RSM-007). BRS-001 request endpoint (returns RSM-009 accepted). Dequeue. Scenario engine: sunshine onboarding. In-process fake (`FakeDataHubClient`) for unit tests + standalone HTTP simulator (Docker) for integration |
-| **MVP 2** | + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle". + Eloverblik mock |
+| **MVP 1** | In-process `FakeDataHubClient` only. Supports: OAuth2 (mock), Timeseries queue (RSM-012), MasterData queue (RSM-007), Charges queue, BRS-001 `SendRequestAsync` (returns RSM-009 accepted), Dequeue. Loads CIM JSON fixture files from disk. No HTTP, no Docker dependency. |
+| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle". + Eloverblik mock |
 | **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-042/011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
 | **MVP 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
 
@@ -214,14 +214,14 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 | Area | Task | Test approach |
 |------|------|---------------|
 | **Foundation** | .NET solution structure, CI/CD pipeline, Docker Compose (PostgreSQL + TimescaleDB) | Verify container starts, CI runs |
-| **Simulator** | In-process `FakeDataHubClient` + standalone HTTP simulator (Docker). Sunshine scenario: BRS-001 → RSM-009 (accepted) → RSM-007 → RSM-012 (30 days) | Unit + integration |
+| **Simulator** | In-process `FakeDataHubClient` loaded with CIM JSON fixtures. Sunshine scenario: BRS-001 → RSM-009 (accepted) → RSM-007 → RSM-012 (31 days). No HTTP — all in-process. | Unit + integration |
 | **Auth** | OAuth2 Auth Manager — token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint |
 | **Ingestion** | Queue Poller (Timeseries + MasterData), CIM JSON Parser (RSM-012 + RSM-007), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
 | **Idempotency** | Track MessageId, skip duplicates, dead-letter on parse failure | Integration: enqueue twice → stored once. Malformed → dead-letter |
 | **Spot prices** | Fetch and store Nord Pool prices (DK1/DK2) | Integration: mock market data → stored prices |
 | **Charges** | Parse tariff updates from Charges queue | Unit: fixture files |
 | **Portfolio** | Customer, metering point, contract, supply period — create and link entities at onboarding | Unit: domain logic. Integration: DB roundtrip |
-| **Onboarding** | BRS-001 request builder + RSM-009 response parser (accepted). RSM-007 master data → activate metering point | Unit: CIM structure. Integration: simulator validates format, returns response |
+| **Onboarding** | BRS-001 request builder + RSM-009 response parser (accepted). RSM-007 master data → activate metering point | Unit: CIM structure. Integration: FakeDataHubClient returns accepted response |
 | **State machine** | ProcessRequest lifecycle: Pending → SentToDataHub → Acknowledged → EffectuationPending → Completed | Unit: state transition rules |
 | **Settlement** | `kWh × (spot + margin)` per hour, grid tariff (time-differentiated), system/transmission tariff, elafgift, subscriptions (pro rata), VAT (25%) | Unit: **golden master tests** |
 | **Actor Test access** | Apply for access to Energinet's test environment (can run in parallel with development) | — |
@@ -230,15 +230,15 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 ```
 1. CRM creates customer + contract + GSRN
-2. System sends BRS-001 (supplier switch) to DataHub (simulator)
-   → Simulator returns RSM-009 (accepted)
-3. After "effective date" (immediate in test):
-   → Simulator enqueues RSM-007 (master data) on MasterData queue
-   → Simulator enqueues RSM-012 (first day of metering data) on Timeseries queue
+2. System sends BRS-001 (supplier switch) via IDataHubClient.SendRequestAsync
+   → FakeDataHubClient returns RSM-009 (accepted)
+3. FakeDataHubClient is pre-loaded with fixtures:
+   → RSM-007 (master data) on MasterData queue
+   → 31 × RSM-012 (one per day, January) on Timeseries queue
 4. System peeks MasterData → parses RSM-007 → activates metering point + supply period
 5. System peeks Timeseries → parses RSM-012 → stores metering data
-6. Repeat step 5 for 30 days (30 RSM-012 messages)
-7. System runs settlement → produces invoice lines → matches golden master
+6. Repeat step 5 for 31 days (31 RSM-012 messages = 744 hours)
+7. System runs settlement → produces charge lines → matches golden master
 ```
 
 ### Golden master tests (introduced here, expanded in later MVPs)
