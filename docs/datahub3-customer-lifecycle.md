@@ -137,10 +137,10 @@ The energy price per hour is composed of two parts:
 Energy per hour = kWh × (spot price + supplier margin)
 ```
 
-In Xellent this is pre-calculated:
-- `PowerExchangePrice` = pure Nordpool spot price
-- `CalculatedPrice` = spot price + supplier margin (already combined)
-- `TimeValue` = kWh consumed in the hour
+In the settlement engine, the relevant values per hour are:
+- **Spot price** = pure Nordpool spot price (DKK/kWh)
+- **Calculated price** = spot price + supplier margin (combined)
+- **Quantity** = kWh consumed in the hour (from RSM-012)
 
 The supplier margin is the profit the supplier charges per kWh on top of the purchase price from Nordpool. The amount depends on the customer's product plan (e.g. a fixed markup of X øre/kWh).
 
@@ -152,9 +152,8 @@ Grid tariffs are charged by the grid company (netvirksomhed) for transporting el
 Grid tariff per hour = kWh × tariff_rate_for_the_hour
 ```
 
-- Rates from `PriceElementRates` (columns Price, Price2..Price24 for hours 1-24)
-- Association via `PriceElementCheckData` (date interval for when the tariff applies)
-- Only entries with `ChargeTypeCode = 3` are tariffs
+- Rates stored per hour (hours 1-24) with validity dates
+- Tariff type determines which rate applies (grid tariff, system tariff, transmission tariff)
 - Grid area (from RSM-007) determines which grid company's tariffs apply
 
 ### Product Margin
@@ -165,8 +164,8 @@ Additional per-kWh charge defined in the customer's product plan (e.g. green ene
 Product margin per hour = kWh × product_rate
 ```
 
-- Rates from `ExuRateTable` based on product type
-- Product association via `ProductExtentTable`
+- Rates from the product plan based on product type
+- Product association via the contract
 
 ### Fixed Charges (Subscription / Abonnement)
 
@@ -201,7 +200,7 @@ Invoice total  = sum of all lines + VAT
 
 1. Retrieve RSM-012 metering data for the period (kWh per hour)
 2. Retrieve Nordpool spot prices for the same hours
-3. Confirm that `CalculatedPrice ≈ spot price + agreed supplier margin` for each hour
+3. Confirm that the calculated price ≈ spot price + agreed supplier margin for each hour
 4. Retrieve applicable tariff rates from the grid company for the period
 5. Calculate each component per hour and sum
 6. Compare with wholesale settlement (RSM-014 / BRS-027) for reconciliation
@@ -532,3 +531,7 @@ Regardless of the offboarding reason, the closing process is the same:
 - [DataHub 3 DDQ Business Process Reference](datahub3-ddq-business-processes.md)
 - [Proposed System Architecture](datahub3-proposed-architecture.md)
 - [RSM-012 Metering Data Reference](rsm-012-datahub3-measure-data.md)
+- [Edge Cases and Error Handling](datahub3-edge-cases.md)
+- [CIS Platform and External Systems](datahub3-cis-and-external-systems.md)
+- [Product Structure and Billing](datahub3-product-and-billing.md)
+- [Settlement Overview](datahub3-settlement-overview.md)

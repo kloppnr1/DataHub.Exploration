@@ -255,6 +255,6 @@ Three core services:
 | [Authentication and security](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, audit log |
 | [Class diagram](datahub3-class-diagram.md) | Domain model with entities and relations |
 | [Database model](datahub3-database-model.md) | PostgreSQL/TimescaleDB schema with DDL |
-| [Edge cases and error handling](datahub3-edge-cases.md) | Corrections, cancellations, reconciliation discrepancies, system errors |
+| [Edge cases and error handling](datahub3-edge-cases.md) | Metering data corrections, erroneous processes, reconciliation discrepancies, elvarme, solar |
 | [CIS platform and external systems](datahub3-cis-and-external-systems.md) | ERP, customer portal, payment services, market data integrations |
-| [Implementation plan](datahub3-implementation-plan.md) | Phased build plan, DataHub simulator, testing strategy |
+| [Implementation plan](datahub3-implementation-plan.md) | MVP-driven build plan, DataHub simulator, testing strategy |

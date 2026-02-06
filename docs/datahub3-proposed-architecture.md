@@ -527,18 +527,18 @@ At these volumes, infrastructure cost is negligible compared to business value. 
 
 ---
 
-## Phased Rollout
+## Implementation Approach
 
-| Phase | Scope | Business Processes |
-|-------|-------|--------------------|
-| 1 | DataHub connection + metering data ingestion | Auth, Queue Poller, RSM-012 (BRS-021), time series store |
-| 2 | Portfolio + master data | RSM-004/007, BRS-001/009/010, Customer & Portfolio Service |
-| 3 | Settlement engine | BRS-020, BRS-027, settlement calculations, billing export |
-| 4 | Full lifecycle management | BRS-002/003/005/006/011/042/043/044, state machine |
-| 5 | Wholesale settlement (engrosopgørelse) + charges | BRS-027/028/029/030, RSM-014/016/017, Charges queue |
-| 6 | PT15M migration | Re-partition time series store, update settlement engine, load test at 7.68M points/day |
+The system is built in **MVPs** (minimum viable products), each delivering a working end-to-end result:
 
-> Details: [Implementation plan](datahub3-implementation-plan.md) — detailed tasks per phase, DataHub simulator, testing strategy
+| MVP | Scope | Business Processes |
+|-----|-------|--------------------|
+| 1 | One correct invoice — DataHub connection + metering data + settlement | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
+| 2 | Full customer lifecycle — onboarding to offboarding | RSM-004/007, BRS-001/002/003/009/010/011/042/043/044, state machine, aconto |
+| 3 | Production pilot — real customers, ERP integration | ERP export, payment services, e-Boks, elvarme, solar, monitoring |
+| 4 | Full operation — all customers, reconciliation, portal | BRS-027/028/029/030, RSM-014/015/016, customer portal, performance |
+
+> Details: [Implementation plan](datahub3-implementation-plan.md) — MVP details, DataHub simulator, testing strategy
 
 ---
 
