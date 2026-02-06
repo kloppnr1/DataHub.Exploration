@@ -453,6 +453,8 @@ Customer          CRM / Sales         Our system          Eloverblik       DataH
 - API provides metering point details, historical consumption, and current supplier information
 - Separate from the DataHub B2B API — different authentication, different endpoints
 
+> Implementation details: [Eloverblik integration guide](datahub3-eloverblik-integration.md) — authentication flow, API endpoints, data mapping, error handling
+
 ---
 
 ## Integration Architecture
