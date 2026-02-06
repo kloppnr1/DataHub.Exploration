@@ -256,3 +256,4 @@ Tre kerneservices:
 | [RSM-012 reference](rsm-012-datahub3-measure-data.md) | Teknisk detalje om måledata-formatet |
 | [Systemarkitektur](datahub3-proposed-architecture.md) | Teknologivalg, datamodel, driftsomkostninger |
 | [Autentificering og sikkerhed](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, auditlog |
+| [Klassediagram](datahub3-class-diagram.md) | Domænemodel med entiteter og relationer |

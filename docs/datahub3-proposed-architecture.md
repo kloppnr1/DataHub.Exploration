@@ -210,6 +210,8 @@ Standard relationel database til strukturerede domænedata:
 | DataHub | InboundMessage (log), OutboundRequest, PendingCorrelation |
 | System | DeadLetter, ProcessedMessageId (idempotens) |
 
+→ Detaljer: [Klassediagram](datahub3-class-diagram.md)
+
 ### Præ-aggregeringspipeline
 
 For effektiv håndtering af afregningsforespørgsler over 230M rækker/måned:
