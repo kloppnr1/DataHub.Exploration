@@ -245,6 +245,20 @@ Invoice total  = sum of all lines + VAT
 - **Rejection:** DataHub rejects the request (incorrect GSRN, conflicting process, CPR mismatch) -> correct data and resubmit
 - **Customer cancellation:** The customer changes their mind -> send **BRS-003** to cancel before the effective date
 
+### Cancelling a Supplier Switch (BRS-003)
+
+If the customer withdraws **before** the effective date:
+
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-003** cancellation request |
+| 2 | DataHub -> DDQ: Receipt (accepted/rejected) |
+| 3 | DataHub -> old DDQ: Notification of cancellation |
+| 4 | Internal: Mark ProcessRequest as `cancelled` |
+| 5 | Internal: Remove prepared billing plans, aconto estimates, etc. |
+
+Cannot be cancelled after the effective date — use BRS-042 (erroneous switch) instead. See [Edge Cases](datahub3-edge-cases.md#2-erroneous-processes).
+
 ---
 
 ## Phase 2: Activation (Switch Takes Effect)
@@ -446,6 +460,19 @@ If the customer also **moves into** a new address where we supply, the move-out 
 
 **Cancellation option:** If the customer pays before the effective date, send **BRS-044** to cancel.
 
+### Cancelling a Supply Termination (BRS-044)
+
+If the customer withdraws the termination or pays an outstanding balance **before** the effective date:
+
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-044** cancel termination |
+| 2 | DataHub -> DDQ: Receipt (termination cancelled) |
+| 3 | Internal: Supply continues normally |
+| 4 | Internal: Cancel any prepared final settlements |
+
+**Typical scenario:** The customer has received a BRS-002 due to non-payment and then pays.
+
 ---
 
 ## Phase 6: Closing (Final Settlement / Slutafregning)
@@ -453,12 +480,44 @@ If the customer also **moves into** a new address where we supply, the move-out 
 Regardless of the offboarding reason, the closing process is the same:
 
 1. Receive final RSM-012 metering data from DataHub (up to end date)
-2. Run settlement for the partial billing period
-3. For aconto customers: calculate final aconto settlement (acontoopgørelse) — actual consumption vs. aconto payments
-4. Issue final invoice within 4 weeks (per the Electricity Supply Order / elleveringsbekendtgørelsen section 17)
-5. Archive customer record, retain metering data per retention policy
+2. Run settlement for the partial billing period (period start -> supply end date)
+3. Calculate all components: energy, grid tariff (nettarif), subscriptions (**pro rata**), taxes and charges
+4. For aconto customers: calculate final aconto settlement (acontoopgørelse) — actual consumption vs. aconto payments
+5. Issue final invoice within 4 weeks (per the Electricity Supply Order / elleveringsbekendtgørelsen section 17)
+6. Archive customer record, retain metering data per retention policy
 
-> Details: [Special Cases and Error Handling](datahub3-edge-cases.md#4-slutafregning-ved-offboarding)
+### Aconto Customer: Final Settlement (Slutopgørelse)
+
+1. Calculate actual consumption from the start of the quarter to the supply end date (partial period)
+2. Compare with aconto payments received for this period
+3. Generate final invoice with reconciliation:
+   - Overpaid -> credit note / refund
+   - Underpaid -> final invoice with remaining balance
+
+### Final Invoice Line Items
+
+| Line | Description |
+|------|-------------|
+| Energy + margin | Actual consumption x rates for the partial period |
+| Grid tariff (nettarif) | Actual consumption x tariff rates, pro rata |
+| Subscription (own) | Pro rata to the supply end date |
+| Subscription (grid) | Pro rata to the supply end date |
+| Taxes and charges | Per kWh on actual consumption |
+| Aconto settlement (if applicable) | Difference between paid estimates and actual total |
+| Outstanding balance | Any unpaid previous invoices |
+| **Amount owed / credit balance** | Net amount |
+
+### After the Final Invoice
+
+| Action | Deadline |
+|--------|----------|
+| Send final invoice to the customer | Within 4 weeks (cf. Electricity Supply Order section 17) |
+| If credit balance: refund to customer's bank account | Without undue delay |
+| If debit balance: normal payment terms | Net 14-30 days |
+| Unpaid debit balance -> debt collection (inkasso) | After payment deadline |
+| Archive customer records | Retain for 5 years (WARNING: VERIFY) |
+| Retain metering data | Per retention policy (3+ years, WARNING: VERIFY) |
+| Deactivate customer portal access | After final payment |
 
 ---
 

@@ -144,7 +144,7 @@ sequenceDiagram
 
 The grid company can submit **corrected meter readings** for an already invoiced period. There is **no explicit flag** — the system must compare with stored data on its own and calculate the difference.
 
-> Details: [Edge cases and error handling](datahub3-edge-cases.md#1-korrektioner-af-måledata) (detection logic, formulas, causes)
+> Details: [Edge cases and error handling](datahub3-edge-cases.md#1-metering-data-corrections) (detection logic, formulas, causes)
 
 ---
 

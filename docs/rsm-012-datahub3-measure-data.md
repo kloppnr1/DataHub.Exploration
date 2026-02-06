@@ -174,7 +174,7 @@ RSM-012 can be delegated:
 
 ## Related Documentation
 
-- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#1-korrektioner-af-måledata) — detektionslogik, korrektionsformler, systemdesign-implikationer
+- [Edge Cases and Error Handling](datahub3-edge-cases.md#1-metering-data-corrections) — detection logic, correction formulas, system design implications
 
 ## Sources
 
