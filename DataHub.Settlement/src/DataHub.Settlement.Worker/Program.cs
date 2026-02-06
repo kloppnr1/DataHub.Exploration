@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -22,7 +23,7 @@ builder.Services.AddOpenTelemetry()
     {
         tracing
             .AddSource(serviceName)
-            .AddNpgsqlInstrumentation()
+            .AddNpgsql()
             .AddOtlpExporter();
     })
     .WithMetrics(metrics =>
