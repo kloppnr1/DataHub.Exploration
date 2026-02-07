@@ -70,6 +70,9 @@
                     <button class="btn" @onclick="() => StartChangeOfSupplier(mp)">
                         Change of Supplier
                     </button>
+                    <button class="btn" @onclick="() => StartAcontoChangeOfSupplier(mp)">
+                        Aconto CoS
+                    </button>
                     <button class="btn" @onclick="() => StartMoveIn(mp)">
                         Move In
                     </button>
@@ -643,6 +646,7 @@
         public bool IsTimeAware { get; set; }
         public ChangeOfSupplierContext? CosContext { get; set; }
         public MoveInContext? MoveInContext { get; set; }
+        public AcontoChangeOfSupplierContext? AcontoCoSContext { get; set; }
         public IReadOnlyList<TimelineEvent>? TimelineEvents { get; set; }
         public HashSet<string> CompletedTimelineSteps { get; } = new();
         public string? NextEventName { get; set; }
@@ -700,7 +704,7 @@
         DateOnly? earliest = null;
         foreach (var action in _actions.Where(a => a.IsTimeAware && a.Status == ActionStatus.WaitingForDate))
         {
-            var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline;
+            var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline ?? action.AcontoCoSContext?.Timeline;
             if (timeline is null) continue;
 
             var nextEvt = timeline.Events
@@ -737,6 +741,10 @@
                 {
                     executed = await Simulator.TickMoveInAsync(miCtx, Clock.CurrentDate, CancellationToken.None);
                 }
+                else if (action.AcontoCoSContext is { } acontoCtx)
+                {
+                    executed = await Simulator.TickAcontoChangeOfSupplierAsync(acontoCtx, Clock.CurrentDate, CancellationToken.None);
+                }
                 else continue;
 
                 foreach (var step in executed)
@@ -757,9 +765,11 @@
                 }
 
                 // Check if all steps done
-                var isComplete = action.CosContext is not null
-                    ? action.CosContext.IsSettled
-                    : action.MoveInContext?.IsSettled ?? false;
+                var isComplete = action.AcontoCoSContext is not null
+                    ? action.AcontoCoSContext.IsAcontoSettled
+                    : action.CosContext is not null
+                        ? action.CosContext.IsSettled
+                        : action.MoveInContext?.IsSettled ?? false;
 
                 if (isComplete)
                 {
@@ -795,11 +805,16 @@
             action.MeteringDaysDelivered = mi.MeteringDaysDelivered;
             action.TotalMeteringDays = mi.TotalMeteringDays;
         }
+        else if (action.AcontoCoSContext is { } aconto)
+        {
+            action.MeteringDaysDelivered = aconto.MeteringDaysDelivered;
+            action.TotalMeteringDays = aconto.TotalMeteringDays;
+        }
     }
 
     private void UpdateNextEvent(ActionViewModel action)
     {
-        var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline;
+        var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline ?? action.AcontoCoSContext?.Timeline;
         if (timeline is null) return;
 
         var nextEvt = timeline.Events
@@ -956,6 +971,36 @@
         StateHasChanged();
     }
 
+    private async Task StartAcontoChangeOfSupplier(MeteringPointInfo mp)
+    {
+        var actionId = Interlocked.Increment(ref _actionCounter);
+        var effectiveDate = ComputeEffectiveDate();
+        var acontoCtx = new AcontoChangeOfSupplierContext(mp.Gsrn, $"Customer #{actionId}", effectiveDate);
+
+        var action = new ActionViewModel
+        {
+            Id = actionId,
+            Gsrn = mp.Gsrn,
+            Address = _selectedAddress,
+            ActionType = "Aconto CoS",
+            TotalSteps = 9,
+            Status = ActionStatus.WaitingForDate,
+            IsTimeAware = true,
+            AcontoCoSContext = acontoCtx,
+            TimelineEvents = acontoCtx.Timeline.Events,
+            TotalMeteringDays = acontoCtx.TotalMeteringDays,
+        };
+        UpdateNextEvent(action);
+        _actions.Insert(0, action);
+
+        _selectedMeteringPoints.Clear();
+        _searchQuery = "";
+        _addressSelected = false;
+
+        await TickSingleActionAsync(action);
+        StateHasChanged();
+    }
+
     private async Task TickSingleActionAsync(ActionViewModel action)
     {
         try
@@ -965,6 +1010,8 @@
                 executed = await Simulator.TickChangeOfSupplierAsync(cosCtx, Clock.CurrentDate, CancellationToken.None);
             else if (action.MoveInContext is { } miCtx)
                 executed = await Simulator.TickMoveInAsync(miCtx, Clock.CurrentDate, CancellationToken.None);
+            else if (action.AcontoCoSContext is { } acontoCtx)
+                executed = await Simulator.TickAcontoChangeOfSupplierAsync(acontoCtx, Clock.CurrentDate, CancellationToken.None);
             else return;
 
             foreach (var step in executed)
@@ -984,7 +1031,9 @@
                 }
             }
 
-            var isComplete = action.CosContext?.IsSettled ?? action.MoveInContext?.IsSettled ?? false;
+            var isComplete = action.AcontoCoSContext is not null
+                ? action.AcontoCoSContext.IsAcontoSettled
+                : action.CosContext?.IsSettled ?? action.MoveInContext?.IsSettled ?? false;
             if (isComplete)
             {
                 action.Status = ActionStatus.Completed;
