@@ -75,14 +75,21 @@
             <div class="@rowCss">
                 <div class="ops-action-id">#@action.Id</div>
                 <div style="flex: 1; min-width: 0;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-weight: 600; font-size: 0.95rem;">@action.ActionType</span>
-                        <span style="font-size: 0.8rem; color: var(--text-muted);">@action.Gsrn</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="font-weight: 600; font-size: 0.95rem;">@action.Gsrn</span>
+                        @foreach (var hist in action.History)
+                        {
+                            <span class="ops-history-badge">@hist</span>
+                        }
                     </div>
                     <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        @if (action.CurrentStepDetails is not null)
+                        @if (action.Status == ActionStatus.Running)
                         {
-                            @action.CurrentStepDetails
+                            <span>@action.ActionType — @action.CurrentStepDetails</span>
+                        }
+                        else if (action.Result is not null)
+                        {
+                            @action.Result
                         }
                         else
                         {
@@ -91,25 +98,25 @@
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
-                    @if (action.Result is not null)
-                    {
-                        <span style="font-weight: 700; font-size: 0.95rem; color: var(--green);">@action.Result</span>
-                    }
                     @switch (action.Status)
                     {
                         case ActionStatus.Running:
                             <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@action.TotalSteps)</span>
                             break;
                         case ActionStatus.Completed:
-                            <span class="badge badge-completed">done</span>
+                            <span class="badge badge-completed">ready</span>
                             @if (!action.IsOffboarded)
                             {
                                 <div class="ops-followup">
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Receive Metering", 2))">Metering</button>
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Run Settlement", 3))">Settlement</button>
-                                    <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Offboard", 5))">Offboard</button>
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Aconto Billing", 4))">Aconto</button>
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Receive Metering", 2))">Metering</button>
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Run Settlement", 3))">Settlement</button>
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Aconto Billing", 4))">Aconto</button>
+                                    <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action, "Offboard", 5))">Offboard</button>
                                 </div>
+                            }
+                            else
+                            {
+                                <span class="badge badge-dead-letter">offboarded</span>
                             }
                             break;
                         case ActionStatus.Failed:
@@ -151,6 +158,17 @@
         border-color: var(--red);
         color: var(--red);
     }
+
+    .ops-history-badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+        border-radius: 3px;
+        background: var(--bg-hover);
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
 </style>
 
 @code {
@@ -161,8 +179,8 @@
         public int Id { get; init; }
         public string Gsrn { get; init; } = "";
         public string Address { get; init; } = "";
-        public string ActionType { get; init; } = "";
-        public int TotalSteps { get; init; } = 8;
+        public string ActionType { get; set; } = "";
+        public int TotalSteps { get; set; } = 8;
         public bool IsOffboarded { get; set; }
         public ActionStatus Status { get; set; }
         public int CompletedSteps { get; set; }
@@ -170,6 +188,7 @@
         public string? CurrentStepDetails { get; set; }
         public string? Result { get; set; }
         public string? ErrorMessage { get; set; }
+        public List<string> History { get; } = new();
     }
 
     private record DawaSuggestion(string Text, string DarId);
@@ -257,7 +276,6 @@
         };
         _actions.Insert(0, action);
 
-        // Clear metering points so user can search again
         _selectedMeteringPoints.Clear();
         _searchQuery = "";
         _addressSelected = false;
@@ -265,20 +283,17 @@
         _ = RunActionAsync(action);
     }
 
-    private void StartFollowUp(string gsrn, string address, string actionType, int totalSteps)
+    private void StartFollowUp(ActionViewModel action, string actionType, int totalSteps)
     {
-        var actionId = Interlocked.Increment(ref _actionCounter);
-        var action = new ActionViewModel
-        {
-            Id = actionId,
-            Gsrn = gsrn,
-            Address = address,
-            ActionType = actionType,
-            TotalSteps = totalSteps,
-            Status = ActionStatus.Running,
-            CurrentStepName = "Starting...",
-        };
-        _actions.Insert(0, action);
+        action.ActionType = actionType;
+        action.TotalSteps = totalSteps;
+        action.Status = ActionStatus.Running;
+        action.CompletedSteps = 0;
+        action.CurrentStepName = "Starting...";
+        action.CurrentStepDetails = null;
+        action.Result = null;
+        action.ErrorMessage = null;
+
         _ = RunActionAsync(action);
     }
 
@@ -322,14 +337,10 @@
 
             await InvokeAsync(() =>
             {
+                action.History.Add(action.ActionType);
                 action.Status = ActionStatus.Completed;
                 if (action.ActionType == "Offboard")
-                {
                     action.IsOffboarded = true;
-                    // Also mark the original action for this GSRN as offboarded
-                    foreach (var a in _actions.Where(a => a.Gsrn == action.Gsrn && a != action))
-                        a.IsOffboarded = true;
-                }
                 StateHasChanged();
             });
         }
