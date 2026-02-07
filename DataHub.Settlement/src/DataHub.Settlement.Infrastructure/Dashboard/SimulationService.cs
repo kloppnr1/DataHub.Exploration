@@ -18,6 +18,23 @@ namespace DataHub.Settlement.Infrastructure.Dashboard;
 
 public record SimulationStep(int Number, string Name, string Details);
 
+public record MeteringPointSummary(
+    string ConnectionStatus,
+    DateTime? ActivatedAt,
+    DateTime? DeactivatedAt,
+    IReadOnlyList<MeteringPointSummary.ProcessInfo> Processes,
+    IReadOnlyList<MeteringPointSummary.SupplyInfo> SupplyPeriods,
+    MeteringPointSummary.MeteringInfo? Metering,
+    IReadOnlyList<MeteringPointSummary.SettlementInfo> Settlements,
+    IReadOnlyList<MeteringPointSummary.AcontoInfo> AcontoPayments)
+{
+    public record ProcessInfo(Guid Id, string ProcessType, string Status, DateOnly? EffectiveDate);
+    public record SupplyInfo(DateOnly StartDate, DateOnly? EndDate, string? EndReason);
+    public record MeteringInfo(DateTime FirstReading, DateTime LastReading, int ReadingCount, decimal TotalKwh);
+    public record SettlementInfo(DateOnly PeriodStart, DateOnly PeriodEnd, decimal TotalAmount, decimal VatAmount, string Status);
+    public record AcontoInfo(DateOnly PeriodStart, DateOnly PeriodEnd, decimal Amount);
+}
+
 public sealed class SimulationService
 {
     private const string Gsrn = "571313100000012345";
@@ -32,6 +49,54 @@ public sealed class SimulationService
     public SimulationService(string connectionString)
     {
         _connectionString = connectionString;
+    }
+
+    public async Task<MeteringPointSummary?> GetMeteringPointSummaryAsync(string gsrn, CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var mp = await conn.QuerySingleOrDefaultAsync<(string ConnectionStatus, DateTime? ActivatedAt, DateTime? DeactivatedAt)>(
+            "SELECT connection_status, activated_at, deactivated_at FROM portfolio.metering_point WHERE gsrn = @Gsrn",
+            new { Gsrn = gsrn });
+        if (mp.ConnectionStatus is null)
+            return null;
+
+        var processes = (await conn.QueryAsync<MeteringPointSummary.ProcessInfo>(
+            "SELECT id, process_type, status, effective_date FROM lifecycle.process_request WHERE gsrn = @Gsrn ORDER BY created_at",
+            new { Gsrn = gsrn })).ToList();
+
+        var supplyPeriods = (await conn.QueryAsync<MeteringPointSummary.SupplyInfo>(
+            "SELECT start_date, end_date, end_reason FROM portfolio.supply_period WHERE gsrn = @Gsrn ORDER BY start_date",
+            new { Gsrn = gsrn })).ToList();
+
+        var meteringRaw = await conn.QuerySingleOrDefaultAsync<(DateTime? First, DateTime? Last, int Count, decimal Total)>(
+            "SELECT MIN(timestamp), MAX(timestamp), COUNT(*)::int, COALESCE(SUM(quantity), 0) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+            new { Gsrn = gsrn });
+        var metering = meteringRaw.First.HasValue
+            ? new MeteringPointSummary.MeteringInfo(meteringRaw.First.Value, meteringRaw.Last!.Value, meteringRaw.Count, meteringRaw.Total)
+            : null;
+
+        var settlements = (await conn.QueryAsync<MeteringPointSummary.SettlementInfo>("""
+            SELECT bp.period_start, bp.period_end,
+                   COALESCE(SUM(sl.total_amount), 0) AS total_amount,
+                   COALESCE(SUM(sl.vat_amount), 0) AS vat_amount,
+                   sr.status
+            FROM settlement.settlement_line sl
+            JOIN settlement.settlement_run sr ON sr.id = sl.settlement_run_id
+            JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
+            WHERE sl.metering_point_id = @Gsrn
+            GROUP BY bp.period_start, bp.period_end, sr.status, sr.created_at
+            ORDER BY bp.period_start
+            """, new { Gsrn = gsrn })).ToList();
+
+        var acontoPayments = (await conn.QueryAsync<MeteringPointSummary.AcontoInfo>(
+            "SELECT period_start, period_end, amount FROM billing.aconto_payment WHERE gsrn = @Gsrn ORDER BY period_start",
+            new { Gsrn = gsrn })).ToList();
+
+        return new MeteringPointSummary(
+            mp.ConnectionStatus, mp.ActivatedAt, mp.DeactivatedAt,
+            processes, supplyPeriods, metering, settlements, acontoPayments);
     }
 
     public async Task<bool> IsAlreadySeededAsync()
