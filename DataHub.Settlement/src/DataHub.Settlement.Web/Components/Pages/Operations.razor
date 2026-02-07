@@ -72,64 +72,193 @@
                 ActionStatus.Failed => "ops-action ops-action-failed",
                 _ => "ops-action",
             };
-            <div class="@rowCss">
-                <div class="ops-action-id">#@action.Id</div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                        <span style="font-weight: 600; font-size: 0.95rem;">@action.Gsrn</span>
-                        @foreach (var hist in action.History)
-                        {
-                            <span class="ops-history-badge">@hist</span>
-                        }
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        @if (action.Status == ActionStatus.Running)
-                        {
-                            <span>@action.ActionType — @action.CurrentStepDetails</span>
-                        }
-                        else if (action.Result is not null)
-                        {
-                            @action.Result
-                        }
-                        else
-                        {
-                            @action.Address
-                        }
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
-                    @switch (action.Status)
-                    {
-                        case ActionStatus.Running:
-                            <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@action.TotalSteps)</span>
-                            break;
-                        case ActionStatus.Completed:
-                            <span class="badge badge-completed">ready</span>
-                            @if (!action.IsOffboarded)
+            var isExpanded = _expandedActionId == action.Id;
+            <div class="@rowCss" style="flex-wrap: wrap;">
+                <div class="ops-action-row" @onclick="@(() => ToggleExpandAsync(action))">
+                    <div class="ops-action-id">#@action.Id</div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-weight: 600; font-size: 0.95rem;">@action.Gsrn</span>
+                            @if (action.CompletedOps.Count > 0)
                             {
-                                <div class="ops-followup">
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Receive Metering", 2))">Metering</button>
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Run Settlement", 3))">Settlement</button>
-                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Aconto Billing", 4))">Aconto</button>
-                                    <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action, "Offboard", 5))">Offboard</button>
-                                </div>
+                                @foreach (var op in action.CompletedOps)
+                                {
+                                    <span class="ops-history-badge">@op</span>
+                                }
+                            }
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            @if (action.Status == ActionStatus.Running)
+                            {
+                                <span>@action.ActionType — @action.CurrentStepDetails</span>
+                            }
+                            else if (action.Result is not null)
+                            {
+                                @action.Result
                             }
                             else
                             {
-                                <span class="badge badge-dead-letter">offboarded</span>
+                                @action.Address
                             }
-                            break;
-                        case ActionStatus.Failed:
-                            <span class="badge badge-dead-letter">failed</span>
-                            break;
-                    }
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                        @switch (action.Status)
+                        {
+                            case ActionStatus.Running:
+                                <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@action.TotalSteps)</span>
+                                break;
+                            case ActionStatus.Completed:
+                                <span class="badge badge-completed">ready</span>
+                                @if (!action.IsOffboarded)
+                                {
+                                    <div class="ops-followup">
+                                        <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Receive Metering", 2))" @onclick:stopPropagation="true">Metering</button>
+                                        <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Run Settlement", 3))" @onclick:stopPropagation="true">Settlement</button>
+                                        <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Aconto Billing", 4))" @onclick:stopPropagation="true">Aconto</button>
+                                        <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action, "Offboard", 5))" @onclick:stopPropagation="true">Offboard</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-dead-letter">offboarded</span>
+                                }
+                                break;
+                            case ActionStatus.Failed:
+                                <span class="badge badge-dead-letter">failed</span>
+                                break;
+                        }
+                        <span class="ops-expand-icon">@(isExpanded ? "\u25B2" : "\u25BC")</span>
+                    </div>
                 </div>
+                @if (isExpanded && action.Summary is { } summary)
+                {
+                    <div class="ops-detail-panel">
+                        <!-- Metering Point -->
+                        <div class="ops-detail-section">
+                            <div class="ops-detail-label">Metering Point</div>
+                            <div class="ops-detail-row">
+                                <span>Status: <strong>@summary.ConnectionStatus</strong></span>
+                                @if (summary.ActivatedAt.HasValue)
+                                {
+                                    <span>Activated: @summary.ActivatedAt.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                }
+                                @if (summary.DeactivatedAt.HasValue)
+                                {
+                                    <span>Deactivated: @summary.DeactivatedAt.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Processes -->
+                        @if (summary.Processes.Count > 0)
+                        {
+                            <div class="ops-detail-section">
+                                <div class="ops-detail-label">Processes</div>
+                                @foreach (var p in summary.Processes)
+                                {
+                                    <div class="ops-detail-row">
+                                        <span class="ops-detail-tag">@p.ProcessType</span>
+                                        <span class="badge @(p.Status == "completed" ? "badge-completed" : p.Status == "final_settled" ? "badge-dead-letter" : "badge-sent")">@p.Status</span>
+                                        @if (p.EffectiveDate.HasValue)
+                                        {
+                                            <span>from @p.EffectiveDate.Value</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Supply Periods -->
+                        @if (summary.SupplyPeriods.Count > 0)
+                        {
+                            <div class="ops-detail-section">
+                                <div class="ops-detail-label">Supply Periods</div>
+                                @foreach (var sp in summary.SupplyPeriods)
+                                {
+                                    <div class="ops-detail-row">
+                                        <span>@sp.StartDate &rarr; @(sp.EndDate?.ToString() ?? "ongoing")</span>
+                                        @if (sp.EndReason is not null)
+                                        {
+                                            <span class="ops-detail-muted">(@sp.EndReason)</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Metering Data -->
+                        @if (summary.Metering is { } m)
+                        {
+                            <div class="ops-detail-section">
+                                <div class="ops-detail-label">Metering Data</div>
+                                <div class="ops-detail-row">
+                                    <span>@m.ReadingCount readings</span>
+                                    <span>@m.TotalKwh.ToString("N1") kWh</span>
+                                    <span class="ops-detail-muted">@m.FirstReading.ToString("yyyy-MM-dd") &ndash; @m.LastReading.ToString("yyyy-MM-dd")</span>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Settlements -->
+                        @if (summary.Settlements.Count > 0)
+                        {
+                            <div class="ops-detail-section">
+                                <div class="ops-detail-label">Settlements</div>
+                                @foreach (var s in summary.Settlements)
+                                {
+                                    <div class="ops-detail-row">
+                                        <span>@s.PeriodStart &rarr; @s.PeriodEnd</span>
+                                        <span><strong>@s.TotalAmount.ToString("N2") DKK</strong></span>
+                                        <span class="ops-detail-muted">VAT @s.VatAmount.ToString("N2")</span>
+                                        <span class="badge badge-completed">@s.Status</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Aconto Payments -->
+                        @if (summary.AcontoPayments.Count > 0)
+                        {
+                            <div class="ops-detail-section">
+                                <div class="ops-detail-label">Aconto Payments</div>
+                                @foreach (var a in summary.AcontoPayments)
+                                {
+                                    <div class="ops-detail-row">
+                                        <span>@a.PeriodStart &rarr; @a.PeriodEnd</span>
+                                        <span><strong>@a.Amount.ToString("N2") DKK</strong></span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else if (isExpanded && action.Summary is null)
+                {
+                    <div class="ops-detail-panel">
+                        <span class="ops-detail-muted">Loading...</span>
+                    </div>
+                }
             </div>
         }
     </div>
 }
 
 <style>
+    .ops-action-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        cursor: pointer;
+    }
+
+    .ops-expand-icon {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        margin-left: 0.25rem;
+    }
+
     .ops-followup {
         display: flex;
         gap: 0.35rem;
@@ -169,6 +298,50 @@
         color: var(--text-muted);
         white-space: nowrap;
     }
+
+    .ops-detail-panel {
+        width: 100%;
+        border-top: 1px solid var(--border);
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .ops-detail-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .ops-detail-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    .ops-detail-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background: var(--bg-hover);
+    }
+
+    .ops-detail-tag {
+        font-weight: 600;
+        min-width: 8rem;
+    }
+
+    .ops-detail-muted {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
 </style>
 
 @code {
@@ -188,7 +361,8 @@
         public string? CurrentStepDetails { get; set; }
         public string? Result { get; set; }
         public string? ErrorMessage { get; set; }
-        public List<string> History { get; } = new();
+        public List<string> CompletedOps { get; } = new();
+        public MeteringPointSummary? Summary { get; set; }
     }
 
     private record DawaSuggestion(string Text, string DarId);
@@ -197,11 +371,28 @@
     private bool _searching;
     private bool _addressSelected;
     private string _selectedAddress = "";
+    private int? _expandedActionId;
     private readonly List<DawaSuggestion> _suggestions = new();
     private readonly List<MeteringPointInfo> _selectedMeteringPoints = new();
     private readonly List<ActionViewModel> _actions = new();
     private int _actionCounter;
     private Timer? _debounceTimer;
+
+    private async Task ToggleExpandAsync(ActionViewModel action)
+    {
+        if (_expandedActionId == action.Id)
+        {
+            _expandedActionId = null;
+            return;
+        }
+
+        _expandedActionId = action.Id;
+        action.Summary = null;
+        StateHasChanged();
+
+        action.Summary = await Simulator.GetMeteringPointSummaryAsync(action.Gsrn, CancellationToken.None);
+        StateHasChanged();
+    }
 
     private void OnSearchInput(ChangeEventArgs e)
     {
@@ -337,7 +528,7 @@
 
             await InvokeAsync(() =>
             {
-                action.History.Add(action.ActionType);
+                action.CompletedOps.Add(action.ActionType);
                 action.Status = ActionStatus.Completed;
                 if (action.ActionType == "Offboard")
                     action.IsOffboarded = true;
