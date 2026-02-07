@@ -74,9 +74,10 @@ public sealed class AcontoChangeOfSupplierContext
     public bool IsBrsSubmitted { get; set; }
     public bool IsAcknowledged { get; set; }
     public bool IsAcontoEstimated { get; set; }
-    public bool IsAcontoPaid { get; set; }
+    public bool IsInvoiceSent { get; set; }
     public bool IsRsm007Received { get; set; }
     public bool IsEffectuated { get; set; }
+    public bool IsAcontoPaid { get; set; }
     public bool IsAcontoSettled { get; set; }
     public bool IsMeteringReceived { get; set; }
     public decimal AcontoEstimate { get; set; }

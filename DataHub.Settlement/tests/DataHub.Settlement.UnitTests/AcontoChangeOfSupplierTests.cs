@@ -32,7 +32,20 @@ public class AcontoChangeOfSupplierTests
     }
 
     [Fact]
-    public void Payment_is_recorded_before_effectuation_in_timeline()
+    public void Invoice_sent_before_effectuation_in_timeline()
+    {
+        var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
+
+        var invoiceDate = timeline.GetDate("Send Invoice");
+        var effectuationDate = timeline.GetDate("Effectuation");
+
+        invoiceDate.Should().NotBeNull();
+        effectuationDate.Should().NotBeNull();
+        invoiceDate!.Value.Should().BeBefore(effectuationDate!.Value);
+    }
+
+    [Fact]
+    public void Payment_is_after_effectuation_in_timeline()
     {
         var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
 
@@ -41,27 +54,27 @@ public class AcontoChangeOfSupplierTests
 
         paymentDate.Should().NotBeNull();
         effectuationDate.Should().NotBeNull();
-        paymentDate!.Value.Should().BeBefore(effectuationDate!.Value);
+        paymentDate!.Value.Should().BeAfter(effectuationDate!.Value);
     }
 
     [Fact]
-    public void Aconto_settlement_runs_at_effectuation_date()
+    public void Aconto_settlement_runs_at_payment_date()
     {
         var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
 
-        var effectuationDate = timeline.GetDate("Effectuation");
+        var paymentDate = timeline.GetDate("Record Payment");
         var settlementDate = timeline.GetDate("Aconto Settlement");
 
-        effectuationDate.Should().NotBeNull();
+        paymentDate.Should().NotBeNull();
         settlementDate.Should().NotBeNull();
-        settlementDate!.Value.Should().Be(effectuationDate!.Value);
+        settlementDate!.Value.Should().Be(paymentDate!.Value);
     }
 
     [Fact]
-    public void Timeline_has_9_events()
+    public void Timeline_has_10_events()
     {
         var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
-        timeline.Events.Should().HaveCount(9);
+        timeline.Events.Should().HaveCount(10);
     }
 
     [Fact]
@@ -79,9 +92,16 @@ public class AcontoChangeOfSupplierTests
     }
 
     [Fact]
-    public void Payment_date_is_D_minus_4()
+    public void Invoice_date_is_D_minus_4()
     {
         var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
-        timeline.GetDate("Record Payment").Should().Be(new DateOnly(2024, 12, 28));
+        timeline.GetDate("Send Invoice").Should().Be(new DateOnly(2024, 12, 28));
+    }
+
+    [Fact]
+    public void Payment_date_is_D_plus_7()
+    {
+        var timeline = DataHubTimeline.BuildAcontoChangeOfSupplierTimeline(Jan1);
+        timeline.GetDate("Record Payment").Should().Be(new DateOnly(2025, 1, 8));
     }
 }

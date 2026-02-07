@@ -1246,17 +1246,28 @@ public sealed class SimulationService
         await Task.Delay(1200, ct);
 
         // ── Step 2: Seed spot prices + receive final metering ──
-        DateTime latestTimestamp;
+        DateTime? latestTimestamp;
         await using (var conn = new NpgsqlConnection(_connectionString))
         {
             await conn.OpenAsync(ct);
-            latestTimestamp = await conn.QuerySingleAsync<DateTime>(
+            latestTimestamp = await conn.QuerySingleOrDefaultAsync<DateTime?>(
                 "SELECT MAX(timestamp) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
                 new { Gsrn = gsrn });
         }
 
-        var departureStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
-            .AddMonths(1);
+        // If no metering data yet (e.g. aconto customer), use effective date from the process
+        DateTime departureStart;
+        if (latestTimestamp.HasValue)
+        {
+            departureStart = new DateTime(latestTimestamp.Value.Year, latestTimestamp.Value.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                .AddMonths(1);
+        }
+        else
+        {
+            var latestProcess = (await processRepo.GetByStatusAsync("completed", ct)).FirstOrDefault(p => p.Gsrn == gsrn);
+            var effDate = latestProcess?.EffectiveDate ?? _clock.Today;
+            departureStart = effDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        }
         const int finalHours = 360; // ~15 days partial month
 
         var prices = GenerateSpotPrices("DK1", departureStart, finalHours);
@@ -1713,17 +1724,27 @@ public sealed class SimulationService
         await Task.Delay(1500, ct);
 
         // ── Step 2: Final Metering ──
-        DateTime latestTimestamp;
+        DateTime? latestTimestamp;
         await using (var conn = new NpgsqlConnection(_connectionString))
         {
             await conn.OpenAsync(ct);
-            latestTimestamp = await conn.QuerySingleAsync<DateTime>(
+            latestTimestamp = await conn.QuerySingleOrDefaultAsync<DateTime?>(
                 "SELECT MAX(timestamp) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
                 new { Gsrn = gsrn });
         }
 
-        var departureStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
-            .AddMonths(1);
+        DateTime departureStart;
+        if (latestTimestamp.HasValue)
+        {
+            departureStart = new DateTime(latestTimestamp.Value.Year, latestTimestamp.Value.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                .AddMonths(1);
+        }
+        else
+        {
+            var latestProcess = (await processRepo.GetByStatusAsync("completed", ct)).FirstOrDefault(p => p.Gsrn == gsrn);
+            var effDate = latestProcess?.EffectiveDate ?? _clock.Today;
+            departureStart = effDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        }
         const int finalHours = 360;
 
         var prices = GenerateSpotPrices("DK1", departureStart, finalHours);
@@ -2474,21 +2495,16 @@ public sealed class SimulationService
                 $"Quarterly estimate: {ctx.AcontoEstimate:N2} DKK (4,000 kWh/year)", currentDate));
         }
 
-        // Step 5: Record Payment
-        if (ctx.IsAcontoEstimated && !ctx.IsAcontoPaid && currentDate >= timeline.GetDate("Record Payment"))
+        // Step 5: Send Invoice
+        if (ctx.IsAcontoEstimated && !ctx.IsInvoiceSent && currentDate >= timeline.GetDate("Send Invoice"))
         {
-            var acontoRepo = new AcontoPaymentRepository(_connectionString);
-            var qStartDate = ed;
-            var qEndDate = ed.AddMonths(3).AddDays(-1);
-            await acontoRepo.RecordPaymentAsync(ctx.Gsrn, qStartDate, qEndDate, ctx.AcontoEstimate, ct);
-
-            ctx.IsAcontoPaid = true;
-            executed.Add(new SimulationStep(5, "Record Payment",
-                $"Aconto payment of {ctx.AcontoEstimate:N2} DKK recorded for {qStartDate}\u2013{qEndDate}", currentDate));
+            ctx.IsInvoiceSent = true;
+            executed.Add(new SimulationStep(5, "Send Invoice",
+                $"Aconto invoice of {ctx.AcontoEstimate:N2} DKK sent to customer", currentDate));
         }
 
         // Step 6: Receive RSM-007
-        if (ctx.IsAcontoPaid && !ctx.IsRsm007Received && currentDate >= timeline.GetDate("Receive RSM-007"))
+        if (ctx.IsInvoiceSent && !ctx.IsRsm007Received && currentDate >= timeline.GetDate("Receive RSM-007"))
         {
             var portfolio = new PortfolioRepository(_connectionString);
             var uid = Guid.NewGuid().ToString("N")[..8];
@@ -2521,8 +2537,70 @@ public sealed class SimulationService
                 "Supply begins, process completed", currentDate));
         }
 
-        // Step 8: Aconto Settlement (immediate — uses estimate, no metering needed)
-        if (ctx.IsEffectuated && !ctx.IsAcontoSettled && currentDate >= timeline.GetDate("Aconto Settlement"))
+        // Step 8: Receive RSM-012 (daily deliveries — starts after effectuation)
+        if (ctx.IsEffectuated && !ctx.IsMeteringReceived)
+        {
+            var firstDeliveryDate = ed.AddDays(1);
+            var lastPossibleDelivery = ed.AddMonths(1).AddDays(2);
+            var deliverUpTo = currentDate < lastPossibleDelivery ? currentDate : lastPossibleDelivery;
+
+            if (deliverUpTo >= firstDeliveryDate && ctx.MeteringDaysDelivered < ctx.TotalMeteringDays)
+            {
+                var meteringRepo = new MeteringDataRepository(_connectionString);
+                var daysToDeliver = deliverUpTo.DayNumber - firstDeliveryDate.DayNumber + 1;
+                var targetDays = Math.Min(daysToDeliver, ctx.TotalMeteringDays);
+                var newDays = targetDays - ctx.MeteringDaysDelivered;
+
+                if (newDays > 0)
+                {
+                    var dayOffset = ctx.MeteringDaysDelivered;
+                    var batchStart = effectiveStart.AddDays(dayOffset);
+                    var batchHours = newDays * 24;
+                    var uid = Guid.NewGuid().ToString("N")[..8];
+                    var msgId012 = $"msg-rsm012-aconto-{uid}";
+                    var rows = GenerateMeteringData(batchStart, batchHours, 0.55m, msgId012);
+                    await meteringRepo.StoreTimeSeriesAsync(ctx.Gsrn, rows, ct);
+
+                    await using (var msgConn = new NpgsqlConnection(_connectionString))
+                    {
+                        await msgConn.OpenAsync(ct);
+                        await msgConn.ExecuteAsync("""
+                            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
+                            VALUES (@MsgId, 'RSM-012', NULL, 'Timeseries', 'processed', @Size)
+                            """, new { MsgId = msgId012, Size = batchHours * 70 });
+                        await msgConn.ExecuteAsync("""
+                            INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
+                            """, new { MsgId = msgId012 });
+                    }
+
+                    ctx.MeteringDaysDelivered = targetDays;
+                    var totalKwh = targetDays * 24 * 0.55m;
+                    var label = ctx.MeteringDaysDelivered >= ctx.TotalMeteringDays
+                        ? $"All {ctx.TotalMeteringDays} days received ({totalKwh:N1} kWh)"
+                        : $"Day {ctx.MeteringDaysDelivered}/{ctx.TotalMeteringDays} ({totalKwh:N1} kWh)";
+                    executed.Add(new SimulationStep(8, "Receive RSM-012", label, currentDate));
+
+                    if (ctx.MeteringDaysDelivered >= ctx.TotalMeteringDays)
+                        ctx.IsMeteringReceived = true;
+                }
+            }
+        }
+
+        // Step 9: Record Payment (after effectuation — direct debit collection)
+        if (ctx.IsEffectuated && !ctx.IsAcontoPaid && currentDate >= timeline.GetDate("Record Payment"))
+        {
+            var acontoRepo = new AcontoPaymentRepository(_connectionString);
+            var qStartDate = ed;
+            var qEndDate = ed.AddMonths(3).AddDays(-1);
+            await acontoRepo.RecordPaymentAsync(ctx.Gsrn, qStartDate, qEndDate, ctx.AcontoEstimate, ct);
+
+            ctx.IsAcontoPaid = true;
+            executed.Add(new SimulationStep(9, "Record Payment",
+                $"Aconto payment of {ctx.AcontoEstimate:N2} DKK collected for {qStartDate}\u2013{qEndDate}", currentDate));
+        }
+
+        // Step 10: Aconto Settlement (recorded once payment received)
+        if (ctx.IsAcontoPaid && !ctx.IsAcontoSettled && currentDate >= timeline.GetDate("Aconto Settlement"))
         {
             var periodEnd = ed.AddMonths(3);
 
@@ -2568,57 +2646,8 @@ public sealed class SimulationService
             }
 
             ctx.IsAcontoSettled = true;
-            executed.Add(new SimulationStep(8, "Aconto Settlement",
+            executed.Add(new SimulationStep(10, "Aconto Settlement",
                 $"Aconto settlement: {ctx.AcontoEstimate:N2} DKK (estimate-based)", currentDate));
-        }
-
-        // Step 9: Receive RSM-012 (daily deliveries — continues after aconto settlement)
-        if (ctx.IsEffectuated && !ctx.IsMeteringReceived)
-        {
-            var firstDeliveryDate = ed.AddDays(1);
-            var lastPossibleDelivery = ed.AddMonths(1).AddDays(2);
-            var deliverUpTo = currentDate < lastPossibleDelivery ? currentDate : lastPossibleDelivery;
-
-            if (deliverUpTo >= firstDeliveryDate && ctx.MeteringDaysDelivered < ctx.TotalMeteringDays)
-            {
-                var meteringRepo = new MeteringDataRepository(_connectionString);
-                var daysToDeliver = deliverUpTo.DayNumber - firstDeliveryDate.DayNumber + 1;
-                var targetDays = Math.Min(daysToDeliver, ctx.TotalMeteringDays);
-                var newDays = targetDays - ctx.MeteringDaysDelivered;
-
-                if (newDays > 0)
-                {
-                    var dayOffset = ctx.MeteringDaysDelivered;
-                    var batchStart = effectiveStart.AddDays(dayOffset);
-                    var batchHours = newDays * 24;
-                    var uid = Guid.NewGuid().ToString("N")[..8];
-                    var msgId012 = $"msg-rsm012-aconto-{uid}";
-                    var rows = GenerateMeteringData(batchStart, batchHours, 0.55m, msgId012);
-                    await meteringRepo.StoreTimeSeriesAsync(ctx.Gsrn, rows, ct);
-
-                    await using (var msgConn = new NpgsqlConnection(_connectionString))
-                    {
-                        await msgConn.OpenAsync(ct);
-                        await msgConn.ExecuteAsync("""
-                            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                            VALUES (@MsgId, 'RSM-012', NULL, 'Timeseries', 'processed', @Size)
-                            """, new { MsgId = msgId012, Size = batchHours * 70 });
-                        await msgConn.ExecuteAsync("""
-                            INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                            """, new { MsgId = msgId012 });
-                    }
-
-                    ctx.MeteringDaysDelivered = targetDays;
-                    var totalKwh = targetDays * 24 * 0.55m;
-                    var label = ctx.MeteringDaysDelivered >= ctx.TotalMeteringDays
-                        ? $"All {ctx.TotalMeteringDays} days received ({totalKwh:N1} kWh)"
-                        : $"Day {ctx.MeteringDaysDelivered}/{ctx.TotalMeteringDays} ({totalKwh:N1} kWh)";
-                    executed.Add(new SimulationStep(9, "Receive RSM-012", label, currentDate));
-
-                    if (ctx.MeteringDaysDelivered >= ctx.TotalMeteringDays)
-                        ctx.IsMeteringReceived = true;
-                }
-            }
         }
 
         return executed;
