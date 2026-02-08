@@ -35,9 +35,9 @@ export default function Dashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
       ),
-      gradient: 'from-amber-400 to-orange-500',
-      bg: 'bg-amber-50',
-      iconBg: 'bg-gradient-to-br from-amber-400 to-orange-500',
+      gradient: 'from-amber-400 to-amber-500',
+      bg: 'bg-teal-50',
+      iconBg: 'bg-amber-500',
       link: '/signups?status=processing',
     },
     {
@@ -50,7 +50,7 @@ export default function Dashboard() {
       ),
       gradient: 'from-emerald-400 to-teal-500',
       bg: 'bg-emerald-50',
-      iconBg: 'bg-gradient-to-br from-emerald-400 to-teal-500',
+      iconBg: 'bg-emerald-500',
       link: '/customers',
     },
     {
@@ -63,7 +63,7 @@ export default function Dashboard() {
       ),
       gradient: 'from-rose-400 to-pink-500',
       bg: 'bg-rose-50',
-      iconBg: 'bg-gradient-to-br from-rose-400 to-pink-500',
+      iconBg: 'bg-rose-500',
       link: '/signups?status=rejected',
     },
     {
@@ -74,16 +74,16 @@ export default function Dashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
         </svg>
       ),
-      gradient: 'from-amber-400 to-orange-500',
-      bg: 'bg-amber-50',
-      iconBg: 'bg-gradient-to-br from-amber-400 to-orange-500',
+      gradient: 'from-teal-400 to-teal-500',
+      bg: 'bg-teal-50',
+      iconBg: 'bg-teal-500',
       link: '/products',
     },
   ];
 
   const statusStyles = {
     registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
-    processing: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+    processing: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
     active:     { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
     rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
     cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
@@ -93,7 +93,7 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
           <p className="text-sm text-slate-400 font-medium">Loading dashboard...</p>
         </div>
       </div>
@@ -114,13 +114,13 @@ export default function Dashboard() {
           <Link
             key={s.label}
             to={s.link}
-            className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-amber-200/60 animate-fade-in-up opacity-0"
+            className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-teal-200/60 animate-fade-in-up opacity-0"
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center text-white shadow-lg shadow-${s.gradient.split('-')[1]}-500/25`}>
                 {s.icon}
               </div>
-              <svg className="w-5 h-5 text-slate-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <svg className="w-5 h-5 text-slate-300 group-hover:text-teal-500 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
               </svg>
             </div>
@@ -134,10 +134,10 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
+            <div className="w-1 h-5 rounded-full bg-teal-500" />
             <h2 className="text-base font-semibold text-slate-900">Recent Signups</h2>
           </div>
-          <Link to="/signups" className="text-sm font-medium text-amber-500 hover:text-amber-700 transition-colors flex items-center gap-1">
+          <Link to="/signups" className="text-sm font-medium text-teal-500 hover:text-teal-700 transition-colors flex items-center gap-1">
             View all
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -167,9 +167,9 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {recent.map((s, i) => (
-                <tr key={s.id} className="hover:bg-amber-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 60}ms` }}>
+                <tr key={s.id} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 60}ms` }}>
                   <td className="px-6 py-3.5">
-                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-amber-600 hover:text-amber-800 transition-colors">
+                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
