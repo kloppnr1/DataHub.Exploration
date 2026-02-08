@@ -79,10 +79,7 @@ export default function Layout() {
             <div className="w-10 h-10 rounded-xl bg-white/12 flex items-center justify-center">
               <span className="text-[20px] font-black text-white/90 leading-none tracking-tighter">V</span>
             </div>
-            <div>
-              <span className="text-[17px] font-semibold text-white/90 tracking-tight">Volt</span>
-              <p className="text-[10px] text-teal-200/40 font-medium tracking-wide">Energy Platform</p>
-            </div>
+            <p className="text-[10px] text-teal-200/40 font-medium tracking-wide">Energy Platform</p>
           </div>
         </div>
 
