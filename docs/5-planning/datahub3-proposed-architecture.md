@@ -1,5 +1,9 @@
 # Proposed Architecture: Settlement System for DataHub 3
 
+> **📋 Note:** This is the original architecture proposal created before MVP 1 implementation.
+> For the **current, as-built architecture**, see [ARCHITECTURE.md](../../DataHub.Settlement/ARCHITECTURE.md).
+> This document is preserved for historical context and to show the evolution of design decisions.
+
 Overall architecture for an open source settlement system operating as an electricity supplier (DDQ) in Energinet DataHub 3. The examples below are sized for ~80,000 customers.
 
 ## Data Volume Estimates

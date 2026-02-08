@@ -499,12 +499,40 @@ All DataHub messages use CIM (Common Information Model) JSON format — a standa
 
 ---
 
-## Further Reading
+## Documentation
 
-| Document | What it covers |
-|----------|---------------|
-| [Next phase plan](docs/next-phase-plan.md) | Onboarding API design, MVP 3 gaps, MVP 4 roadmap |
-| [Customer lifecycle](docs/datahub3-customer-lifecycle.md) | 6-phase lifecycle from onboarding to closing |
-| [Product and billing](docs/datahub3-product-and-billing.md) | Invoice structure, aconto, payment models |
-| [Edge cases](docs/datahub3-edge-cases.md) | Corrections, erroneous processes, reconciliation |
-| [Implementation plan](docs/datahub3-implementation-plan.md) | Original MVP roadmap |
+This project has comprehensive documentation organized by topic and audience. **Start here:**
+
+### 📚 [Documentation Index](docs/INDEX.md)
+
+The complete guide to all documentation, with navigation paths for different audiences and visual maps showing how documents relate.
+
+### Key Documents
+
+**For business context:**
+- [Customer Lifecycle](docs/2-business-context/datahub3-customer-lifecycle.md) - Complete customer journey from onboarding to offboarding
+- [Product & Billing](docs/2-business-context/datahub3-product-and-billing.md) - Aconto, invoices, legal requirements
+- [Edge Cases](docs/2-business-context/datahub3-edge-cases.md) - Corrections, solar, elvarme, erroneous switches
+- [Market Rules](docs/2-business-context/datahub3-market-rules.md) - Danish energy market regulations
+
+**For technical implementation:**
+- [ARCHITECTURE.md](DataHub.Settlement/ARCHITECTURE.md) - Design decisions, patterns, and rationale
+- [Database Model](docs/3-architecture/datahub3-database-model.md) - Schema design and TimescaleDB usage
+- [Class Diagram](docs/3-architecture/datahub3-class-diagram.md) - Domain model structure
+- [Sequence Diagrams](docs/3-architecture/datahub3-sequence-diagrams.md) - Process flows
+
+**For DataHub integration:**
+- [DDQ Business Processes](docs/4-integration/datahub3-ddq-business-processes.md) - BRS/RSM message types
+- [Authentication & Security](docs/4-integration/datahub3-authentication-security.md) - OAuth2 and token management
+- [RSM-012 Measure Data](docs/4-integration/rsm-012-datahub3-measure-data.md) - Metering data format
+
+**For current work:**
+- [Next Phase Plan](docs/5-planning/next-phase-plan.md) - Onboarding API design and MVP 4 roadmap
+
+### Quick Navigation by Role
+
+- **New Developer?** → [README.md](README.md) → [Settlement Overview](docs/1-getting-started/datahub3-settlement-overview.md) → [ARCHITECTURE.md](DataHub.Settlement/ARCHITECTURE.md)
+- **Business Analyst?** → [Customer Lifecycle](docs/2-business-context/datahub3-customer-lifecycle.md) → [Product & Billing](docs/2-business-context/datahub3-product-and-billing.md)
+- **Solution Architect?** → [ARCHITECTURE.md](DataHub.Settlement/ARCHITECTURE.md) → [Database Model](docs/3-architecture/datahub3-database-model.md)
+
+See the [Documentation Index](docs/INDEX.md) for complete navigation paths and document relationships.
