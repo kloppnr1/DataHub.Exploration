@@ -53,20 +53,20 @@ The supplier's product is defined by:
 
 Note: binding periods are not allowed for electricity supply contracts in Denmark. Customers can switch supplier at any time with 15 business days notice.
 
-Grid tariffs, system tariffs, transmission, and electricity tax are set by the grid company, Energinet, and the state respectively. The customer can't negotiate these — they're the same whether the customer is with DDQ or any other supplier. There are ~40 grid companies in Denmark, each with different rates, but which one applies is determined by the customer's address, not their choice of supplier.
+Grid tariffs, system tariffs, transmission, and electricity tax are set by the grid company, Energinet, and the state respectively. The customer can't negotiate these — they're the same regardless of supplier. There are ~40 grid companies in Denmark, each with different rates, but which one applies is determined by the customer's address, not their choice of supplier.
 
-This matters for the onboarding API: **the sales channel only needs to show DDQ's own pricing** (margin + subscription). No need to estimate grid tariffs at signup — the customer can't compare those between suppliers anyway.
+This matters for the onboarding API: **the sales channel only needs to show our own pricing** (margin + subscription). No need to estimate grid tariffs at signup — the customer can't compare those between suppliers anyway.
 
 ```
-Invoice line               Who sets the price      DDQ controls?
+Invoice line               Who sets the price      We control?
 ─────────────────────────  ─────────────────────── ─────────────
-Energy (spot + margin)     Nord Pool + DDQ         ✓ margin
+Energy (spot + margin)     Nord Pool + us          ✓ margin
 Grid tariff                Grid company            ✗ pass-through
 System tariff              Energinet               ✗ pass-through
 Transmission               Energinet               ✗ pass-through
 Electricity tax (elafgift) The state               ✗ pass-through
 Grid subscription          Grid company            ✗ pass-through
-Supplier subscription      DDQ                     ✓ subscription
+Supplier subscription      Us                      ✓ subscription
 VAT (25%)                  The state               ✗ calculated
 ```
 
@@ -250,7 +250,7 @@ Recalculated automatically at each quarterly settlement, or on customer request.
 
 | Scenario | Trigger | BRS process |
 |----------|---------|-------------|
-| **Switches to another supplier** | Another DDQ sends BRS-001 for our metering point | We receive notification, don't initiate |
+| **Switches to another supplier** | The new supplier sends BRS-001 for our metering point | We receive notification, don't initiate |
 | **Terminates contract** | Customer calls to cancel | We send BRS-002 (end of supply) |
 | **Moves out** | Customer moves to a new address | We or grid company sends BRS-010 |
 | **Non-payment** | Collections process exhausted | We send BRS-002 with non-payment reason |
