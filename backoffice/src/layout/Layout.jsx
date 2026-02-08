@@ -79,8 +79,7 @@ export default function Layout() {
               </svg>
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-white tracking-wide">Settlement</h1>
-              <p className="text-[11px] text-slate-400">Back Office</p>
+              <h1 className="text-sm font-semibold text-white tracking-wide">Volt</h1>
             </div>
           </div>
         </div>
@@ -117,7 +116,7 @@ export default function Layout() {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-slate-800">
-          <p className="text-[11px] text-slate-500">DataHub Settlement v0.1</p>
+          <p className="text-[11px] text-slate-500">Volt v0.1</p>
         </div>
       </aside>
 
