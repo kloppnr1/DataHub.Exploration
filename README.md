@@ -480,7 +480,7 @@ All DataHub messages use CIM (Common Information Model) JSON format — a standa
 
 ---
 
-## Verified Reference Invoices
+## Reference Invoices (Golden Masters)
 
 10 hand-calculated invoices that the settlement engine must reproduce exactly. If any of these break, something is wrong.
 
