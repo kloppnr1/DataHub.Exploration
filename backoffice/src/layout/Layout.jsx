@@ -2,6 +2,21 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const navSections = [
   {
+    label: 'Overview',
+    items: [
+      {
+        to: '/',
+        label: 'Dashboard',
+        end: true,
+        icon: (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
     label: 'Onboarding',
     items: [
       {
@@ -49,64 +64,53 @@ const navSections = [
   },
 ];
 
-const pageTitle = {
-  '/signups': 'Signups',
-  '/signups/new': 'New Signup',
-  '/customers': 'Customers',
-  '/products': 'Products',
-};
-
 export default function Layout() {
-  const location = useLocation();
-
-  // Derive title from path
-  const title =
-    pageTitle[location.pathname] ||
-    (location.pathname.startsWith('/signups/') ? 'Signup Detail' : '') ||
-    (location.pathname.startsWith('/customers/') ? 'Customer Detail' : '') ||
-    'Back Office';
-
   return (
-    <div className="flex h-screen bg-slate-100">
+    <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
-      <aside className="w-60 bg-slate-900 flex flex-col shrink-0">
+      <aside className="w-[220px] bg-slate-950 flex flex-col shrink-0 border-r border-slate-800/60">
         {/* Brand */}
-        <div className="px-5 py-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <div className="px-5 pt-6 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
+              <svg className="w-5 h-5 text-slate-950" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-white tracking-wide">Volt</h1>
-            </div>
+            <span className="text-[17px] font-bold text-white tracking-tight">Volt</span>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pb-4 space-y-6 overflow-y-auto">
+        <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">
                 {section.label}
               </p>
-              <div className="space-y-0.5">
-                {section.items.map(({ to, label, icon }) => (
+              <div className="space-y-px">
+                {section.items.map(({ to, label, icon, end }) => (
                   <NavLink
                     key={to}
                     to={to}
-                    end={to === '/signups'}
+                    end={end || to === '/signups'}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      `group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all ${
                         isActive
-                          ? 'bg-indigo-500/15 text-indigo-400 font-medium'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          ? 'bg-amber-500/10 text-amber-400 font-medium'
+                          : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                       }`
                     }
                   >
-                    {icon}
-                    {label}
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-amber-400" />
+                        )}
+                        {icon}
+                        {label}
+                      </>
+                    )}
                   </NavLink>
                 ))}
               </div>
@@ -115,23 +119,19 @@ export default function Layout() {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-slate-800">
-          <p className="text-[11px] text-slate-500">Volt v0.1</p>
+        <div className="px-5 py-4 border-t border-slate-800/60">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] text-slate-500">Development</span>
+          </div>
+          <p className="text-[10px] text-slate-600 mt-1">Volt v0.1</p>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-8 shrink-0">
-          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-8">
-          <Outlet />
-        </main>
-      </div>
+      {/* Main content — no top bar, full bleed */}
+      <main className="flex-1 overflow-auto bg-slate-900">
+        <Outlet />
+      </main>
     </div>
   );
 }
