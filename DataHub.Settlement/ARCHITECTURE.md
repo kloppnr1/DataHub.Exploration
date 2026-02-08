@@ -278,11 +278,15 @@ The `DataHub.Settlement.Simulator` project is a standalone ASP.NET Minimal API t
 
 ---
 
-## Web Dashboard
+## Development Dashboard (Blazor)
+
+> **⚠️ IMPORTANT**: This dashboard is strictly for development and testing. It is NOT a production application for end users.
 
 ### Technology
 
 Blazor Server with **Tailwind CSS via CDN** — interactive server-rendered pages without a JavaScript build pipeline. No npm, no webpack, no node_modules.
+
+**Purpose**: Testing settlement calculations, simulating DataHub interactions, and time-traveling through multi-day business processes. Uses stub clients and simulated clock for reproducible testing scenarios.
 
 ### Pages
 
@@ -303,6 +307,58 @@ Settlement processes span weeks in real time: a BRS request is sent, acknowledge
 The Operations page uses `SimulatedClock` to compress this timeline — users can advance "today" day by day, triggering the same orchestration logic that would run in production. Each day-step processes scheduled effectuations, delivers metering data for the previous day, and runs settlement when periods complete.
 
 **Why?** Without time simulation, demonstrating or testing a full customer lifecycle would require waiting weeks. The simulated clock makes multi-day business processes explorable in minutes.
+
+---
+
+## Production Back Office (Volt)
+
+> **📊 PRODUCTION APPLICATION**: Volt is the end-user tool for back-office staff managing customer operations.
+
+### Technology
+
+React + Vite + Tailwind CSS — modern frontend framework with fast dev server and optimized production builds.
+
+**Purpose**: Daily operational tasks for customer service staff — creating signups, handling DataHub rejections, disambiguating GSRNs, monitoring the onboarding pipeline, and viewing customer data.
+
+### Architecture
+
+The back-office app is a **separate project within the same repository** (`backoffice/`):
+
+```
+backoffice/
+├── src/
+│   ├── pages/         — UI components (SignupList, CustomerDetail, etc.)
+│   ├── layout/        — Navigation and page structure
+│   ├── api.js         — HTTP client for Settlement API
+│   └── App.jsx        — React Router configuration
+├── index.html
+├── package.json
+└── vite.config.js
+```
+
+### Integration
+
+Volt communicates with the settlement system exclusively through the REST API (`DataHub.Settlement.Api`):
+
+- **No shared code** — completely decoupled from the .NET backend
+- **HTTP-only communication** — API runs on `localhost:5001`, UI on `localhost:5173`
+- **Same database** — reads from shared PostgreSQL/TimescaleDB instance
+- **Separate deployment** — can be deployed independently
+
+### Pages
+
+| Page | Purpose |
+|------|---------|
+| **Dashboard** | Overview of signup pipeline, recent activity, key metrics |
+| **Signups** | List all signups with status filtering, create new signups, view details |
+| **Customers** | List customers, view customer detail with contracts and metering points |
+| **Products** | View available electricity products (margin, subscription, terms) |
+
+### Why Separate from the Blazor Dashboard?
+
+The Blazor dashboard serves developers testing complex settlement calculations and simulating multi-day processes. Back-office staff need a production-ready tool focused on operational workflows (signup creation, rejection handling, customer lookup) without development/testing features like time-travel or simulation scenarios.
+
+**Different audiences, different tools.**
 
 ---
 

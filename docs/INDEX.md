@@ -23,6 +23,26 @@ Start with [README.md](../README.md) → [Settlement Overview](1-getting-started
 
 ---
 
+## Application Guide
+
+This repository contains **two web applications** with different purposes:
+
+### 🔧 Development Dashboard (Blazor)
+- **Port**: localhost:5000
+- **For**: Developers testing settlement logic
+- **Features**: Simulation, time-travel, CIM message viewer, settlement debugging
+- **Status**: Development/testing tool only — NOT for production
+
+### 📊 Volt Back Office (React)
+- **Port**: localhost:5173
+- **For**: Customer service staff
+- **Features**: Signup management, customer lookup, rejection handling, pipeline monitoring
+- **Status**: Production end-user application
+
+**Documentation**: See [README.md](../README.md) Quick Start for setup instructions.
+
+---
+
 ## Documentation Map
 
 ```
