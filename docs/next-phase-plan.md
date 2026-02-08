@@ -241,7 +241,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
               └─────────────────────┘
 ```
 
-**Scope boundary:** This settlement system provides the API. The back-office web application (for handling rejections, GSRN disambiguation, manual corrections) is a **separate project** — it consumes this API. The existing `DataHub.Settlement.Web` project is a development/testing dashboard only.
+**Scope boundary:** The back-office web application (for handling rejections, GSRN disambiguation, manual corrections) will be a **separate project within this repo** — it shares the same database and domain models but is not part of the B1 scope. The existing `DataHub.Settlement.Web` project is a development/testing dashboard only.
 
 ---
 
