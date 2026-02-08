@@ -235,4 +235,21 @@ public sealed class PortfolioRepository : IPortfolioRepository
         await conn.ExecuteAsync(new CommandDefinition(sql,
             new { Gsrn = gsrn, NewGridAreaCode = newGridAreaCode, NewPriceArea = newPriceArea }, cancellationToken: ct));
     }
+
+    public async Task<IReadOnlyList<Product>> GetActiveProductsAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh,
+                   subscription_kr_per_month, description, green_energy, display_order
+            FROM portfolio.product
+            WHERE is_active = true
+            ORDER BY display_order, name
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Product>(
+            new CommandDefinition(sql, cancellationToken: ct));
+        return result.ToList();
+    }
 }

@@ -15,4 +15,5 @@ public record SupplyPeriod(Guid Id, string Gsrn, DateOnly StartDate, DateOnly? E
 public record Product(
     Guid Id, string Name, string EnergyModel,
     decimal MarginOrePerKwh, decimal? SupplementOrePerKwh,
-    decimal SubscriptionKrPerMonth);
+    decimal SubscriptionKrPerMonth,
+    string? Description = null, bool GreenEnergy = false, int DisplayOrder = 0);
