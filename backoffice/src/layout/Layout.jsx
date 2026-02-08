@@ -118,7 +118,7 @@ export default function Layout() {
               </svg>
             </div>
             <div>
-              <span className="text-[18px] font-bold text-white tracking-tight">Volt</span>
+              <span className="text-[18px] font-bold text-white tracking-tight">V</span>
               <p className="text-[10px] text-teal-100/60 font-medium">Energy Platform</p>
             </div>
           </div>
