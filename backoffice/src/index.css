@@ -41,6 +41,80 @@
   animation: glow-pulse 3s ease-in-out infinite;
 }
 
+/* Volt brand icon */
+.volt-brand {
+  position: relative;
+  cursor: pointer;
+}
+.volt-brand:hover .volt-bolt {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+  transform: scale(1.1);
+}
+.volt-bolt {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+/* Spark particles */
+@keyframes spark-1 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(12px, -14px) scale(0); }
+}
+@keyframes spark-2 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-10px, -12px) scale(0); }
+}
+@keyframes spark-3 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(14px, 6px) scale(0); }
+}
+@keyframes spark-4 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-12px, 8px) scale(0); }
+}
+@keyframes spark-5 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(4px, -16px) scale(0); }
+}
+@keyframes spark-6 {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-6px, -15px) scale(0); }
+}
+
+.volt-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.volt-brand:hover .volt-sparks {
+  opacity: 1;
+}
+.volt-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fef3c7;
+  box-shadow: 0 0 4px 1px rgba(253, 230, 138, 0.8);
+  opacity: 0;
+}
+.volt-brand:hover .volt-spark:nth-child(1) { animation: spark-1 0.5s ease-out 0.05s; top: 25%; left: 55%; }
+.volt-brand:hover .volt-spark:nth-child(2) { animation: spark-2 0.5s ease-out 0.1s; top: 30%; left: 40%; }
+.volt-brand:hover .volt-spark:nth-child(3) { animation: spark-3 0.5s ease-out 0.08s; top: 55%; left: 60%; }
+.volt-brand:hover .volt-spark:nth-child(4) { animation: spark-4 0.5s ease-out 0.15s; top: 50%; left: 35%; }
+.volt-brand:hover .volt-spark:nth-child(5) { animation: spark-5 0.45s ease-out 0s; top: 20%; left: 48%; }
+.volt-brand:hover .volt-spark:nth-child(6) { animation: spark-6 0.45s ease-out 0.12s; top: 35%; left: 45%; }
+
+/* Bolt flash on hover */
+@keyframes bolt-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+.volt-brand:hover .volt-flash {
+  animation: bolt-flash 0.4s ease-out;
+}
+
 /* Fade in up animation */
 @keyframes fade-in-up {
   from {

@@ -76,13 +76,30 @@ export default function Layout() {
         {/* Brand */}
         <div className="px-5 pt-7 pb-6 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center glow-pulse">
-              <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
-                <path d="M18.5 3L7 18h7.5l-2 11L26 14h-7.5l2-11z" fill="white" />
-                <path d="M18.5 3L7 18h7.5l-2 11L26 14h-7.5l2-11z" fill="url(#volt-shine)" fillOpacity="0.3" />
+            <div className="volt-brand w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center glow-pulse">
+              {/* Spark particles */}
+              <div className="volt-sparks">
+                <span className="volt-spark" />
+                <span className="volt-spark" />
+                <span className="volt-spark" />
+                <span className="volt-spark" />
+                <span className="volt-spark" />
+                <span className="volt-spark" />
+              </div>
+              {/* Bolt icon */}
+              <svg className="volt-bolt w-7 h-7 relative z-10" viewBox="0 0 32 32" fill="none">
+                {/* Main bolt shape */}
+                <path d="M18.5 2L6 17.5h8l-2.5 12.5L25 14.5h-8l2.5-12.5z" fill="white" />
+                {/* Shine overlay */}
+                <path d="M18.5 2L6 17.5h8l-2.5 12.5L25 14.5h-8l2.5-12.5z" fill="url(#volt-shine)" fillOpacity="0.4" />
+                {/* Inner highlight edge */}
+                <path d="M17 5l-8.5 11h6l-1.5 8L22 14h-6l1-9z" fill="white" fillOpacity="0.25" />
+                {/* Bright flash overlay (animates on hover) */}
+                <circle className="volt-flash" cx="14" cy="16" r="10" fill="white" opacity="0" />
                 <defs>
-                  <linearGradient id="volt-shine" x1="10" y1="3" x2="22" y2="29">
-                    <stop stopColor="white" stopOpacity="0.8" />
+                  <linearGradient id="volt-shine" x1="8" y1="2" x2="24" y2="30">
+                    <stop stopColor="white" stopOpacity="0.9" />
+                    <stop offset="0.5" stopColor="#fef3c7" stopOpacity="0.3" />
                     <stop offset="1" stopColor="white" stopOpacity="0" />
                   </linearGradient>
                 </defs>
