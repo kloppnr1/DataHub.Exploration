@@ -1,5 +1,8 @@
 # DataHub.Settlement — Architecture & Design Rationale
 
+> **📋 Historical Context:** For the original architecture proposal (pre-MVP 1), see [docs/5-planning/datahub3-proposed-architecture.md](../docs/5-planning/datahub3-proposed-architecture.md).
+> This document reflects the **as-built architecture** after MVP 1-3 implementation.
+
 ## Overview
 
 DataHub.Settlement is an electricity settlement platform for the Danish energy market. It integrates with Energinet's DataHub — the central hub that coordinates all electricity suppliers, grid companies, and metering operators in Denmark — to handle customer onboarding, metering data collection, and billing.
