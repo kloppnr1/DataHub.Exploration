@@ -15,6 +15,17 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
     ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
 
+// CORS for back-office dev (React on :5173)
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Core services
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<IAddressLookupClient, StubAddressLookupClient>();
@@ -29,8 +40,12 @@ var app = builder.Build();
 var migrationLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigrator");
 DatabaseMigrator.Migrate(connectionString, migrationLogger);
 
+app.UseCors();
+
 // Health
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+// --- Products ---
 
 // GET /api/products — list active products
 app.MapGet("/api/products", async (IPortfolioRepository repo, CancellationToken ct) =>
@@ -48,6 +63,8 @@ app.MapGet("/api/products", async (IPortfolioRepository repo, CancellationToken 
         green_energy = p.GreenEnergy,
     }));
 });
+
+// --- Signups (sales channel) ---
 
 // POST /api/signup — create a new signup
 app.MapPost("/api/signup", async (SignupRequest request, IOnboardingService service, CancellationToken ct) =>
@@ -86,6 +103,83 @@ app.MapPost("/api/signup/{id}/cancel", async (string id, IOnboardingService serv
     {
         return Results.Conflict(new { error = ex.Message });
     }
+});
+
+// --- Signups (back-office) ---
+
+// GET /api/signups — list all signups, optional status filter
+app.MapGet("/api/signups", async (string? status, ISignupRepository repo, CancellationToken ct) =>
+{
+    var signups = await repo.GetAllAsync(status, ct);
+    return Results.Ok(signups);
+});
+
+// GET /api/signups/{id} — full signup detail
+app.MapGet("/api/signups/{id:guid}", async (Guid id, ISignupRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetDetailByIdAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/signups/{id}/events — process event timeline
+app.MapGet("/api/signups/{id:guid}/events", async (Guid id, ISignupRepository signupRepo, IProcessRepository processRepo, CancellationToken ct) =>
+{
+    var detail = await signupRepo.GetDetailByIdAsync(id, ct);
+    if (detail is null) return Results.NotFound();
+    if (!detail.ProcessRequestId.HasValue) return Results.Ok(Array.Empty<object>());
+
+    var events = await processRepo.GetEventsAsync(detail.ProcessRequestId.Value, ct);
+    return Results.Ok(events.Select(e => new
+    {
+        e.OccurredAt,
+        e.EventType,
+        e.Payload,
+        e.Source,
+    }));
+});
+
+// --- Address lookup ---
+
+// GET /api/address/{darId} — resolve DAR ID to GSRN(s)
+app.MapGet("/api/address/{darId}", async (string darId, IAddressLookupClient addressLookup, CancellationToken ct) =>
+{
+    var result = await addressLookup.LookupByDarIdAsync(darId, ct);
+    return Results.Ok(result.MeteringPoints.Select(mp => new
+    {
+        mp.Gsrn,
+        mp.Type,
+        grid_area_code = mp.GridAreaCode,
+    }));
+});
+
+// --- Customers ---
+
+// GET /api/customers — list all customers
+app.MapGet("/api/customers", async (IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var customers = await repo.GetCustomersAsync(ct);
+    return Results.Ok(customers);
+});
+
+// GET /api/customers/{id} — customer detail with contracts and metering points
+app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var customer = await repo.GetCustomerAsync(id, ct);
+    if (customer is null) return Results.NotFound();
+
+    var contracts = await repo.GetContractsForCustomerAsync(id, ct);
+    var meteringPoints = await repo.GetMeteringPointsForCustomerAsync(id, ct);
+
+    return Results.Ok(new
+    {
+        customer.Id,
+        customer.Name,
+        customer.CprCvr,
+        customer.ContactType,
+        customer.Status,
+        Contracts = contracts,
+        MeteringPoints = meteringPoints,
+    });
 });
 
 app.Run();

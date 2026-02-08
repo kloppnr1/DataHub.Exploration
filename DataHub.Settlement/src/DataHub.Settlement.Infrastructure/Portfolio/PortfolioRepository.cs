@@ -252,4 +252,68 @@ public sealed class PortfolioRepository : IPortfolioRepository
             new CommandDefinition(sql, cancellationToken: ct));
         return result.ToList();
     }
+
+    public async Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<Customer>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            ORDER BY name
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Customer>(
+            new CommandDefinition(sql, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date
+            FROM portfolio.contract
+            WHERE customer_id = @CustomerId
+            ORDER BY start_date DESC
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Contract>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<IReadOnlyList<MeteringPointWithSupply>> GetMeteringPointsForCustomerAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT DISTINCT mp.gsrn, mp.type, mp.settlement_method, mp.grid_area_code,
+                   mp.price_area, mp.connection_status,
+                   sp.start_date AS supply_start, sp.end_date AS supply_end
+            FROM portfolio.contract c
+            JOIN portfolio.metering_point mp ON mp.gsrn = c.gsrn
+            LEFT JOIN portfolio.supply_period sp ON sp.gsrn = c.gsrn AND sp.end_date IS NULL
+            WHERE c.customer_id = @CustomerId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<MeteringPointWithSupply>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return result.ToList();
+    }
 }

@@ -36,3 +36,33 @@ public record SignupResponse(
     string Status,
     string Gsrn,
     DateOnly EffectiveDate);
+
+public record SignupListItem(
+    Guid Id,
+    string SignupNumber,
+    string Gsrn,
+    string Type,
+    DateOnly EffectiveDate,
+    string Status,
+    string? RejectionReason,
+    string CustomerName,
+    DateTime CreatedAt);
+
+public record SignupDetail(
+    Guid Id,
+    string SignupNumber,
+    string DarId,
+    string Gsrn,
+    string Type,
+    DateOnly EffectiveDate,
+    string Status,
+    string? RejectionReason,
+    Guid CustomerId,
+    string CustomerName,
+    string CprCvr,
+    string ContactType,
+    Guid ProductId,
+    string ProductName,
+    Guid? ProcessRequestId,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);

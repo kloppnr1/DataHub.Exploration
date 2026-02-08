@@ -17,4 +17,8 @@ public interface IPortfolioRepository
     Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct);
     Task UpdateMeteringPointGridAreaAsync(string gsrn, string newGridAreaCode, string newPriceArea, CancellationToken ct);
     Task<IReadOnlyList<Product>> GetActiveProductsAsync(CancellationToken ct);
+    Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct);
+    Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken ct);
+    Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct);
+    Task<IReadOnlyList<MeteringPointWithSupply>> GetMeteringPointsForCustomerAsync(Guid customerId, CancellationToken ct);
 }

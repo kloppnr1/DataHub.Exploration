@@ -142,4 +142,44 @@ public sealed class SignupRepository : ISignupRepository
         return await conn.QuerySingleOrDefaultAsync<string>(
             new CommandDefinition(sql, new { SignupId = signupId }, cancellationToken: ct));
     }
+
+    public async Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct)
+    {
+        var sql = """
+            SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
+                   s.rejection_reason, c.name AS customer_name, s.created_at
+            FROM portfolio.signup s
+            JOIN portfolio.customer c ON c.id = s.customer_id
+            """;
+
+        if (!string.IsNullOrEmpty(statusFilter))
+            sql += " WHERE s.status = @Status";
+
+        sql += " ORDER BY s.created_at DESC";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<SignupListItem>(
+            new CommandDefinition(sql, new { Status = statusFilter }, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT s.id, s.signup_number, s.dar_id, s.gsrn, s.type, s.effective_date, s.status,
+                   s.rejection_reason, s.customer_id, c.name AS customer_name, c.cpr_cvr,
+                   c.contact_type, s.product_id, p.name AS product_name,
+                   s.process_request_id, s.created_at, s.updated_at
+            FROM portfolio.signup s
+            JOIN portfolio.customer c ON c.id = s.customer_id
+            JOIN portfolio.product p ON p.id = s.product_id
+            WHERE s.id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<SignupDetail>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
 }

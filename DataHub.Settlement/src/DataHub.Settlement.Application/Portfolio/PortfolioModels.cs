@@ -17,3 +17,8 @@ public record Product(
     decimal MarginOrePerKwh, decimal? SupplementOrePerKwh,
     decimal SubscriptionKrPerMonth,
     string? Description = null, bool GreenEnergy = false, int DisplayOrder = 0);
+
+public record MeteringPointWithSupply(
+    string Gsrn, string Type, string SettlementMethod,
+    string GridAreaCode, string PriceArea, string ConnectionStatus,
+    DateOnly? SupplyStart, DateOnly? SupplyEnd);

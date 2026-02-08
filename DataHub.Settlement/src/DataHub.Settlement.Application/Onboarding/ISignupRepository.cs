@@ -11,4 +11,6 @@ public interface ISignupRepository
     Task UpdateStatusAsync(Guid id, string status, string? rejectionReason, CancellationToken ct);
     Task SetProcessRequestIdAsync(Guid id, Guid processRequestId, CancellationToken ct);
     Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct);
+    Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct);
+    Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct);
 }
