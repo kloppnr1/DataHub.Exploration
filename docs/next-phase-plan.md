@@ -39,7 +39,7 @@ This phase bridges the two: close out MVP 3 gaps, then lay the MVP 4 foundation.
 
 ## Phase Structure
 
-The phase is split into two tracks that can overlap:
+The phase is split into two tracks that can overlap. The **Onboarding API** (B1) is the top priority — it is the entry point for all sales channels and must be built first to establish the API-first integration pattern that everything else depends on.
 
 ```
 Track A: MVP 3 Completion (close the gaps)
@@ -50,11 +50,12 @@ Track A: MVP 3 Completion (close the gaps)
   A5. RSM-015/016 historical data requests
 
 Track B: MVP 4 Foundation (production readiness)
-  B1. Settlement result export API
-  B2. Invoice generation model
-  B3. Customer portal data layer
-  B4. Monitoring & health checks
-  B5. Performance baseline & load testing
+  B1. Onboarding API — sales channel entry point          ★ TOP PRIORITY
+  B2. Settlement result export API
+  B3. Invoice generation model
+  B4. Customer portal data layer
+  B5. Monitoring & health checks
+  B6. Performance baseline & load testing
 ```
 
 Track A has no dependencies on Track B. They can be developed in parallel.
@@ -207,7 +208,149 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ## Track B: MVP 4 Foundation
 
-### B1. Settlement Result Export API
+### B1. Onboarding API — Sales Channel Entry Point ★ TOP PRIORITY
+
+**Problem:** The settlement system can process customers end-to-end, but there's no entry point for "a customer just signed up." Sales happen through three channels — website (self-service), mobile app (self-service), and customer service (phone). Today, customer creation is manual or demo-seeded. All three channels need the same programmatic entry point.
+
+**Design principle:** API-first. All sales channels call the same endpoints. The website doesn't talk to the database directly. Customer service doesn't use a different code path. One API, multiple consumers.
+
+```
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Website     │  │  Mobile App  │  │  Customer    │
+│  (self-serv) │  │  (self-serv) │  │  Service UI  │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       └─────────────────┼─────────────────┘
+                         │
+                  ┌──────▼──────┐
+                  │  Onboarding │
+                  │     API     │
+                  └──────┬──────┘
+                         │
+              ┌──────────▼──────────┐
+              │  DataHub.Settlement │
+              │  Portfolio + BRS-001│
+              └─────────────────────┘
+```
+
+**What to build:**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/signup/validate` | Validate GSRN format (18 digits), check not already in portfolio, address lookup via DAWA |
+| `GET /api/products` | List available energy products (margin, subscription, fixed/variable, green energy options) |
+| `GET /api/products/{id}` | Product detail with pricing breakdown |
+| `POST /api/signup` | Create customer + metering point + contract + supply period. Queue BRS-001. Return signup ID |
+| `GET /api/signup/{id}/status` | Track process state: Registered → Sent to DataHub → Acknowledged → Effectuation Pending → Active |
+| `POST /api/signup/{id}/cancel` | Cancel before activation — sends BRS-003 if still within cancellation window |
+
+**Request/response models:**
+
+```
+POST /api/signup
+{
+  "gsrn": "571313180000000001",
+  "customer": {
+    "name": "Anders Jensen",
+    "cpr_or_cvr": "0101901234",
+    "email": "anders@example.dk",
+    "phone": "+4512345678"
+  },
+  "product_id": "spot-standard",
+  "requested_start_date": "2026-04-01"
+}
+
+→ 201 Created
+{
+  "signup_id": "sgn-2026-00042",
+  "status": "registered",
+  "gsrn": "571313180000000001",
+  "requested_start_date": "2026-04-01",
+  "estimated_activation": "2026-04-01",
+  "process_id": "proc-xxxxx",
+  "links": {
+    "status": "/api/signup/sgn-2026-00042/status",
+    "cancel": "/api/signup/sgn-2026-00042/cancel"
+  }
+}
+```
+
+**Signup flow internals:**
+
+| Step | What happens |
+|------|-------------|
+| 1. Validate | Check GSRN format, verify not duplicate, look up address via DAWA |
+| 2. Create portfolio entities | `customer`, `metering_point`, `contract`, `supply_period` (start = requested date) |
+| 3. Create process request | `process_request` with type BRS-001, status `pending` |
+| 4. Return immediately | Signup ID + status link. The BRS-001 is sent asynchronously by `ProcessSchedulerService` |
+| 5. Background processing | Scheduler picks up pending process → sends BRS-001 → DataHub responds → state machine advances |
+| 6. Status polling | Sales channel polls `/status` to track progress and notify customer |
+
+**Product catalog management:**
+
+| Task | Detail |
+|------|--------|
+| `portfolio.product` table enhancement | Add: description, active flag, display_order, pricing_type (spot/fixed), green_energy flag |
+| Seed realistic products | "Spot Standard", "Spot Green", "Fixed 12 Month", etc. |
+| Admin endpoints (basic) | `POST /api/admin/products`, `PUT /api/admin/products/{id}` — for back-office product management |
+| Product validation at signup | Verify product exists and is active |
+
+**Address lookup integration:**
+
+| Task | Detail |
+|------|--------|
+| Wire DAWA into validation | `AddressLookupService` already partially exists — connect to `/api/signup/validate` |
+| Return formatted address | When GSRN validation succeeds, include the resolved address in the response for customer confirmation |
+
+**Authentication strategy (this phase):**
+
+| Channel | Auth method | Implementation |
+|---------|------------|----------------|
+| Website / App | API key + session token (stub) | Real MitID integration is MVP 4 proper |
+| Customer Service | API key + agent ID header | Agent identity passed through for audit |
+| API-to-API | API key | Machine-to-machine, simple header |
+
+The API validates the API key. The caller is responsible for authenticating the end user (MitID, agent login). The API receives the verified identity (CPR/CVR) and trusts it. This separation keeps the settlement system auth-agnostic.
+
+**Signup lifecycle notifications:**
+
+| Event | How the sales channel learns about it |
+|-------|--------------------------------------|
+| BRS-001 sent | Status changes to `sent_to_datahub` — visible via polling |
+| BRS-001 accepted (RSM-009) | Status changes to `acknowledged` |
+| BRS-001 rejected (RSM-009) | Status changes to `rejected` — include rejection reason |
+| Metering point activated (RSM-007) | Status changes to `active` |
+| Cancellation confirmed | Status changes to `cancelled` |
+
+Polling first (`GET /status`). Webhook push is a future enhancement.
+
+**Tests:**
+
+| Test | Type |
+|------|------|
+| GSRN validation: valid format accepted | Unit |
+| GSRN validation: invalid format rejected (wrong length, non-numeric) | Unit |
+| GSRN validation: duplicate GSRN rejected | Integration |
+| Signup creates all portfolio entities correctly | Integration |
+| Signup queues BRS-001 process request | Integration |
+| Status endpoint reflects process state transitions | Integration |
+| Cancel before activation sends BRS-003 | Integration |
+| Cancel after activation returns 409 Conflict | Integration |
+| Product listing returns active products only | Integration |
+| Invalid product ID at signup returns 400 | Unit |
+| Full flow: signup → BRS-001 → RSM-009 accepted → RSM-007 → status = active | Integration (simulator) |
+
+**Exit criteria:**
+- All three sales channels can create customers through the same API
+- Signup produces a trackable process with status polling
+- Cancellation works before activation
+- Product catalog is queryable and validated at signup
+- Address lookup integrated into validation
+- Full signup → activation flow works end-to-end against the simulator
+
+---
+
+### B2. Settlement Result Export API
 
 **Problem:** Settlement results exist only in the database and dashboard. No programmatic way for external systems (ERP, billing) to retrieve them.
 
@@ -236,7 +379,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-### B2. Invoice Generation Model
+### B3. Invoice Generation Model
 
 **Problem:** Settlement produces line items, but there's no invoice entity that groups them into a customer-facing document with an invoice number, due date, and payment reference.
 
@@ -264,7 +407,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-### B3. Customer Portal Data Layer
+### B4. Customer Portal Data Layer
 
 **Problem:** No API for customers to view their own consumption, invoices, and contract details. The dashboard is internal — a customer-facing portal needs a different data layer.
 
@@ -296,7 +439,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-### B4. Monitoring & Health Checks
+### B5. Monitoring & Health Checks
 
 **Problem:** The system has OpenTelemetry tracing but no health checks, no structured alerting, and no operational metrics beyond what Aspire Dashboard shows.
 
@@ -325,7 +468,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-### B5. Performance Baseline & Load Testing
+### B6. Performance Baseline & Load Testing
 
 **Problem:** The system works with demo data (a handful of metering points). MVP 4 requires 80K+ metering points. No performance baseline exists.
 
@@ -356,24 +499,27 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ## Execution Order
 
-Recommended sequence, with dependencies noted:
+Recommended sequence. **B1 (Onboarding API) starts immediately** — it establishes the API-first pattern and is the single entry point all sales channels need.
 
 ```
-Week 1-2:  A1 (aggregations persistence)     — unblocks reconciliation dashboard
-           B4 (monitoring & health checks)    — independent, quick win
+Week 1-2:  B1 (onboarding API)               ★ TOP PRIORITY — sales channel entry point
+           A1 (aggregations persistence)     — unblocks reconciliation dashboard
 
-Week 3-4:  A2 (simulator error injection)     — test infrastructure
-           B1 (settlement export API)         — independent
+Week 3-4:  B1 (onboarding API, continued)    — full signup → activation flow, simulator scenario
+           B5 (monitoring & health checks)   — independent, quick win
 
-Week 5-6:  A3 (BRS-011 erroneous move)        — new feature
+Week 5-6:  A2 (simulator error injection)     — test infrastructure
+           B2 (settlement export API)        — follows B1 API patterns
+
+Week 7-8:  A3 (BRS-011 erroneous move)        — new feature
            A4 (concurrent edge-case tests)    — test gap closure
-           B2 (invoice generation model)      — depends on settlement being solid
+           B3 (invoice generation model)      — depends on settlement being solid
 
-Week 7-8:  A5 (RSM-015/016 historical data)   — depends on A1 (reconciliation)
-           B3 (customer portal data layer)    — depends on B1 (API patterns)
+Week 9-10: A5 (RSM-015/016 historical data)   — depends on A1 (reconciliation)
+           B4 (customer portal data layer)    — depends on B2 (API patterns)
 
-Week 9-10: B5 (performance baseline)          — depends on B1-B3 (APIs to benchmark)
-           Polish, documentation, review
+Week 11-12: B6 (performance baseline)         — depends on B1-B4 (APIs to benchmark)
+            Polish, documentation, review
 ```
 
 Items within the same week can be worked in parallel.
@@ -386,9 +532,9 @@ These items are **not** in this phase:
 
 | Item | Reason for deferral |
 |------|-------------------|
-| Customer disputes workflow | Requires RSM-015/016 (A5) + invoice model (B2) + customer portal (B3) — build the pieces first, then the workflow |
-| ERP integration | Requires settlement export API (B1) + invoice model (B2) to be stable |
-| Payment services (PBS/Betalingsservice) | Requires invoice model (B2) + production infrastructure |
+| Customer disputes workflow | Requires RSM-015/016 (A5) + invoice model (B3) + customer portal (B4) — build the pieces first, then the workflow |
+| ERP integration | Requires settlement export API (B2) + invoice model (B3) to be stable |
+| Payment services (PBS/Betalingsservice) | Requires invoice model (B3) + production infrastructure |
 | Digital post (e-Boks) | Requires invoice PDF generation |
 | Real customer portal authentication (NemID/MitID) | Security scope — separate work stream |
 | Pilot customers (10-50) | Requires all of the above |
@@ -411,20 +557,22 @@ These items are **not** in this phase:
 
 | Migration | Track | Purpose |
 |-----------|-------|---------|
-| V022 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
-| V023 | B2 | `billing.invoice` + `billing.credit_note` tables |
+| V022 | B1 | `portfolio.product` enhancements (description, active, pricing_type, green_energy) + `portfolio.signup` tracking table |
+| V023 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
+| V024 | B3 | `billing.invoice` + `billing.credit_note` tables |
 
 ---
 
 ## Success Criteria for This Phase
 
-1. **MVP 3 complete:** All planned features implemented, all 12 golden master tests pass, all integration tests pass
-2. **Settlement export API:** External systems can query settlement results via REST
-3. **Invoice model:** Settlement runs produce invoices with numbers, due dates, and line items
-4. **Customer portal data:** Consumption, invoices, and contract data queryable via API
-5. **Monitoring:** Health checks and operational metrics operational
-6. **Performance baseline:** Measured at 80K metering points, bottlenecks documented
-7. **CI green:** All unit + integration tests pass on every push
+1. **Onboarding API live:** All three sales channels (web, app, customer service) can create customers through a single API, with full signup → activation flow working end-to-end
+2. **MVP 3 complete:** All planned features implemented, all 12 golden master tests pass, all integration tests pass
+3. **Settlement export API:** External systems can query settlement results via REST
+4. **Invoice model:** Settlement runs produce invoices with numbers, due dates, and line items
+5. **Customer portal data:** Consumption, invoices, and contract data queryable via API
+6. **Monitoring:** Health checks and operational metrics operational
+7. **Performance baseline:** Measured at 80K metering points, bottlenecks documented
+8. **CI green:** All unit + integration tests pass on every push
 
 ---
 
@@ -432,8 +580,12 @@ These items are **not** in this phase:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
+| Onboarding API contract changes after sales channel integration | Breaking changes for website/app | Design API contract carefully up front, version from day one (`/api/v1/signup`) |
+| GSRN validation insufficient without DataHub lookup | Customer signs up with wrong GSRN | Validate format + DAWA address lookup. Real GSRN verification happens when BRS-001 is accepted/rejected |
+| 15+ business day BRS-001 notice period confuses customers | High dropout between signup and activation | Clear status communication, email/SMS notifications at each state change (future) |
+| Product catalog ownership unclear (this system vs. CRM) | Duplicate or conflicting product data | Start with products in this system, design for external sync later |
 | RSM-015/016 CIM format unknown | Parser may need rework once real messages are seen | Build parser from documentation, plan for fixture updates |
 | BRS-011 endpoint name/format unverified | Request may be rejected by real DataHub | Research Energinet documentation, build against best understanding |
-| TimescaleDB performance at 80K scale | Settlement may be too slow | Profile early (B5), identify bottlenecks before building more features |
+| TimescaleDB performance at 80K scale | Settlement may be too slow | Profile early (B6), identify bottlenecks before building more features |
 | Invoice numbering conflicts in distributed deployment | Duplicate invoice numbers | Use database sequence, not application-generated numbers |
-| API authentication model changes | Breaking changes for ERP integration | Keep auth simple (API key) in this phase, design for replacement |
+| API authentication model changes | Breaking changes for ERP/sales integration | Keep auth simple (API key) in this phase, design for replacement |
