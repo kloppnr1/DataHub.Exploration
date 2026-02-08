@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './layout/Layout';
+import Dashboard from './pages/Dashboard';
 import SignupList from './pages/SignupList';
 import SignupNew from './pages/SignupNew';
 import SignupDetail from './pages/SignupDetail';
@@ -12,7 +13,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/signups" replace />} />
+          <Route path="/" element={<Dashboard />} />
           <Route path="/signups" element={<SignupList />} />
           <Route path="/signups/new" element={<SignupNew />} />
           <Route path="/signups/:id" element={<SignupDetail />} />
