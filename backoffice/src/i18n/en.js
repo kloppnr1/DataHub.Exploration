@@ -300,6 +300,15 @@ export default {
   'runDetail.colCurrency': 'Currency',
   'runDetail.noLinesFound': 'No settlement lines found.',
   'runDetail.showingLines': 'lines',
+  'runDetail.subtotal': 'Subtotal',
+  'chargeType.energy': 'Energy',
+  'chargeType.grid_tariff': 'Grid Tariff',
+  'chargeType.system_tariff': 'System Tariff',
+  'chargeType.transmission_tariff': 'Transmission Tariff',
+  'chargeType.electricity_tax': 'Electricity Tax',
+  'chargeType.grid_subscription': 'Grid Subscription',
+  'chargeType.supplier_subscription': 'Supplier Subscription',
+  'chargeType.production_credit': 'Production Credit',
 
   // ── Messages ──
   'messages.title': 'Messages',
