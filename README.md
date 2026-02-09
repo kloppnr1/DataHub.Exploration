@@ -30,10 +30,7 @@ docker compose up -d          # TimescaleDB + DataHub simulator + Aspire Dashboa
 dotnet build
 dotnet test
 dotnet run --project src/DataHub.Settlement.Worker    # Background services
-dotnet run --project src/DataHub.Settlement.Web       # Dev dashboard at localhost:5000
 ```
-
-> **⚠️ DEVELOPMENT ONLY**: The Blazor dashboard (`DataHub.Settlement.Web`) is for testing settlement calculations, simulating DataHub scenarios, and time-travel operations. It uses stub clients and is NOT intended for production use.
 
 **Aspire Dashboard:** http://localhost:18888 — logs, traces, metrics.
 
@@ -41,22 +38,32 @@ dotnet run --project src/DataHub.Settlement.Web       # Dev dashboard at localho
 
 #### For Production (Back-Office Operations)
 
-The **Volt** back-office application is the production tool for customer service and signup handling.
+The **Volt** back-office application is the production tool for customer service, signup handling, and operational monitoring.
 
 ```bash
-# Terminal 1: Start the settlement API
+# Terminal 1: Start PostgreSQL
+cd DataHub.Settlement
+docker compose up -d postgres                         # TimescaleDB only
+
+# Terminal 2: Start the settlement API
 cd DataHub.Settlement
 dotnet run --project src/DataHub.Settlement.Api       # API at localhost:5001
 
-# Terminal 2: Start the back-office UI
+# Terminal 3: Seed demo data (optional, first time only)
+cd DataHub.Settlement/tools/DataHub.Settlement.Seeder
+dotnet run                                            # Populates database with demo data
+
+# Terminal 4: Start the back-office UI
 cd backoffice
 npm install
 npm run dev                                           # Volt UI at localhost:5173
 ```
 
-> **📊 PRODUCTION TOOL**: The Volt back-office app (`backoffice/`) is the end-user interface for managing customer signups, handling rejections, viewing customer data, and monitoring the onboarding pipeline.
+> **📊 PRODUCTION TOOL**: The Volt back-office app (`backoffice/`) provides complete visibility into settlement operations, billing data, DataHub messaging, customer management, and signup handling.
 
 **Access**: Open http://localhost:5173 in your browser.
+
+**Demo Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, and 18 outbound requests for testing the back-office UI.
 
 ### Technology
 
@@ -68,13 +75,14 @@ This repository contains two web applications with distinct purposes:
 
 | Application | Technology | Purpose | Port | Users |
 |------------|-----------|---------|------|-------|
-| **Development Dashboard** | Blazor Server | Testing settlement engine, simulating DataHub scenarios, time-travel debugging | 5000 | Developers |
-| **Volt (Back Office)** | React + Vite | Managing customer signups, handling rejections, viewing customers, monitoring pipeline | 5173 | Customer service staff |
+| **Settlement API** | ASP.NET Minimal API | REST API for settlement operations, billing data, messaging logs | 5001 | Back-office UI, integrations |
+| **Volt (Back Office)** | React + Vite | Customer signups, billing visibility, settlement runs, DataHub messaging, operational monitoring | 5173 | Customer service staff, operations |
 
 **When to use which:**
-- **Building or testing settlement logic?** → Use the Blazor development dashboard
-- **Managing real customer signups or operations?** → Use Volt back office
-- **Checking logs and traces?** → Use Aspire Dashboard (port 18888)
+- **Managing customer signups or viewing operational data?** → Use Volt back office (http://localhost:5173)
+- **Building API integrations?** → Use Settlement API (http://localhost:5001/api)
+- **Checking logs and traces?** → Use Aspire Dashboard (http://localhost:18888)
+- **Testing settlement calculations?** → Run Worker with Docker Compose simulator
 
 Both applications share the same database and domain models but are completely separate projects.
 

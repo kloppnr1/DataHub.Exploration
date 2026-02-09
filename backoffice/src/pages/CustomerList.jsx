@@ -13,13 +13,13 @@ export default function CustomerList() {
   const [error, setError] = useState(null);
 
   const fetchPage = useCallback((p, q) => {
-    setLoading(true);
+    setLoading(data === null); // Only show full loading on initial load
     setError(null);
     api.getCustomers({ page: p, pageSize: PAGE_SIZE, search: q || undefined })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [data]);
 
   useEffect(() => { fetchPage(page, search); }, [page, search, fetchPage]);
 
