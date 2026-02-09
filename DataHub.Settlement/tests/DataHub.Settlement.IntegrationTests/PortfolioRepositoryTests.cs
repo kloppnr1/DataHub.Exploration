@@ -160,4 +160,19 @@ public class PortfolioRepositoryTests
             "monthly", "post_payment", new DateOnly(2025, 1, 1), CancellationToken.None);
         contract.Gsrn.Should().Be("571313100000033333");
     }
+
+    [Fact]
+    public async Task GetDashboardStatsAsync_returns_valid_stats_without_deserialization_error()
+    {
+        // This test catches Dapper deserialization errors caused by column name mismatches
+        // between SQL aliases and record constructor parameters.
+
+        var stats = await _sut.GetDashboardStatsAsync(CancellationToken.None);
+
+        stats.Should().NotBeNull();
+        stats.PendingSignups.Should().BeGreaterThanOrEqualTo(0);
+        stats.ActiveCustomers.Should().BeGreaterThanOrEqualTo(0);
+        stats.RejectedSignups.Should().BeGreaterThanOrEqualTo(0);
+        stats.ProductCount.Should().BeGreaterThanOrEqualTo(0);
+    }
 }
