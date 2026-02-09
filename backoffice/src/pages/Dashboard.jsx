@@ -110,8 +110,8 @@ export default function Dashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
               </svg>
             </div>
-            <p className="text-3xl font-bold text-slate-900">{s.value.toLocaleString('da-DK')}</p>
-            <p className="text-sm text-slate-500 mt-0.5 font-medium">{s.label}</p>
+            <p className="text-4xl font-bold text-slate-900">{s.value.toLocaleString('da-DK')}</p>
+            <p className="text-base text-slate-500 mt-1 font-medium">{s.label}</p>
           </Link>
         ))}
       </div>
