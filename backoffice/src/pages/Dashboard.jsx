@@ -24,44 +24,44 @@ export default function Dashboard() {
           label: 'Pending Signups',
           value: stats.pendingSignups,
           icon: (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           ),
-          iconBg: 'bg-amber-500',
+          iconBg: 'bg-slate-100',
           link: '/signups',
         },
         {
           label: 'Active Customers',
           value: stats.activeCustomers,
           icon: (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
             </svg>
           ),
-          iconBg: 'bg-emerald-500',
+          iconBg: 'bg-slate-100',
           link: '/customers',
         },
         {
           label: 'Rejected',
           value: stats.rejectedSignups,
           icon: (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
             </svg>
           ),
-          iconBg: 'bg-rose-500',
+          iconBg: 'bg-slate-100',
           link: '/signups',
         },
         {
           label: 'Products',
           value: stats.productCount,
           icon: (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
             </svg>
           ),
-          iconBg: 'bg-teal-500',
+          iconBg: 'bg-slate-100',
           link: '/products',
         },
       ]
@@ -103,7 +103,7 @@ export default function Dashboard() {
             className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-teal-200/60 animate-fade-in-up opacity-0"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center text-white`}>
+              <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center`}>
                 {s.icon}
               </div>
               <svg className="w-5 h-5 text-slate-300 group-hover:text-teal-500 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
