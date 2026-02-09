@@ -4,7 +4,8 @@ namespace DataHub.Settlement.Application.Onboarding;
 
 public interface ISignupRepository
 {
-    Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, Guid customerId,
+    Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
+        string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
         Guid? correctedFromId, CancellationToken ct);
     Task<string> NextSignupNumberAsync(CancellationToken ct);
@@ -14,6 +15,7 @@ public interface ISignupRepository
     Task<Signup?> GetActiveByGsrnAsync(string gsrn, CancellationToken ct);
     Task UpdateStatusAsync(Guid id, string status, string? rejectionReason, CancellationToken ct);
     Task SetProcessRequestIdAsync(Guid id, Guid processRequestId, CancellationToken ct);
+    Task LinkCustomerAsync(Guid signupId, Guid customerId, CancellationToken ct);
     Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct);
     Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct);
     Task<PagedResult<SignupListItem>> GetAllPagedAsync(string? statusFilter, int page, int pageSize, CancellationToken ct);

@@ -32,15 +32,18 @@ public sealed class SignupRepository : ISignupRepository
         return await conn.QuerySingleAsync<string>(new CommandDefinition(sql, cancellationToken: ct));
     }
 
-    public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, Guid customerId,
+    public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
+        string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
         Guid? correctedFromId, CancellationToken ct)
     {
         const string sql = """
             INSERT INTO portfolio.signup
-                (signup_number, dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, corrected_from_id)
+                (signup_number, dar_id, gsrn, customer_name, customer_cpr_cvr, customer_contact_type,
+                 product_id, process_request_id, type, effective_date, corrected_from_id)
             VALUES
-                (@SignupNumber, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId)
+                (@SignupNumber, @DarId, @Gsrn, @CustomerName, @CustomerCprCvr, @CustomerContactType,
+                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId)
             RETURNING id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
                       type, effective_date, status, rejection_reason, corrected_from_id
             """;
@@ -50,7 +53,8 @@ public sealed class SignupRepository : ISignupRepository
         return await conn.QuerySingleAsync<Signup>(
             new CommandDefinition(sql, new
             {
-                SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn, CustomerId = customerId,
+                SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn,
+                CustomerName = customerName, CustomerCprCvr = customerCprCvr, CustomerContactType = customerContactType,
                 ProductId = productId, ProcessRequestId = processRequestId, Type = type,
                 EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId
             }, cancellationToken: ct));
@@ -146,6 +150,20 @@ public sealed class SignupRepository : ISignupRepository
             new { Id = id, ProcessRequestId = processRequestId }, cancellationToken: ct));
     }
 
+    public async Task LinkCustomerAsync(Guid signupId, Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.signup
+            SET customer_id = @CustomerId, updated_at = now()
+            WHERE id = @SignupId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { SignupId = signupId, CustomerId = customerId }, cancellationToken: ct));
+    }
+
     public async Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct)
     {
         const string sql = """
@@ -165,9 +183,9 @@ public sealed class SignupRepository : ISignupRepository
     {
         var sql = """
             SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
-                   s.rejection_reason, c.name AS customer_name, s.created_at
+                   s.rejection_reason, COALESCE(c.name, s.customer_name) AS customer_name, s.created_at
             FROM portfolio.signup s
-            JOIN portfolio.customer c ON c.id = s.customer_id
+            LEFT JOIN portfolio.customer c ON c.id = s.customer_id
             """;
 
         if (!string.IsNullOrEmpty(statusFilter))
@@ -193,9 +211,9 @@ public sealed class SignupRepository : ISignupRepository
 
         var dataSql = $"""
             SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
-                   s.rejection_reason, c.name AS customer_name, s.created_at
+                   s.rejection_reason, COALESCE(c.name, s.customer_name) AS customer_name, s.created_at
             FROM portfolio.signup s
-            JOIN portfolio.customer c ON c.id = s.customer_id
+            LEFT JOIN portfolio.customer c ON c.id = s.customer_id
             {whereClause}
             ORDER BY s.created_at DESC
             LIMIT @PageSize OFFSET @Offset
@@ -223,9 +241,9 @@ public sealed class SignupRepository : ISignupRepository
     {
         const string sql = """
             SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
-                   s.rejection_reason, c.name AS customer_name, s.created_at
+                   s.rejection_reason, COALESCE(c.name, s.customer_name) AS customer_name, s.created_at
             FROM portfolio.signup s
-            JOIN portfolio.customer c ON c.id = s.customer_id
+            LEFT JOIN portfolio.customer c ON c.id = s.customer_id
             ORDER BY s.created_at DESC
             LIMIT @Limit
             """;
@@ -241,12 +259,15 @@ public sealed class SignupRepository : ISignupRepository
     {
         const string sql = """
             SELECT s.id, s.signup_number, s.dar_id, s.gsrn, s.type, s.effective_date, s.status,
-                   s.rejection_reason, s.customer_id, c.name AS customer_name, c.cpr_cvr,
-                   c.contact_type, s.product_id, p.name AS product_name,
+                   s.rejection_reason, s.customer_id,
+                   COALESCE(c.name, s.customer_name) AS customer_name,
+                   COALESCE(c.cpr_cvr, s.customer_cpr_cvr) AS cpr_cvr,
+                   COALESCE(c.contact_type, s.customer_contact_type) AS contact_type,
+                   s.product_id, p.name AS product_name,
                    s.process_request_id, s.created_at, s.updated_at,
                    s.corrected_from_id, orig.signup_number AS corrected_from_signup_number
             FROM portfolio.signup s
-            JOIN portfolio.customer c ON c.id = s.customer_id
+            LEFT JOIN portfolio.customer c ON c.id = s.customer_id
             JOIN portfolio.product p ON p.id = s.product_id
             LEFT JOIN portfolio.signup orig ON orig.id = s.corrected_from_id
             WHERE s.id = @Id

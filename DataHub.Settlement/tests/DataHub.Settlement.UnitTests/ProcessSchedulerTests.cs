@@ -1,6 +1,7 @@
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Onboarding;
+using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using FluentAssertions;
@@ -71,12 +72,16 @@ public class ProcessSchedulerTests
 
     private sealed class StubSignupRepository : ISignupRepository
     {
-        public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, Guid customerId,
-            Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, CancellationToken ct)
+        public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
+            string customerName, string customerCprCvr, string customerContactType,
+            Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
+            Guid? correctedFromId, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<string> NextSignupNumberAsync(CancellationToken ct)
             => throw new NotImplementedException();
         public Task<Signup?> GetBySignupNumberAsync(string signupNumber, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Signup?> GetByIdAsync(Guid id, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<Signup?> GetByProcessRequestIdAsync(Guid processRequestId, CancellationToken ct)
             => Task.FromResult<Signup?>(null);
@@ -86,11 +91,19 @@ public class ProcessSchedulerTests
             => Task.CompletedTask;
         public Task SetProcessRequestIdAsync(Guid id, Guid processRequestId, CancellationToken ct)
             => throw new NotImplementedException();
+        public Task LinkCustomerAsync(Guid signupId, Guid customerId, CancellationToken ct)
+            => Task.CompletedTask;
         public Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct)
             => throw new NotImplementedException();
+        public Task<PagedResult<SignupListItem>> GetAllPagedAsync(string? statusFilter, int page, int pageSize, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<SignupListItem>> GetRecentAsync(int limit, CancellationToken ct)
+            => throw new NotImplementedException();
         public Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<SignupCorrectionLink>> GetCorrectionChainAsync(Guid signupId, CancellationToken ct)
             => throw new NotImplementedException();
     }
 

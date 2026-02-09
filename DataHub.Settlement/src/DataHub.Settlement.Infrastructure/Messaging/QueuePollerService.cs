@@ -187,12 +187,12 @@ public sealed class QueuePollerService : BackgroundService
 
             // Create portfolio from signup if one exists for this GSRN
             var signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
-            if (signup is not null)
+            if (signup is not null && signup.CustomerId.HasValue)
             {
                 var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
 
                 await _portfolioRepo.CreateContractAsync(
-                    signup.CustomerId, masterData.MeteringPointId, signup.ProductId,
+                    signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
                     "quarterly", "aconto", effectiveDate, ct);
 
                 await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
