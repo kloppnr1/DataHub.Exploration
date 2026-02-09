@@ -178,7 +178,7 @@ public sealed class BillingRepository : IBillingRepository
                    COUNT(*) OVER() AS total_count
             FROM settlement.settlement_line sl
             WHERE sl.settlement_run_id = @SettlementRunId
-            ORDER BY sl.charge_type, sl.metering_point_id
+            ORDER BY sl.metering_point_id, sl.charge_type
             LIMIT @PageSize OFFSET @Offset
             """;
 

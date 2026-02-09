@@ -300,6 +300,15 @@ export default {
   'runDetail.colCurrency': 'Valuta',
   'runDetail.noLinesFound': 'Ingen afregningslinjer fundet.',
   'runDetail.showingLines': 'linjer',
+  'runDetail.subtotal': 'Subtotal',
+  'chargeType.energy': 'Energi',
+  'chargeType.grid_tariff': 'Nettarif',
+  'chargeType.system_tariff': 'Systemtarif',
+  'chargeType.transmission_tariff': 'Transmissionstarif',
+  'chargeType.electricity_tax': 'Elafgift',
+  'chargeType.grid_subscription': 'Netabonnement',
+  'chargeType.supplier_subscription': 'Leverandørabonnement',
+  'chargeType.production_credit': 'Produktionskredit',
 
   // ── Messages ──
   'messages.title': 'Beskeder',
