@@ -81,7 +81,7 @@ export default function CustomerDetail() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.contracts.map((c, i) => (
-                <tr key={c.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={c.id} className={`transition-colors duration-150 animate-slide-in ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-4 py-1.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{c.gsrn}</span>
                   </td>
@@ -121,7 +121,7 @@ export default function CustomerDetail() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.meteringPoints.map((mp, i) => (
-                <tr key={mp.gsrn} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={mp.gsrn} className={`transition-colors duration-150 animate-slide-in ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-4 py-1.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{mp.gsrn}</span>
                   </td>

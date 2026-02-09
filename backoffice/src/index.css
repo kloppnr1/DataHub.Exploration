@@ -43,30 +43,13 @@
   background-clip: text;
 }
 
-/* Fade in up animation */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* Fade in up — no opacity change to prevent flicker */
 .animate-fade-in-up {
-  animation: fade-in-up 0.4s ease-out forwards;
+  /* intentionally empty — class kept to avoid JSX changes */
 }
 
-/* Staggered children */
-.stagger > :nth-child(1) { animation-delay: 0ms; }
-.stagger > :nth-child(2) { animation-delay: 60ms; }
-.stagger > :nth-child(3) { animation-delay: 120ms; }
-.stagger > :nth-child(4) { animation-delay: 180ms; }
-.stagger > :nth-child(5) { animation-delay: 240ms; }
-.stagger > :nth-child(6) { animation-delay: 300ms; }
-.stagger > :nth-child(7) { animation-delay: 360ms; }
-.stagger > :nth-child(8) { animation-delay: 420ms; }
+/* Staggered children — no-op */
+.stagger > * { }
 
 /* Glass card */
 .glass {
@@ -92,17 +75,7 @@
   pointer-events: none;
 }
 
-/* Table row slide in */
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+/* Table row slide in — no-op to prevent flicker */
 .animate-slide-in {
-  animation: slide-in-right 0.3s ease-out forwards;
+  /* intentionally empty */
 }

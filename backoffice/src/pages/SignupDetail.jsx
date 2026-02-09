@@ -249,7 +249,7 @@ export default function SignupDetail() {
               <div className="absolute left-[14px] top-2 bottom-2 w-px bg-teal-200" />
               <div className="space-y-4">
                 {events.map((evt, i) => (
-                  <div key={i} className="flex gap-4 relative animate-slide-in opacity-0" style={{ animationDelay: `${i * 80}ms` }}>
+                  <div key={i} className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
                       i === 0 ? 'bg-teal-500 shadow-md shadow-teal-500/25' : 'bg-slate-100 border-2 border-slate-200'
                     }`}>

@@ -100,7 +100,7 @@ export default function Dashboard() {
           <Link
             key={s.label}
             to={s.link}
-            className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-teal-200/60 animate-fade-in-up opacity-0"
+            className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-teal-200/60 animate-fade-in-up"
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center`}>
@@ -153,7 +153,7 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {recent.map((s, i) => (
-                <tr key={s.id} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 60}ms` }}>
+                <tr key={s.id} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in" style={{ animationDelay: `${i * 60}ms` }}>
                   <td className="px-6 py-3.5">
                     <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                       {s.signupNumber}

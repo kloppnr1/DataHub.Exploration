@@ -65,7 +65,7 @@ export default function Products() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {products.map((p, i) => (
-                <tr key={p.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={p.id} className={`transition-colors duration-150 animate-slide-in ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-4 py-1.5">
                     <span className="text-xs font-semibold text-slate-900">{p.name}</span>
                   </td>
