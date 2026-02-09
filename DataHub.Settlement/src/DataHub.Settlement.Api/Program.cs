@@ -1,12 +1,16 @@
 using DataHub.Settlement.Application.AddressLookup;
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Domain;
 using DataHub.Settlement.Infrastructure;
 using DataHub.Settlement.Infrastructure.AddressLookup;
+using DataHub.Settlement.Infrastructure.Billing;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.Lifecycle;
+using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Portfolio;
 
@@ -33,6 +37,8 @@ builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(conn
 builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connectionString));
 builder.Services.AddSingleton<ISignupRepository>(new SignupRepository(connectionString));
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
+builder.Services.AddSingleton<IBillingRepository>(new BillingRepository(connectionString));
+builder.Services.AddSingleton<IMessageRepository>(new MessageRepository(connectionString));
 
 var app = builder.Build();
 
@@ -234,6 +240,130 @@ app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo
         Contracts = contracts,
         MeteringPoints = meteringPoints,
     });
+});
+
+// --- Billing (back-office) ---
+
+// GET /api/billing/periods — paginated billing periods
+app.MapGet("/api/billing/periods", async (int? page, int? pageSize, IBillingRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetBillingPeriodsAsync(p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/periods/{id} — billing period detail with settlement runs
+app.MapGet("/api/billing/periods/{id:guid}", async (Guid id, IBillingRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetBillingPeriodAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/billing/runs — paginated settlement runs (optional billing period filter)
+app.MapGet("/api/billing/runs", async (Guid? billingPeriodId, int? page, int? pageSize, IBillingRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetSettlementRunsAsync(billingPeriodId, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/runs/{id} — settlement run detail with aggregates
+app.MapGet("/api/billing/runs/{id:guid}", async (Guid id, IBillingRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetSettlementRunAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/billing/runs/{id}/lines — paginated settlement lines for a run
+app.MapGet("/api/billing/runs/{id:guid}/lines", async (Guid id, int? page, int? pageSize, IBillingRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetSettlementLinesAsync(id, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/metering-points/{gsrn}/lines — settlement lines by GSRN with optional date filter
+app.MapGet("/api/billing/metering-points/{gsrn}/lines", async (string gsrn, DateOnly? fromDate, DateOnly? toDate, IBillingRepository repo, CancellationToken ct) =>
+{
+    var lines = await repo.GetSettlementLinesByMeteringPointAsync(gsrn, fromDate, toDate, ct);
+    return Results.Ok(lines);
+});
+
+// GET /api/billing/customers/{id}/summary — customer billing summary
+app.MapGet("/api/billing/customers/{id:guid}/summary", async (Guid id, IBillingRepository repo, CancellationToken ct) =>
+{
+    var summary = await repo.GetCustomerBillingAsync(id, ct);
+    return summary is not null ? Results.Ok(summary) : Results.NotFound();
+});
+
+// --- Messages (back-office) ---
+
+// GET /api/messages/inbound — paginated inbound messages with filters
+app.MapGet("/api/messages/inbound", async (
+    string? messageType, string? status, string? correlationId, string? queueName,
+    DateTime? fromDate, DateTime? toDate,
+    int? page, int? pageSize,
+    IMessageRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var filter = new MessageFilter(messageType, status, correlationId, fromDate, toDate, queueName);
+    var result = await repo.GetInboundMessagesAsync(filter, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/messages/inbound/{id} — inbound message detail
+app.MapGet("/api/messages/inbound/{id:guid}", async (Guid id, IMessageRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetInboundMessageAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/messages/outbound — paginated outbound requests with filters
+app.MapGet("/api/messages/outbound", async (
+    string? processType, string? status, string? correlationId,
+    DateTime? fromDate, DateTime? toDate,
+    int? page, int? pageSize,
+    IMessageRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var filter = new OutboundFilter(processType, status, correlationId, fromDate, toDate);
+    var result = await repo.GetOutboundRequestsAsync(filter, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/messages/outbound/{id} — outbound request detail
+app.MapGet("/api/messages/outbound/{id:guid}", async (Guid id, IMessageRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetOutboundRequestAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/messages/dead-letters — paginated dead letters
+app.MapGet("/api/messages/dead-letters", async (bool? resolved, int? page, int? pageSize, IMessageRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetDeadLettersAsync(resolved, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/messages/dead-letters/{id} — dead letter detail
+app.MapGet("/api/messages/dead-letters/{id:guid}", async (Guid id, IMessageRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetDeadLetterAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/messages/stats — message statistics
+app.MapGet("/api/messages/stats", async (IMessageRepository repo, CancellationToken ct) =>
+{
+    var stats = await repo.GetMessageStatsAsync(ct);
+    return Results.Ok(stats);
 });
 
 app.Run();

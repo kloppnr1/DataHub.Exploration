@@ -32,13 +32,13 @@ export default function SignupList() {
   const [error, setError] = useState(null);
 
   const fetchPage = useCallback((p, status) => {
-    setLoading(true);
+    setLoading(data === null); // Only show full loading on initial load
     setError(null);
     api.getSignups({ status: status === 'all' ? undefined : status, page: p, pageSize: PAGE_SIZE })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [data]);
 
   useEffect(() => { fetchPage(page, filter); }, [page, filter, fetchPage]);
 
