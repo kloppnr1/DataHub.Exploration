@@ -93,18 +93,15 @@ public sealed class OnboardingService : IOnboardingService
         // 7. Map type to process type
         var processType = request.Type == "switch" ? "supplier_switch" : "move_in";
 
-        // 8. Create customer
-        var customer = await _portfolioRepo.CreateCustomerAsync(
-            request.CustomerName, request.CprCvr, request.ContactType, ct);
-
-        // 9. Create process request
+        // 8. Create process request
         var stateMachine = new ProcessStateMachine(_processRepo, _clock);
         var process = await stateMachine.CreateRequestAsync(gsrn, processType, request.EffectiveDate, ct);
 
-        // 10. Create signup (with optional correction link)
+        // 9. Create signup (with customer info, but customer not created yet)
         var signupNumber = await _signupRepo.NextSignupNumberAsync(ct);
         var signup = await _signupRepo.CreateAsync(
-            signupNumber, request.DarId, gsrn, customer.Id,
+            signupNumber, request.DarId, gsrn,
+            request.CustomerName, request.CprCvr, request.ContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
             request.CorrectedFromId, ct);
 
@@ -170,6 +167,22 @@ public sealed class OnboardingService : IOnboardingService
 
         var newStatus = MapProcessStatusToSignupStatus(processStatus);
         if (newStatus is null || newStatus == signup.Status) return;
+
+        // Create customer when signup becomes active
+        if (newStatus == "active" && !signup.CustomerId.HasValue)
+        {
+            var signupDetail = await _signupRepo.GetDetailByIdAsync(signup.Id, ct);
+            if (signupDetail is not null && !string.IsNullOrEmpty(signupDetail.CustomerName))
+            {
+                var customer = await _portfolioRepo.CreateCustomerAsync(
+                    signupDetail.CustomerName, signupDetail.CprCvr, signupDetail.ContactType, ct);
+
+                await _signupRepo.LinkCustomerAsync(signup.Id, customer.Id, ct);
+
+                _logger.LogInformation("Customer {CustomerId} created for signup {SignupNumber}",
+                    customer.Id, signup.SignupNumber);
+            }
+        }
 
         await _signupRepo.UpdateStatusAsync(signup.Id, newStatus, reason, ct);
 
