@@ -10,9 +10,11 @@ namespace DataHub.Settlement.Infrastructure.Metering;
 /// Fetches day-ahead spot prices from Energi Data Service (energidataservice.dk).
 /// Free, public, no authentication required.
 ///
-/// Two datasets:
-///   - Elspotprices:    hourly (PT1H),          available up to Sep 30 2025
-///   - DayAheadPrices:  quarter-hourly (PT15M), available from Oct 1 2025 onward
+/// Two datasets with different column names:
+///   - Elspotprices:    hourly (PT1H),          up to Sep 30 2025
+///       Columns: HourUTC, PriceArea, SpotPriceDKK
+///   - DayAheadPrices:  quarter-hourly (PT15M), from Oct 1 2025
+///       Columns: TimeUTC, PriceArea, DayAheadPriceDKK
 ///
 /// Prices are returned in DKK/MWh by the API and converted to øre/kWh for storage.
 /// Conversion: DKK/MWh ÷ 10 = øre/kWh  (1 MWh = 1000 kWh, 1 DKK = 100 øre).
@@ -44,32 +46,28 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
         if (from < QuarterHourCutover)
         {
             var hourlyEnd = to <= QuarterHourCutover ? to : QuarterHourCutover;
-            var hourlyPrices = await FetchDatasetAsync(
-                HourlyDataset, priceArea, from, hourlyEnd, "PT1H", ct);
+            var hourlyPrices = await FetchHourlyAsync(priceArea, from, hourlyEnd, ct);
             results.AddRange(hourlyPrices);
         }
 
         if (to > QuarterHourCutover)
         {
             var qhStart = from >= QuarterHourCutover ? from : QuarterHourCutover;
-            var qhPrices = await FetchDatasetAsync(
-                QuarterHourlyDataset, priceArea, qhStart, to, "PT15M", ct);
+            var qhPrices = await FetchQuarterHourlyAsync(priceArea, qhStart, to, ct);
             results.AddRange(qhPrices);
         }
 
         return results;
     }
 
-    private async Task<List<SpotPriceRow>> FetchDatasetAsync(
-        string dataset, string priceArea, DateOnly from, DateOnly to,
-        string resolution, CancellationToken ct)
+    /// <summary>Elspotprices dataset: HourUTC, PriceArea, SpotPriceDKK</summary>
+    private async Task<List<SpotPriceRow>> FetchHourlyAsync(
+        string priceArea, DateOnly from, DateOnly to, CancellationToken ct)
     {
-        // energidataservice.dk interprets dates in Danish timezone (CET/CEST).
-        // We pass dates as yyyy-MM-dd which the API interprets as Danish midnight.
-        // The filter parameter must be URL-encoded JSON.
-        var filter = JsonSerializer.Serialize(new { PriceArea = new[] { priceArea } });
-        var encodedFilter = Uri.EscapeDataString(filter);
-        var url = $"{BaseUrl}/{dataset}" +
+        var encodedFilter = Uri.EscapeDataString(
+            JsonSerializer.Serialize(new { PriceArea = new[] { priceArea } }));
+
+        var url = $"{BaseUrl}/{HourlyDataset}" +
                   $"?start={from:yyyy-MM-dd}" +
                   $"&end={to:yyyy-MM-dd}" +
                   $"&filter={encodedFilter}" +
@@ -78,39 +76,69 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
 
         _logger.LogInformation(
             "Fetching {Dataset} prices for {PriceArea} from {From} to {To}",
-            dataset, priceArea, from, to);
+            HourlyDataset, priceArea, from, to);
 
-        var response = await _httpClient.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-
-        var body = await response.Content.ReadFromJsonAsync<EnergiDataServiceResponse>(
-            JsonOptions, ct);
-
+        var body = await GetAsync<ElspotpricesResponse>(url, ct);
         if (body?.Records is null || body.Records.Count == 0)
         {
-            _logger.LogWarning(
-                "No records returned from {Dataset} for {PriceArea} {From}–{To}",
-                dataset, priceArea, from, to);
+            _logger.LogWarning("No records from Elspotprices for {PriceArea} {From}–{To}", priceArea, from, to);
             return [];
         }
 
+        _logger.LogInformation("Received {Count} hourly prices for {PriceArea}", body.Records.Count, priceArea);
+
+        return body.Records
+            .Where(r => r.SpotPriceDkk is not null)
+            .Select(r => new SpotPriceRow(
+                r.PriceArea,
+                DateTime.SpecifyKind(r.HourUtc, DateTimeKind.Utc),
+                r.SpotPriceDkk!.Value / 10m,
+                "PT1H"))
+            .ToList();
+    }
+
+    /// <summary>DayAheadPrices dataset: TimeUTC, PriceArea, DayAheadPriceDKK</summary>
+    private async Task<List<SpotPriceRow>> FetchQuarterHourlyAsync(
+        string priceArea, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        var encodedFilter = Uri.EscapeDataString(
+            JsonSerializer.Serialize(new { PriceArea = new[] { priceArea } }));
+
+        var url = $"{BaseUrl}/{QuarterHourlyDataset}" +
+                  $"?start={from:yyyy-MM-dd}" +
+                  $"&end={to:yyyy-MM-dd}" +
+                  $"&filter={encodedFilter}" +
+                  $"&sort=TimeUTC%20asc" +
+                  $"&columns=TimeUTC,PriceArea,DayAheadPriceDKK";
+
         _logger.LogInformation(
-            "Received {Count} price records from {Dataset} for {PriceArea}",
-            body.Records.Count, dataset, priceArea);
+            "Fetching {Dataset} prices for {PriceArea} from {From} to {To}",
+            QuarterHourlyDataset, priceArea, from, to);
 
-        var prices = new List<SpotPriceRow>(body.Records.Count);
-        foreach (var record in body.Records)
+        var body = await GetAsync<DayAheadPricesResponse>(url, ct);
+        if (body?.Records is null || body.Records.Count == 0)
         {
-            if (record.SpotPriceDkk is null)
-                continue;
-
-            var timestamp = DateTime.SpecifyKind(record.HourUtc, DateTimeKind.Utc);
-            var priceOrePerKwh = record.SpotPriceDkk.Value / 10m; // DKK/MWh → øre/kWh
-
-            prices.Add(new SpotPriceRow(record.PriceArea, timestamp, priceOrePerKwh, resolution));
+            _logger.LogWarning("No records from DayAheadPrices for {PriceArea} {From}–{To}", priceArea, from, to);
+            return [];
         }
 
-        return prices;
+        _logger.LogInformation("Received {Count} quarter-hourly prices for {PriceArea}", body.Records.Count, priceArea);
+
+        return body.Records
+            .Where(r => r.DayAheadPriceDkk is not null)
+            .Select(r => new SpotPriceRow(
+                r.PriceArea,
+                DateTime.SpecifyKind(r.TimeUtc, DateTimeKind.Utc),
+                r.DayAheadPriceDkk!.Value / 10m,
+                "PT15M"))
+            .ToList();
+    }
+
+    private async Task<T?> GetAsync<T>(string url, CancellationToken ct)
+    {
+        var response = await _httpClient.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -118,14 +146,15 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
         PropertyNameCaseInsensitive = true,
     };
 
-    private sealed class EnergiDataServiceResponse
+    // ── Elspotprices response models ──
+
+    private sealed class ElspotpricesResponse
     {
         public long Total { get; set; }
-        public string? Dataset { get; set; }
-        public List<PriceRecord> Records { get; set; } = [];
+        public List<ElspotpricesRecord> Records { get; set; } = [];
     }
 
-    private sealed class PriceRecord
+    private sealed class ElspotpricesRecord
     {
         [JsonPropertyName("HourUTC")]
         public DateTime HourUtc { get; set; }
@@ -134,5 +163,24 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
 
         [JsonPropertyName("SpotPriceDKK")]
         public decimal? SpotPriceDkk { get; set; }
+    }
+
+    // ── DayAheadPrices response models ──
+
+    private sealed class DayAheadPricesResponse
+    {
+        public long Total { get; set; }
+        public List<DayAheadPricesRecord> Records { get; set; } = [];
+    }
+
+    private sealed class DayAheadPricesRecord
+    {
+        [JsonPropertyName("TimeUTC")]
+        public DateTime TimeUtc { get; set; }
+
+        public string PriceArea { get; set; } = "";
+
+        [JsonPropertyName("DayAheadPriceDKK")]
+        public decimal? DayAheadPriceDkk { get; set; }
     }
 }
