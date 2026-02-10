@@ -1,8 +1,11 @@
 using DataHub.Settlement.Application.AddressLookup;
+using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Infrastructure.Database;
+using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Portfolio;
@@ -30,8 +33,13 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
         var clock = new TestClock();
         var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<OnboardingService>();
 
+        var dataHubClient = new FakeDataHubClient();
+        var brsBuilder = new BrsRequestBuilder();
+        var messageRepo = new NullMessageRepository();
+
         _onboardingService = new OnboardingService(
-            _signupRepo, _portfolioRepo, processRepo, addressLookup, clock, logger);
+            _signupRepo, _portfolioRepo, processRepo, addressLookup,
+            dataHubClient, brsBuilder, messageRepo, clock, logger);
     }
 
     public Task InitializeAsync() => _db.InitializeAsync();

@@ -142,7 +142,8 @@ public class QueuePollerTests
         var clock = new TestClock { Today = new DateOnly(2024, 12, 5) };
         var onboardingService = new OnboardingService(
             signupRepo, _portfolioRepo, processRepo,
-            new StubAddressLookupClient(), clock,
+            new StubAddressLookupClient(), client, new Infrastructure.DataHub.BrsRequestBuilder(),
+            new NullMessageRepository(), clock,
             NullLogger<OnboardingService>.Instance);
 
         var poller = new QueuePollerService(

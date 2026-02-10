@@ -1,5 +1,7 @@
 using DataHub.Settlement.Application.AddressLookup;
+using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Domain;
@@ -15,6 +17,9 @@ public sealed class OnboardingService : IOnboardingService
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly IProcessRepository _processRepo;
     private readonly IAddressLookupClient _addressLookup;
+    private readonly IDataHubClient _dataHubClient;
+    private readonly IBrsRequestBuilder _brsBuilder;
+    private readonly IMessageRepository _messageRepo;
     private readonly IClock _clock;
     private readonly ILogger<OnboardingService> _logger;
 
@@ -23,6 +28,9 @@ public sealed class OnboardingService : IOnboardingService
         IPortfolioRepository portfolioRepo,
         IProcessRepository processRepo,
         IAddressLookupClient addressLookup,
+        IDataHubClient dataHubClient,
+        IBrsRequestBuilder brsBuilder,
+        IMessageRepository messageRepo,
         IClock clock,
         ILogger<OnboardingService> logger)
     {
@@ -30,6 +38,9 @@ public sealed class OnboardingService : IOnboardingService
         _portfolioRepo = portfolioRepo;
         _processRepo = processRepo;
         _addressLookup = addressLookup;
+        _dataHubClient = dataHubClient;
+        _brsBuilder = brsBuilder;
+        _messageRepo = messageRepo;
         _clock = clock;
         _logger = logger;
     }
@@ -186,9 +197,22 @@ public sealed class OnboardingService : IOnboardingService
                 break;
 
             case "processing":
-                // Already sent to DataHub — cancel process, status will sync
+                // Already sent to DataHub — send BRS-003 cancellation, then cancel locally
                 if (signup.ProcessRequestId.HasValue)
                 {
+                    var process = await _processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
+                    if (process?.DatahubCorrelationId is not null)
+                    {
+                        var cimPayload = _brsBuilder.BuildBrs003(process.Gsrn, process.DatahubCorrelationId);
+                        var response = await _dataHubClient.SendRequestAsync("cancel_switch", cimPayload, ct);
+                        await _messageRepo.RecordOutboundRequestAsync(
+                            "BRS-003", process.Gsrn, response.CorrelationId,
+                            response.Accepted ? "acknowledged_ok" : "acknowledged_error", ct);
+                        _logger.LogInformation(
+                            "Sent BRS-003 cancel to DataHub for GSRN {Gsrn}, correlation={CorrelationId}",
+                            process.Gsrn, response.CorrelationId);
+                    }
+
                     var stateMachine = new ProcessStateMachine(_processRepo, _clock);
                     await stateMachine.MarkCancelledAsync(signup.ProcessRequestId.Value, "Cancelled by user", ct);
                 }
