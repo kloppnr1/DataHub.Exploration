@@ -35,8 +35,12 @@ ALTER TABLE portfolio.contract
     ADD COLUMN IF NOT EXISTS payer_id UUID REFERENCES portfolio.payer(id);
 
 -- 4. Link payer to invoice (nullable — NULL means customer is the payer)
-ALTER TABLE invoicing.invoice
-    ADD COLUMN IF NOT EXISTS payer_id UUID REFERENCES portfolio.payer(id);
+-- Guarded: invoicing schema may not exist yet (created in a later migration)
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'invoicing' AND table_name = 'invoice') THEN
+        ALTER TABLE invoicing.invoice ADD COLUMN IF NOT EXISTS payer_id UUID REFERENCES portfolio.payer(id);
+    END IF;
+END $$;
 
 -- 5. Add billing address fields to signup (captured at signup, copied to customer on activation)
 ALTER TABLE portfolio.signup

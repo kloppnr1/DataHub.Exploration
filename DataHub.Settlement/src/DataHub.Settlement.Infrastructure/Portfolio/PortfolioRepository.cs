@@ -119,7 +119,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
         const string sql = """
             INSERT INTO portfolio.contract (customer_id, gsrn, product_id, billing_frequency, payment_model, start_date)
             VALUES (@CustomerId, @Gsrn, @ProductId, @BillingFrequency, @PaymentModel, @StartDate)
-            RETURNING id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date
+            RETURNING id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date, payer_id
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
