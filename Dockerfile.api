@@ -9,7 +9,7 @@ RUN npm run build
 # Stage 2: Build .NET API
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY DataHub.Settlement/DataHub.Settlement.sln ./
+COPY DataHub.Settlement/DataHub.Settlement.sln DataHub.Settlement/Directory.Build.props ./
 COPY DataHub.Settlement/src/DataHub.Settlement.Domain/DataHub.Settlement.Domain.csproj src/DataHub.Settlement.Domain/
 COPY DataHub.Settlement/src/DataHub.Settlement.Application/DataHub.Settlement.Application.csproj src/DataHub.Settlement.Application/
 COPY DataHub.Settlement/src/DataHub.Settlement.Infrastructure/DataHub.Settlement.Infrastructure.csproj src/DataHub.Settlement.Infrastructure/
