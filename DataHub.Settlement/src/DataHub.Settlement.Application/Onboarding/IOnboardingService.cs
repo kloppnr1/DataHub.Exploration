@@ -3,6 +3,7 @@ namespace DataHub.Settlement.Application.Onboarding;
 public interface IOnboardingService
 {
     Task<AddressLookupResponse> LookupAddressAsync(string darId, CancellationToken ct);
+    Task<AddressLookupResponse> ValidateGsrnAsync(string gsrn, CancellationToken ct);
     Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct);
     Task<SignupStatusResponse?> GetStatusAsync(string signupNumber, CancellationToken ct);
     Task CancelAsync(string signupNumber, CancellationToken ct);

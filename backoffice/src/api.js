@@ -40,6 +40,7 @@ export const api = {
 
   // Address lookup
   lookupAddress: (darId) => request(`/address/${darId}`),
+  validateGsrn: (gsrn) => request(`/address/gsrn/${gsrn}`),
 
   // Customers — paginated with search
   getCustomers: ({ page, pageSize, search } = {}) =>

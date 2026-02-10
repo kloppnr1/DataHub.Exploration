@@ -53,6 +53,7 @@ export default function SignupNew() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [darId, setDarId] = useState('');
+  const [gsrnInput, setGsrnInput] = useState('');
   const [meteringPoints, setMeteringPoints] = useState(null);
   const [selectedGsrn, setSelectedGsrn] = useState(null);
   const [lookingUp, setLookingUp] = useState(false);
@@ -111,6 +112,7 @@ export default function SignupNew() {
     setSelectedAddress(null);
     setAddressQuery('');
     setDarId('');
+    setGsrnInput('');
     setMeteringPoints(null);
     setSelectedGsrn(null);
   }
@@ -126,6 +128,24 @@ export default function SignupNew() {
       const available = result.filter((mp) => !mp.has_active_process);
       if (available.length === 1) setSelectedGsrn(available[0].gsrn);
       else if (result.length === 1 && !result[0].has_active_process) setSelectedGsrn(result[0].gsrn);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
+  async function validateGsrn(gsrn) {
+    setLookingUp(true);
+    setError(null);
+    setMeteringPoints(null);
+    setSelectedGsrn(null);
+    setDarId('');
+    try {
+      const result = await api.validateGsrn(gsrn);
+      setMeteringPoints(result);
+      const available = result.filter((mp) => !mp.has_active_process);
+      if (available.length === 1) setSelectedGsrn(available[0].gsrn);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -295,6 +315,16 @@ export default function SignupNew() {
                   >
                     {t('signupNew.darId')}
                   </button>
+                  <button
+                    onClick={() => { setAddressMode('gsrn'); clearAddress(); }}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg border-2 transition-all duration-200 ${
+                      addressMode === 'gsrn'
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                  >
+                    {t('signupNew.gsrn')}
+                  </button>
                 </div>
 
                 {/* Search mode */}
@@ -379,6 +409,30 @@ export default function SignupNew() {
                         {lookingUp ? t('signupNew.searching') : t('signupNew.lookUp')}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* GSRN mode */}
+                {addressMode === 'gsrn' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.gsrn')}</label>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={gsrnInput}
+                        onChange={(e) => setGsrnInput(e.target.value)}
+                        placeholder={t('signupNew.gsrnPlaceholder')}
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm font-mono text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
+                      />
+                      <button
+                        onClick={() => validateGsrn(gsrnInput)}
+                        disabled={!gsrnInput || lookingUp}
+                        className="px-6 py-3.5 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                      >
+                        {lookingUp ? t('signupNew.validating') : t('signupNew.validate')}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1.5 font-medium">{t('signupNew.gsrnHelper')}</p>
                   </div>
                 )}
 

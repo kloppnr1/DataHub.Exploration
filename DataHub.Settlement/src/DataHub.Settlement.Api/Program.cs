@@ -209,6 +209,26 @@ app.MapGet("/api/signups/{id:guid}/events", async (Guid id, ISignupRepository si
 
 // --- Address lookup ---
 
+// GET /api/address/gsrn/{gsrn} — validate GSRN directly (no address lookup)
+app.MapGet("/api/address/gsrn/{gsrn}", async (string gsrn, IOnboardingService service, CancellationToken ct) =>
+{
+    try
+    {
+        var result = await service.ValidateGsrnAsync(gsrn, ct);
+        return Results.Ok(result.MeteringPoints.Select(mp => new
+        {
+            mp.Gsrn,
+            mp.Type,
+            grid_area_code = mp.GridAreaCode,
+            has_active_process = mp.HasActiveProcess,
+        }));
+    }
+    catch (ValidationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 // GET /api/address/{darId} — resolve DAR ID to GSRN(s) with active process check
 app.MapGet("/api/address/{darId}", async (string darId, IOnboardingService service, CancellationToken ct) =>
 {

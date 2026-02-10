@@ -15,6 +15,11 @@ public sealed class NullOnboardingService : IOnboardingService
         return Task.FromResult(new AddressLookupResponse(Array.Empty<MeteringPointResponse>()));
     }
 
+    public Task<AddressLookupResponse> ValidateGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        return Task.FromResult(new AddressLookupResponse(Array.Empty<MeteringPointResponse>()));
+    }
+
     public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
         return Task.FromResult(new SignupResponse(

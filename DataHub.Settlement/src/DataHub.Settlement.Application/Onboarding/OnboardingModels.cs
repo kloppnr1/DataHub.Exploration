@@ -22,7 +22,7 @@ public record SignupStatusResponse(
     string? RejectionReason);
 
 public record SignupRequest(
-    string DarId,
+    string? DarId,
     string CustomerName,
     string CprCvr,
     string ContactType,

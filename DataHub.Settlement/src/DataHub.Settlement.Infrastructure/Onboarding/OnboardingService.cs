@@ -48,6 +48,16 @@ public sealed class OnboardingService : IOnboardingService
         return new AddressLookupResponse(meteringPoints);
     }
 
+    public async Task<AddressLookupResponse> ValidateGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        if (!GsrnValidator.IsValid(gsrn))
+            throw new ValidationException($"Invalid GSRN format: {gsrn}");
+
+        var hasActive = await _processRepo.HasActiveByGsrnAsync(gsrn, ct);
+        var mp = new MeteringPointResponse(gsrn, "E17", "\u2014", hasActive);
+        return new AddressLookupResponse([mp]);
+    }
+
     public async Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
         // 0. If this is a correction, validate the original signup exists and is rejected
@@ -60,28 +70,38 @@ public sealed class OnboardingService : IOnboardingService
                 throw new ValidationException($"Can only correct a rejected signup. Signup {original.SignupNumber} is '{original.Status}'.");
         }
 
-        // 1. Resolve GSRN from DAR ID
-        var lookupResult = await _addressLookup.LookupByDarIdAsync(request.DarId, ct);
-
-        if (lookupResult.MeteringPoints.Count == 0)
-            throw new ValidationException("No metering point found for the given address.");
-
+        // 1. Resolve GSRN — either directly or via DAR ID
         string gsrn;
-        if (!string.IsNullOrEmpty(request.Gsrn))
+        if (string.IsNullOrEmpty(request.DarId))
         {
-            // Frontend selected a specific GSRN — validate it belongs to this address
-            var match = lookupResult.MeteringPoints.FirstOrDefault(mp => mp.Gsrn == request.Gsrn);
-            gsrn = match?.Gsrn
-                ?? throw new ValidationException($"GSRN {request.Gsrn} not found at address {request.DarId}.");
-        }
-        else if (lookupResult.MeteringPoints.Count == 1)
-        {
-            gsrn = lookupResult.MeteringPoints[0].Gsrn;
+            // GSRN-direct mode — no address lookup
+            gsrn = request.Gsrn
+                ?? throw new ValidationException("Either DarId or Gsrn must be provided.");
         }
         else
         {
-            throw new ValidationException(
-                $"Multiple metering points found at this address ({lookupResult.MeteringPoints.Count}). Please select one.");
+            // Existing DAR-based flow
+            var lookupResult = await _addressLookup.LookupByDarIdAsync(request.DarId, ct);
+
+            if (lookupResult.MeteringPoints.Count == 0)
+                throw new ValidationException("No metering point found for the given address.");
+
+            if (!string.IsNullOrEmpty(request.Gsrn))
+            {
+                // Frontend selected a specific GSRN — validate it belongs to this address
+                var match = lookupResult.MeteringPoints.FirstOrDefault(mp => mp.Gsrn == request.Gsrn);
+                gsrn = match?.Gsrn
+                    ?? throw new ValidationException($"GSRN {request.Gsrn} not found at address {request.DarId}.");
+            }
+            else if (lookupResult.MeteringPoints.Count == 1)
+            {
+                gsrn = lookupResult.MeteringPoints[0].Gsrn;
+            }
+            else
+            {
+                throw new ValidationException(
+                    $"Multiple metering points found at this address ({lookupResult.MeteringPoints.Count}). Please select one.");
+            }
         }
 
         // 2. Validate GSRN format
@@ -114,7 +134,7 @@ public sealed class OnboardingService : IOnboardingService
         // 9. Create signup (with customer info, but customer not created yet)
         var signupNumber = await _signupRepo.NextSignupNumberAsync(ct);
         var signup = await _signupRepo.CreateAsync(
-            signupNumber, request.DarId, gsrn,
+            signupNumber, request.DarId ?? "", gsrn,
             request.CustomerName, request.CprCvr, request.ContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
             request.CorrectedFromId, ct);

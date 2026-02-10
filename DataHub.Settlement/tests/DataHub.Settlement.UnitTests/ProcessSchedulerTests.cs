@@ -127,6 +127,8 @@ public class ProcessSchedulerTests
     {
         public Task<AddressLookupResponse> LookupAddressAsync(string darId, CancellationToken ct)
             => throw new NotImplementedException();
+        public Task<AddressLookupResponse> ValidateGsrnAsync(string gsrn, CancellationToken ct)
+            => throw new NotImplementedException();
         public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<SignupStatusResponse?> GetStatusAsync(string signupNumber, CancellationToken ct)
