@@ -20,7 +20,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy infrastructure
+      - name: Deploy infrastructure (placeholder images)
         id: bicep
         uses: azure/arm-deploy@v2
         with:
@@ -47,19 +47,17 @@ jobs:
           docker build -f Dockerfile.worker -t "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}" .
           docker push "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}"
 
-      - name: Update API container app
-        run: |
-          az containerapp update \
-            --name api \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image "${{ steps.bicep.outputs.acrLoginServer }}/datahub-api:${{ github.sha }}"
-
-      - name: Update Worker container app
-        run: |
-          az containerapp update \
-            --name worker \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image "${{ steps.bicep.outputs.acrLoginServer }}/datahub-worker:${{ github.sha }}"
+      - name: Deploy with real images
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >
+            location=westeurope
+            postgresPassword=${{ secrets.POSTGRES_PASSWORD }}
+            apiImage=${{ steps.bicep.outputs.acrLoginServer }}/datahub-api:${{ github.sha }}
+            workerImage=${{ steps.bicep.outputs.acrLoginServer }}/datahub-worker:${{ github.sha }}
+          failOnStdErr: false
 
       - name: Print deployed URL
         run: |

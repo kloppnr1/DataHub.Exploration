@@ -5,9 +5,16 @@ param location string
 @description('Password for the PostgreSQL container')
 param postgresPassword string
 
+@description('API container image (overridden by CI/CD after first deploy)')
+param apiImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
+@description('Worker container image (overridden by CI/CD after first deploy)')
+param workerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var acrName = 'acrdatahub${uniqueSuffix}'
 var environmentName = 'cae-datahub-settlement'
+var useAcr = apiImage != 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 // Log Analytics Workspace (required by Container Apps Environment)
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -97,25 +104,25 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'http'
       }
-      registries: [
+      registries: useAcr ? [
         {
           server: acr.properties.loginServer
           username: acr.listCredentials().username
           passwordSecretRef: 'acr-password'
         }
-      ]
-      secrets: [
+      ] : []
+      secrets: useAcr ? [
         {
           name: 'acr-password'
           value: acr.listCredentials().passwords[0].value
         }
-      ]
+      ] : []
     }
     template: {
       containers: [
         {
           name: 'api'
-          image: '${acr.properties.loginServer}/datahub-api:latest'
+          image: apiImage
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -165,25 +172,25 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
   properties: {
     managedEnvironmentId: environment.id
     configuration: {
-      registries: [
+      registries: useAcr ? [
         {
           server: acr.properties.loginServer
           username: acr.listCredentials().username
           passwordSecretRef: 'acr-password'
         }
-      ]
-      secrets: [
+      ] : []
+      secrets: useAcr ? [
         {
           name: 'acr-password'
           value: acr.listCredentials().passwords[0].value
         }
-      ]
+      ] : []
     }
     template: {
       containers: [
         {
           name: 'worker'
-          image: '${acr.properties.loginServer}/datahub-worker:latest'
+          image: workerImage
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
