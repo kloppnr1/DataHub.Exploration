@@ -32,7 +32,26 @@ public record SignupRequest(
     string Type,
     DateOnly EffectiveDate,
     string? Gsrn = null,
-    Guid? CorrectedFromId = null);
+    Guid? CorrectedFromId = null,
+    // Billing address (customer's postal address — distinct from supply point)
+    string? BillingStreet = null,
+    string? BillingHouseNumber = null,
+    string? BillingFloor = null,
+    string? BillingDoor = null,
+    string? BillingPostalCode = null,
+    string? BillingCity = null,
+    // Optional separate payer (if someone other than the customer pays)
+    string? PayerName = null,
+    string? PayerCprCvr = null,
+    string? PayerContactType = null,
+    string? PayerEmail = null,
+    string? PayerPhone = null,
+    string? PayerBillingStreet = null,
+    string? PayerBillingHouseNumber = null,
+    string? PayerBillingFloor = null,
+    string? PayerBillingDoor = null,
+    string? PayerBillingPostalCode = null,
+    string? PayerBillingCity = null);
 
 public record SignupResponse(
     Guid Id,
@@ -78,3 +97,12 @@ public record SignupCorrectionLink(
     string SignupNumber,
     string Status,
     DateTime CreatedAt);
+
+/// <summary>Billing address and optional payer info captured at signup time.</summary>
+public record SignupAddressInfo(
+    string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
+    string? BillingDoor, string? BillingPostalCode, string? BillingCity,
+    string? PayerName, string? PayerCprCvr, string? PayerContactType,
+    string? PayerEmail, string? PayerPhone,
+    string? PayerBillingStreet, string? PayerBillingHouseNumber, string? PayerBillingFloor,
+    string? PayerBillingDoor, string? PayerBillingPostalCode, string? PayerBillingCity);

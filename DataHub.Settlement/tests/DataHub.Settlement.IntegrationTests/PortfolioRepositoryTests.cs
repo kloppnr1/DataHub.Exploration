@@ -25,7 +25,7 @@ public class PortfolioRepositoryTests
     {
         await EnsureGridAreaAsync();
 
-        var customer = await _sut.CreateCustomerAsync("Test Customer", "0101901234", "private", CancellationToken.None);
+        var customer = await _sut.CreateCustomerAsync("Test Customer", "0101901234", "private", null, CancellationToken.None);
         customer.Id.Should().NotBeEmpty();
         customer.Name.Should().Be("Test Customer");
         customer.Status.Should().Be("active");
@@ -115,7 +115,7 @@ public class PortfolioRepositoryTests
         await EnsureGridAreaAsync();
         var mp = new MeteringPoint("571313100000055555", "E17", "flex", "344", "5790000392261", "DK1", "connected");
         await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
-        var customer = await _sut.CreateCustomerAsync("End Contract Test", "0101905555", "private", CancellationToken.None);
+        var customer = await _sut.CreateCustomerAsync("End Contract Test", "0101905555", "private", null, CancellationToken.None);
         var product = await _sut.CreateProductAsync("Test Prod", "spot", 4.0m, null, 39.00m, CancellationToken.None);
         await _sut.CreateContractAsync(customer.Id, "571313100000055555", product.Id, "monthly", "post_payment",
             new DateOnly(2025, 1, 1), CancellationToken.None);
@@ -154,7 +154,7 @@ public class PortfolioRepositoryTests
         await _sut.UpdateMeteringPointGridAreaAsync("571313100000033333", "740", "DK2", CancellationToken.None);
 
         // Verify by creating a contract (proves the mp still exists and is functional)
-        var customer = await _sut.CreateCustomerAsync("Grid Test", "0101903333", "private", CancellationToken.None);
+        var customer = await _sut.CreateCustomerAsync("Grid Test", "0101903333", "private", null, CancellationToken.None);
         var product = await _sut.CreateProductAsync("Grid Prod", "spot", 4.0m, null, 39.00m, CancellationToken.None);
         var contract = await _sut.CreateContractAsync(customer.Id, "571313100000033333", product.Id,
             "monthly", "post_payment", new DateOnly(2025, 1, 1), CancellationToken.None);

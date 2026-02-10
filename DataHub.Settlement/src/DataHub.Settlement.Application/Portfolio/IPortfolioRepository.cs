@@ -2,7 +2,7 @@ namespace DataHub.Settlement.Application.Portfolio;
 
 public interface IPortfolioRepository
 {
-    Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, CancellationToken ct);
+    Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, Address? billingAddress, CancellationToken ct);
     Task<Customer?> GetCustomerByCprCvrAsync(string cprCvr, CancellationToken ct);
     Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct);
     Task<Product> CreateProductAsync(string name, string energyModel, decimal marginOrePerKwh, decimal? supplementOrePerKwh, decimal subscriptionKrPerMonth, CancellationToken ct);
@@ -24,4 +24,11 @@ public interface IPortfolioRepository
     Task<DashboardStats> GetDashboardStatsAsync(CancellationToken ct);
     Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct);
     Task<IReadOnlyList<MeteringPointWithSupply>> GetMeteringPointsForCustomerAsync(Guid customerId, CancellationToken ct);
+
+    // Payer operations
+    Task<Payer> CreatePayerAsync(string name, string cprCvr, string contactType,
+        string? email, string? phone, Address? billingAddress, CancellationToken ct);
+    Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct);
+    Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct);
+    Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct);
 }

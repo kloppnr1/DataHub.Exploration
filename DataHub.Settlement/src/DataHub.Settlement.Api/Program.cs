@@ -270,7 +270,7 @@ app.MapGet("/api/customers", async (int? page, int? pageSize, string? search, IP
     return Results.Ok(result);
 });
 
-// GET /api/customers/{id} — customer detail with contracts and metering points
+// GET /api/customers/{id} — customer detail with contracts, metering points, and billing address
 app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo, CancellationToken ct) =>
 {
     var customer = await repo.GetCustomerAsync(id, ct);
@@ -278,6 +278,7 @@ app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo
 
     var contracts = await repo.GetContractsForCustomerAsync(id, ct);
     var meteringPoints = await repo.GetMeteringPointsForCustomerAsync(id, ct);
+    var payers = await repo.GetPayersForCustomerAsync(id, ct);
 
     return Results.Ok(new
     {
@@ -286,9 +287,39 @@ app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo
         customer.CprCvr,
         customer.ContactType,
         customer.Status,
+        BillingAddress = customer.BillingAddress,
         Contracts = contracts,
         MeteringPoints = meteringPoints,
+        Payers = payers,
     });
+});
+
+// PUT /api/customers/{id}/billing-address — update customer billing address
+app.MapPut("/api/customers/{id:guid}/billing-address", async (Guid id, Address address, IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var customer = await repo.GetCustomerAsync(id, ct);
+    if (customer is null) return Results.NotFound();
+
+    await repo.UpdateCustomerBillingAddressAsync(id, address, ct);
+    return Results.Ok(new { message = "Billing address updated." });
+});
+
+// --- Payers ---
+
+// POST /api/payers — create a new payer
+app.MapPost("/api/payers", async (Payer request, IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var payer = await repo.CreatePayerAsync(
+        request.Name, request.CprCvr, request.ContactType,
+        request.Email, request.Phone, request.BillingAddress, ct);
+    return Results.Created($"/api/payers/{payer.Id}", payer);
+});
+
+// GET /api/payers/{id} — payer detail
+app.MapGet("/api/payers/{id:guid}", async (Guid id, IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var payer = await repo.GetPayerAsync(id, ct);
+    return payer is not null ? Results.Ok(payer) : Results.NotFound();
 });
 
 // --- Billing (back-office) ---

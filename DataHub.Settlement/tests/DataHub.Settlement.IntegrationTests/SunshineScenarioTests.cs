@@ -58,7 +58,7 @@ public class SunshineScenarioTests
         await SeedSpotPricesAsync(ct);
 
         // ──── 2. ARRANGE: create customer + product + contract via CRM ────
-        var customer = await _portfolio.CreateCustomerAsync("Test Kunde", "0101901234", "private", ct);
+        var customer = await _portfolio.CreateCustomerAsync("Test Kunde", "0101901234", "private", null, ct);
         var product = await _portfolio.CreateProductAsync("Spot Standard", "spot", 4.0m, null, 39.00m, ct);
 
         var mp = new MeteringPoint(Gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");

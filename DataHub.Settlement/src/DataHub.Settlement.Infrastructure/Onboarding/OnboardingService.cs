@@ -131,14 +131,22 @@ public sealed class OnboardingService : IOnboardingService
         var stateMachine = new ProcessStateMachine(_processRepo, _clock);
         var process = await stateMachine.CreateRequestAsync(gsrn, processType, request.EffectiveDate, ct);
 
-        // 9. Create signup (with customer info, but customer not created yet)
+        // 9. Create signup (with customer info + address/payer, but customer not created yet)
         var dbContactType = MapContactTypeToDb(request.ContactType);
+        var addressInfo = new SignupAddressInfo(
+            request.BillingStreet, request.BillingHouseNumber, request.BillingFloor,
+            request.BillingDoor, request.BillingPostalCode, request.BillingCity,
+            request.PayerName, request.PayerCprCvr,
+            request.PayerContactType is not null ? MapContactTypeToDb(request.PayerContactType) : null,
+            request.PayerEmail, request.PayerPhone,
+            request.PayerBillingStreet, request.PayerBillingHouseNumber, request.PayerBillingFloor,
+            request.PayerBillingDoor, request.PayerBillingPostalCode, request.PayerBillingCity);
         var signupNumber = await _signupRepo.NextSignupNumberAsync(ct);
         var signup = await _signupRepo.CreateAsync(
             signupNumber, request.DarId ?? "", gsrn,
             request.CustomerName, request.CprCvr, dbContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
-            request.CorrectedFromId, ct);
+            request.CorrectedFromId, addressInfo, ct);
 
         _logger.LogInformation(
             "Signup {SignupNumber} created for GSRN {Gsrn}, type={Type}, effective={EffectiveDate}{Correction}",
@@ -209,6 +217,15 @@ public sealed class OnboardingService : IOnboardingService
             var signupDetail = await _signupRepo.GetDetailByIdAsync(signup.Id, ct);
             if (signupDetail is not null && !string.IsNullOrEmpty(signupDetail.CprCvr))
             {
+                // Retrieve address/payer info captured at signup
+                var addressInfo = await _signupRepo.GetAddressInfoAsync(signup.Id, ct);
+                var billingAddress = addressInfo is not null
+                    && (addressInfo.BillingStreet is not null || addressInfo.BillingPostalCode is not null || addressInfo.BillingCity is not null)
+                    ? new Address(addressInfo.BillingStreet, addressInfo.BillingHouseNumber,
+                        addressInfo.BillingFloor, addressInfo.BillingDoor,
+                        addressInfo.BillingPostalCode, addressInfo.BillingCity)
+                    : null;
+
                 // Check if customer with this CPR/CVR already exists (multi-metering point scenario)
                 var existingCustomer = await _portfolioRepo.GetCustomerByCprCvrAsync(signupDetail.CprCvr, ct);
 
@@ -217,21 +234,48 @@ public sealed class OnboardingService : IOnboardingService
                     // Link to existing customer (e.g., home + summer residence)
                     await _signupRepo.LinkCustomerAsync(signup.Id, existingCustomer.Id, ct);
 
+                    // Update billing address if provided and customer doesn't have one yet
+                    if (billingAddress is not null && existingCustomer.BillingAddress is null)
+                    {
+                        await _portfolioRepo.UpdateCustomerBillingAddressAsync(existingCustomer.Id, billingAddress, ct);
+                    }
+
                     _logger.LogInformation(
                         "Signup {SignupNumber} linked to existing customer {CustomerId} ({CustomerName}) — multi-metering point scenario",
                         signup.SignupNumber, existingCustomer.Id, existingCustomer.Name);
                 }
                 else
                 {
-                    // Create new customer (map contact_type from signup to customer schema)
+                    // Create new customer with billing address
                     var customerContactType = MapContactType(signupDetail.ContactType);
                     var customer = await _portfolioRepo.CreateCustomerAsync(
-                        signupDetail.CustomerName, signupDetail.CprCvr, customerContactType, ct);
+                        signupDetail.CustomerName, signupDetail.CprCvr, customerContactType, billingAddress, ct);
 
                     await _signupRepo.LinkCustomerAsync(signup.Id, customer.Id, ct);
 
                     _logger.LogInformation("Customer {CustomerId} created for signup {SignupNumber}",
                         customer.Id, signup.SignupNumber);
+                }
+
+                // Create payer if a separate payer was specified at signup
+                if (addressInfo is not null && !string.IsNullOrEmpty(addressInfo.PayerName))
+                {
+                    var payerContactType = MapContactType(addressInfo.PayerContactType ?? "person");
+                    var payerAddress = addressInfo.PayerBillingStreet is not null
+                        || addressInfo.PayerBillingPostalCode is not null
+                        || addressInfo.PayerBillingCity is not null
+                        ? new Address(addressInfo.PayerBillingStreet, addressInfo.PayerBillingHouseNumber,
+                            addressInfo.PayerBillingFloor, addressInfo.PayerBillingDoor,
+                            addressInfo.PayerBillingPostalCode, addressInfo.PayerBillingCity)
+                        : null;
+
+                    var payer = await _portfolioRepo.CreatePayerAsync(
+                        addressInfo.PayerName, addressInfo.PayerCprCvr ?? "",
+                        payerContactType, addressInfo.PayerEmail, addressInfo.PayerPhone,
+                        payerAddress, ct);
+
+                    _logger.LogInformation("Payer {PayerId} ({PayerName}) created for signup {SignupNumber}",
+                        payer.Id, payer.Name, signup.SignupNumber);
                 }
             }
         }

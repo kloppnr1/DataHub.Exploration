@@ -35,15 +35,23 @@ public sealed class SignupRepository : ISignupRepository
     public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
         string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-        Guid? correctedFromId, CancellationToken ct)
+        Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct)
     {
         const string sql = """
             INSERT INTO portfolio.signup
                 (signup_number, dar_id, gsrn, customer_name, customer_cpr_cvr, customer_contact_type,
-                 product_id, process_request_id, type, effective_date, corrected_from_id)
+                 product_id, process_request_id, type, effective_date, corrected_from_id,
+                 billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city,
+                 payer_name, payer_cpr_cvr, payer_contact_type, payer_email, payer_phone,
+                 payer_billing_street, payer_billing_house_number, payer_billing_floor,
+                 payer_billing_door, payer_billing_postal_code, payer_billing_city)
             VALUES
                 (@SignupNumber, @DarId, @Gsrn, @CustomerName, @CustomerCprCvr, @CustomerContactType,
-                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId)
+                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId,
+                 @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity,
+                 @PayerName, @PayerCprCvr, @PayerContactType, @PayerEmail, @PayerPhone,
+                 @PayerBillingStreet, @PayerBillingHouseNumber, @PayerBillingFloor,
+                 @PayerBillingDoor, @PayerBillingPostalCode, @PayerBillingCity)
             RETURNING id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
                       type, effective_date, status, rejection_reason, corrected_from_id
             """;
@@ -56,7 +64,24 @@ public sealed class SignupRepository : ISignupRepository
                 SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn,
                 CustomerName = customerName, CustomerCprCvr = customerCprCvr, CustomerContactType = customerContactType,
                 ProductId = productId, ProcessRequestId = processRequestId, Type = type,
-                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId
+                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId,
+                BillingStreet = addressInfo?.BillingStreet,
+                BillingHouseNumber = addressInfo?.BillingHouseNumber,
+                BillingFloor = addressInfo?.BillingFloor,
+                BillingDoor = addressInfo?.BillingDoor,
+                BillingPostalCode = addressInfo?.BillingPostalCode,
+                BillingCity = addressInfo?.BillingCity,
+                PayerName = addressInfo?.PayerName,
+                PayerCprCvr = addressInfo?.PayerCprCvr,
+                PayerContactType = addressInfo?.PayerContactType,
+                PayerEmail = addressInfo?.PayerEmail,
+                PayerPhone = addressInfo?.PayerPhone,
+                PayerBillingStreet = addressInfo?.PayerBillingStreet,
+                PayerBillingHouseNumber = addressInfo?.PayerBillingHouseNumber,
+                PayerBillingFloor = addressInfo?.PayerBillingFloor,
+                PayerBillingDoor = addressInfo?.PayerBillingDoor,
+                PayerBillingPostalCode = addressInfo?.PayerBillingPostalCode,
+                PayerBillingCity = addressInfo?.PayerBillingCity,
             }, cancellationToken: ct));
     }
 
@@ -312,5 +337,23 @@ public sealed class SignupRepository : ISignupRepository
         var result = await conn.QueryAsync<SignupCorrectionLink>(
             new CommandDefinition(sql, new { SignupId = signupId }, cancellationToken: ct));
         return result.ToList();
+    }
+
+    public async Task<SignupAddressInfo?> GetAddressInfoAsync(Guid signupId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT billing_street, billing_house_number, billing_floor, billing_door,
+                   billing_postal_code, billing_city,
+                   payer_name, payer_cpr_cvr, payer_contact_type, payer_email, payer_phone,
+                   payer_billing_street, payer_billing_house_number, payer_billing_floor,
+                   payer_billing_door, payer_billing_postal_code, payer_billing_city
+            FROM portfolio.signup
+            WHERE id = @SignupId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<SignupAddressInfo>(
+            new CommandDefinition(sql, new { SignupId = signupId }, cancellationToken: ct));
     }
 }

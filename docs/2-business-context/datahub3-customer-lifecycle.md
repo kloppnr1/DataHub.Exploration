@@ -214,14 +214,16 @@ Invoice total  = sum of all lines + VAT
 ### Internal Steps
 
 1. Sales creates customer record (name, CPR/CVR, contact details, contract terms)
-2. Customer provides their address (DAR ID) or GSRN directly
-3. If DAR ID provided, the system looks up the GSRN(s) via the Energinet address lookup API
-4. The system determines the correct process:
+2. Customer provides their **supply address** (DAR ID) or GSRN directly — this is where the meter is
+3. Customer provides their **billing address** (street, house number, floor, door, postal code, city) — this is where they live and receive correspondence. May differ from supply address (e.g., summer house)
+4. Optionally, a separate **payer** is specified if someone other than the customer pays the bills (e.g., parent, employer, landlord)
+5. If DAR ID provided, the system looks up the GSRN(s) via the Energinet address lookup API
+6. The system determines the correct process:
    - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001 or BRS-043)
    - **Customer moving into a new address** -> move-in (tilflytning) (BRS-009)
-5. The system selects product/tariff plan based on contract terms
-6. For aconto customers: calculate initial aconto estimate based on static annual consumption (4,000 kWh/year for house, 2,500 kWh/year for apartment)
-7. Onboarding record is created with status `awaiting_datahub`
+7. The system selects product/tariff plan based on contract terms
+8. For aconto customers: calculate initial aconto estimate based on static annual consumption (4,000 kWh/year for house, 2,500 kWh/year for apartment)
+9. Onboarding record is created with status `awaiting_datahub`
 
 ### DataHub Communication
 

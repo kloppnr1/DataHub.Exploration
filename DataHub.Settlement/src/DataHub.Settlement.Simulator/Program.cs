@@ -7,6 +7,16 @@ builder.Services.AddSingleton<SimulatorState>();
 var app = builder.Build();
 var state = app.Services.GetRequiredService<SimulatorState>();
 
+// Background timer: check pending effectuations every 5 seconds
+_ = Task.Run(async () =>
+{
+    while (true)
+    {
+        await Task.Delay(5_000);
+        state.FlushReadyEffectuations();
+    }
+});
+
 // ── OAuth2 token endpoint (fake) ──
 app.MapPost("/oauth2/v2.0/token", () =>
 {
@@ -71,17 +81,18 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     if (gsrn is not null)
         state.ActivateGsrn(gsrn);
 
-    // Auto-enqueue RSM-009 (acknowledgment) + RSM-007 (master data confirmation) after 15s delay
+    // RSM-009 (acknowledgment) after 15s delay
     _ = Task.Run(async () =>
     {
         await Task.Delay(15_000);
         state.EnqueueMessage("MasterData", "RSM-009", correlationId,
             BuildRsm009Json(correlationId, true));
-
-        var effectiveDate = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
-        state.EnqueueMessage("MasterData", "RSM-007", correlationId,
-            ScenarioLoader.BuildRsm007Json(gsrn ?? "571313100000012345", effectiveDate));
     });
+
+    // RSM-007 (master data confirmation) — scheduled for the effective date
+    var effectiveDateStr = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
+    var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed) ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
+    state.ScheduleEffectuation(gsrn ?? "571313100000012345", correlationId, effectiveDate);
 
     return Results.Ok(new
     {
@@ -119,7 +130,7 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     if (gsrn is not null)
         state.DeactivateGsrn(gsrn);
 
-    // Auto-enqueue RSM-009 only (no RSM-007 for end-of-supply) after 15s delay
+    // RSM-009 only (no RSM-007 for end-of-supply) after 15s delay
     _ = Task.Run(async () =>
     {
         await Task.Delay(15_000);
@@ -203,6 +214,17 @@ app.MapPost("/admin/reset", () =>
 app.MapGet("/admin/requests", () =>
 {
     return Results.Ok(state.GetRequests());
+});
+
+app.MapGet("/admin/effectuations", () =>
+{
+    return Results.Ok(state.GetPendingEffectuations().Select(e => new
+    {
+        e.Gsrn,
+        e.CorrelationId,
+        EffectiveDate = e.EffectiveDate.ToString("yyyy-MM-dd"),
+        e.Enqueued,
+    }));
 });
 
 app.MapGet("/", () => "DataHub Settlement Simulator");

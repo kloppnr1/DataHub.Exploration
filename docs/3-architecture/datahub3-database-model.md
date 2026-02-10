@@ -18,7 +18,8 @@ Physical database schema for the settlement system. Based on the conceptual [dom
 │  ├── supply_period          └── spot_price            ├── subscription
 │  ├── contract                                         └── electricity_tax
 │  ├── grid_area              Schema: settlement
-│  └── product                ├── billing_period        Schema: datahub
+│  ├── payer                  ├── billing_period        Schema: datahub
+│  └── product
 │                             ├── settlement_run        ├── inbound_message
 │  Schema: lifecycle          ├── settlement_line       ├── outbound_request
 │  ├── process_request        ├── aconto_payment        ├── processed_message_id
@@ -44,6 +45,13 @@ CREATE TABLE portfolio.customer (
     contact_type    TEXT NOT NULL CHECK (contact_type IN ('private', 'business')),
     email           TEXT,
     phone           TEXT,
+    -- Billing/contact address (distinct from supply point address)
+    billing_street          TEXT,               -- e.g. 'Vestergade'
+    billing_house_number    TEXT,               -- e.g. '12A'
+    billing_floor           TEXT,               -- e.g. '3' or 'st'
+    billing_door            TEXT,               -- e.g. 'th', 'tv', 'mf'
+    billing_postal_code     TEXT,               -- 4 digits, e.g. '8000'
+    billing_city            TEXT,               -- e.g. 'Aarhus C'
     status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -54,6 +62,35 @@ CREATE INDEX idx_customer_status ON portfolio.customer (status);
 ```
 
 **GDPR note:** `cpr_cvr` must be encrypted at rest (column-level encryption or transparent data encryption). Consider storing only a hash for lookups and the encrypted value separately.
+
+**Address note:** The billing address is where the customer lives and receives correspondence. This is distinct from the supply point (metering point location), which is identified by GSRN. A customer may have supply at one address but live at another (e.g., summer house, rental property).
+
+### payer
+
+The payer is the entity that pays the invoice. In most cases the customer is the payer, but they can differ (e.g., parent paying for child's apartment, company paying for employee's home).
+
+```sql
+CREATE TABLE portfolio.payer (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                    TEXT NOT NULL,
+    cpr_cvr                 TEXT NOT NULL,
+    contact_type            TEXT NOT NULL CHECK (contact_type IN ('private', 'business')),
+    email                   TEXT,
+    phone                   TEXT,
+    billing_street          TEXT,
+    billing_house_number    TEXT,
+    billing_floor           TEXT,
+    billing_door            TEXT,
+    billing_postal_code     TEXT,
+    billing_city            TEXT,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_payer_cpr_cvr ON portfolio.payer (cpr_cvr);
+```
+
+When `contract.payer_id` is NULL, the customer is the payer (default). When set, invoices for that contract go to the payer instead.
 
 ### metering_point
 
@@ -130,6 +167,7 @@ CREATE TABLE portfolio.contract (
     customer_id         UUID NOT NULL REFERENCES portfolio.customer(id),
     gsrn                TEXT NOT NULL REFERENCES portfolio.metering_point(gsrn),
     product_id          UUID NOT NULL REFERENCES portfolio.product(id),
+    payer_id            UUID REFERENCES portfolio.payer(id),  -- NULL = customer is the payer
     billing_frequency   TEXT NOT NULL CHECK (billing_frequency IN ('monthly', 'quarterly')),
     payment_model       TEXT NOT NULL CHECK (payment_model IN ('aconto', 'post_payment')),
     payment_term_days   INT NOT NULL DEFAULT 30,
@@ -153,6 +191,7 @@ erDiagram
     customer ||--o{ contract : "har"
     contract }o--|| metering_point : "binder"
     contract }o--|| product : "bruger"
+    contract }o--o| payer : "betales af"
     metering_point ||--o{ supply_period : "historik"
     metering_point }o--|| grid_area : "tilhører"
 
@@ -161,13 +200,26 @@ erDiagram
         text name
         text cpr_cvr
         text contact_type
+        text billing_street
+        text billing_postal_code
+        text billing_city
         text status
+    }
+    payer {
+        uuid id PK
+        text name
+        text cpr_cvr
+        text contact_type
+        text billing_street
+        text billing_postal_code
+        text billing_city
     }
     contract {
         uuid id PK
         uuid customer_id FK
         text gsrn FK
         uuid product_id FK
+        uuid payer_id FK
         text billing_frequency
         text payment_model
         int payment_term_days
@@ -561,6 +613,7 @@ erDiagram
 CREATE TABLE invoicing.invoice (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id         UUID NOT NULL REFERENCES portfolio.customer(id),
+    payer_id            UUID REFERENCES portfolio.payer(id),  -- NULL = customer is the payer
     billing_period_id   UUID NOT NULL REFERENCES settlement.billing_period(id),
     settlement_run_id   UUID REFERENCES settlement.settlement_run(id),
     invoice_type        TEXT NOT NULL CHECK (invoice_type IN (
