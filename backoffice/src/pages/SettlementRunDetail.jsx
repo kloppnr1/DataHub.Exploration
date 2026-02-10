@@ -21,11 +21,17 @@ function StatusBadge({ status, label }) {
   );
 }
 
+const triggerStyles = {
+  manual: 'bg-blue-50 text-blue-700',
+  auto: 'bg-purple-50 text-purple-700',
+};
+
 export default function SettlementRunDetail() {
   const { t } = useTranslation();
   const { id } = useParams();
   const [run, setRun] = useState(null);
   const [linesData, setLinesData] = useState(null);
+  const [corrections, setCorrections] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [linesLoading, setLinesLoading] = useState(true);
@@ -34,8 +40,14 @@ export default function SettlementRunDetail() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api.getSettlementRun(id)
-      .then(setRun)
+    Promise.all([
+      api.getSettlementRun(id),
+      api.getRunCorrections(id).catch(() => []),
+    ])
+      .then(([runData, correctionsData]) => {
+        setRun(runData);
+        setCorrections(correctionsData);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -247,6 +259,50 @@ export default function SettlementRunDetail() {
           </div>
         )}
       </div>
+
+      {/* Related Corrections */}
+      {corrections.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
+          <div className="px-6 py-4 border-b border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-900">{t('runDetail.relatedCorrections')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('runDetail.relatedCorrectionsSubtitle')}</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColId')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColMeteringPoint')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTrigger')}</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColDeltaKwh')}</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTotal')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColCreated')}</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-100">
+                {corrections.map((c) => (
+                  <tr key={c.correctionBatchId} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      <Link to={`/billing/corrections/${c.correctionBatchId}`} className="text-teal-600 font-medium hover:text-teal-700 font-mono text-sm">
+                        {c.correctionBatchId.substring(0, 8)}...
+                      </Link>
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm font-mono text-slate-700">{c.meteringPointId}</td>
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${triggerStyles[c.triggerType] || triggerStyles.manual}`}>
+                        {t('corrections.trigger_' + c.triggerType)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-sm tabular-nums text-slate-600">{c.totalDeltaKwh.toFixed(3)}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-sm tabular-nums font-semibold text-slate-900">{c.total.toFixed(2)} DKK</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{new Date(c.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

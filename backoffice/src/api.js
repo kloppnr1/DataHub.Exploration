@@ -61,6 +61,13 @@ export const api = {
   getCustomerBillingSummary: (customerId) =>
     request(`/billing/customers/${customerId}/summary`),
 
+  // Corrections
+  getCorrections: ({ meteringPointId, triggerType, fromDate, toDate, page, pageSize } = {}) =>
+    request(`/billing/corrections${qs({ meteringPointId, triggerType, fromDate, toDate, page, pageSize })}`),
+  getCorrection: (batchId) => request(`/billing/corrections/${batchId}`),
+  triggerCorrection: (data) => request('/billing/corrections', { method: 'POST', body: JSON.stringify(data) }),
+  getRunCorrections: (runId) => request(`/billing/runs/${runId}/corrections`),
+
   // Messages
   getInboundMessages: ({ messageType, status, correlationId, queueName, fromDate, toDate, page, pageSize } = {}) =>
     request(`/messages/inbound${qs({ messageType, status, correlationId, queueName, fromDate, toDate, page, pageSize })}`),

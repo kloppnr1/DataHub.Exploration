@@ -16,6 +16,8 @@ import Messages from './pages/Messages';
 import InboundMessageDetail from './pages/InboundMessageDetail';
 import OutboundRequestDetail from './pages/OutboundRequestDetail';
 import DeadLetterDetail from './pages/DeadLetterDetail';
+import Corrections from './pages/Corrections';
+import CorrectionDetail from './pages/CorrectionDetail';
 
 export default function App() {
   return (
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/billing" element={<BillingPeriods />} />
             <Route path="/billing/periods/:id" element={<BillingPeriodDetail />} />
             <Route path="/billing/runs/:id" element={<SettlementRunDetail />} />
+            <Route path="/billing/corrections" element={<Corrections />} />
+            <Route path="/billing/corrections/:batchId" element={<CorrectionDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/inbound/:id" element={<InboundMessageDetail />} />
             <Route path="/messages/outbound/:id" element={<OutboundRequestDetail />} />

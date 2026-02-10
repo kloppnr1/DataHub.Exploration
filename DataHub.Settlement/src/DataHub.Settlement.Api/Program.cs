@@ -5,6 +5,8 @@ using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
+using DataHub.Settlement.Application.Settlement;
+using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Domain;
 using DataHub.Settlement.Infrastructure;
 using DataHub.Settlement.Infrastructure.AddressLookup;
@@ -15,6 +17,8 @@ using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Portfolio;
+using DataHub.Settlement.Infrastructure.Settlement;
+using DataHub.Settlement.Infrastructure.Tariff;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +46,11 @@ builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 builder.Services.AddSingleton<IBillingRepository>(new BillingRepository(connectionString));
 builder.Services.AddSingleton<ISpotPriceRepository>(new SpotPriceRepository(connectionString));
 builder.Services.AddSingleton<IMessageRepository>(new MessageRepository(connectionString));
+builder.Services.AddSingleton<CorrectionEngine>();
+builder.Services.AddSingleton<ICorrectionRepository>(new CorrectionRepository(connectionString));
+builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
+builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
+builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
 
 var app = builder.Build();
 
@@ -337,6 +346,48 @@ app.MapGet("/api/billing/customers/{id:guid}/summary", async (Guid id, IBillingR
 {
     var summary = await repo.GetCustomerBillingAsync(id, ct);
     return summary is not null ? Results.Ok(summary) : Results.NotFound();
+});
+
+// --- Corrections (back-office) ---
+
+// GET /api/billing/corrections — paginated corrections with optional filters
+app.MapGet("/api/billing/corrections", async (
+    string? meteringPointId, string? triggerType, DateOnly? fromDate, DateOnly? toDate,
+    int? page, int? pageSize,
+    ICorrectionRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetCorrectionsPagedAsync(meteringPointId, triggerType, fromDate, toDate, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/corrections/{batchId} — correction detail with lines
+app.MapGet("/api/billing/corrections/{batchId:guid}", async (Guid batchId, ICorrectionRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetCorrectionAsync(batchId, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// POST /api/billing/corrections — trigger manual correction
+app.MapPost("/api/billing/corrections", async (TriggerCorrectionRequest request, ICorrectionService service, CancellationToken ct) =>
+{
+    try
+    {
+        var detail = await service.TriggerCorrectionAsync(request, ct);
+        return Results.Created($"/api/billing/corrections/{detail.CorrectionBatchId}", detail);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// GET /api/billing/runs/{id}/corrections — corrections linked to a settlement run
+app.MapGet("/api/billing/runs/{id:guid}/corrections", async (Guid id, ICorrectionRepository repo, CancellationToken ct) =>
+{
+    var corrections = await repo.GetCorrectionsForRunAsync(id, ct);
+    return Results.Ok(corrections);
 });
 
 // --- Messages (back-office) ---
