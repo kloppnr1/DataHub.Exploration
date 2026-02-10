@@ -107,6 +107,9 @@ public static class ScenarioLoader
     }
 
     private static string BuildRsm007Json()
+        => BuildRsm007Json("571313100000012345", "2025-01-01T00:00:00Z");
+
+    internal static string BuildRsm007Json(string gsrn, string effectiveDate)
     {
         var doc = new
         {
@@ -118,13 +121,13 @@ public static class ScenarioLoader
                 {
                     MarketEvaluationPoint = new
                     {
-                        mRID = "571313100000012345",
+                        mRID = gsrn,
                         type = "E17",
                         settlementMethod = "D01",
                         linkedMarketEvaluationPoint = new { mRID = "344" },
                         inDomain = new { mRID = "5790000392261" },
                     },
-                    Period = new { timeInterval = new { start = "2025-01-01T00:00:00Z" } },
+                    Period = new { timeInterval = new { start = effectiveDate } },
                 },
             },
         };

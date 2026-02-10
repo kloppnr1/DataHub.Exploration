@@ -11,6 +11,9 @@ param apiImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:la
 @description('Worker container image (overridden by CI/CD after first deploy)')
 param workerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
+@description('Simulator container image (overridden by CI/CD after first deploy)')
+param simulatorImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var acrName = 'acrdatahub${uniqueSuffix}'
 var environmentName = 'cae-datahub-settlement'
@@ -200,7 +203,56 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'ConnectionStrings__SettlementDb'
               value: 'Host=postgresql;Port=5432;Database=datahub_settlement;Username=settlement;Password=${postgresPassword}'
             }
+            {
+              name: 'DataHub__BaseUrl'
+              value: 'http://simulator'
+            }
           ]
+        }
+      ]
+      scale: {
+        minReplicas: 1
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+// Container App: Simulator (internal DataHub mock)
+resource simulator 'Microsoft.App/containerApps@2024-03-01' = {
+  name: 'simulator'
+  location: location
+  properties: {
+    managedEnvironmentId: environment.id
+    configuration: {
+      ingress: {
+        external: false
+        targetPort: 8080
+        transport: 'http'
+      }
+      registries: useAcr ? [
+        {
+          server: acr.properties.loginServer
+          username: acr.listCredentials().username
+          passwordSecretRef: 'acr-password'
+        }
+      ] : []
+      secrets: useAcr ? [
+        {
+          name: 'acr-password'
+          value: acr.listCredentials().passwords[0].value
+        }
+      ] : []
+    }
+    template: {
+      containers: [
+        {
+          name: 'simulator'
+          image: simulatorImage
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
         }
       ]
       scale: {

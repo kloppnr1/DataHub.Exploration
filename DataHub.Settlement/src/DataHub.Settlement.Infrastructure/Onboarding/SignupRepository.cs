@@ -167,9 +167,9 @@ public sealed class SignupRepository : ISignupRepository
     public async Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct)
     {
         const string sql = """
-            SELECT c.cpr_cvr
+            SELECT COALESCE(c.cpr_cvr, s.customer_cpr_cvr)
             FROM portfolio.signup s
-            JOIN portfolio.customer c ON c.id = s.customer_id
+            LEFT JOIN portfolio.customer c ON c.id = s.customer_id
             WHERE s.id = @SignupId
             """;
 

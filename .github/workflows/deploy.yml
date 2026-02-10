@@ -47,6 +47,14 @@ jobs:
           docker build -f Dockerfile.worker -t "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}" .
           docker push "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}"
 
+      - name: Build and push Simulator image
+        run: |
+          ACR_NAME="${{ steps.bicep.outputs.acrName }}"
+          ACR_LOGIN_SERVER="${{ steps.bicep.outputs.acrLoginServer }}"
+          az acr login --name "$ACR_NAME"
+          docker build -f Dockerfile.simulator -t "$ACR_LOGIN_SERVER/datahub-simulator:${{ github.sha }}" .
+          docker push "$ACR_LOGIN_SERVER/datahub-simulator:${{ github.sha }}"
+
       - name: Deploy with real images
         uses: azure/arm-deploy@v2
         with:
@@ -57,6 +65,7 @@ jobs:
             postgresPassword=${{ secrets.POSTGRES_PASSWORD }}
             apiImage=${{ steps.bicep.outputs.acrLoginServer }}/datahub-api:${{ github.sha }}
             workerImage=${{ steps.bicep.outputs.acrLoginServer }}/datahub-worker:${{ github.sha }}
+            simulatorImage=${{ steps.bicep.outputs.acrLoginServer }}/datahub-simulator:${{ github.sha }}
           failOnStdErr: false
 
       - name: Print deployed URL

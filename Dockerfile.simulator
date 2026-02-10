@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY DataHub.Settlement/DataHub.Settlement.sln DataHub.Settlement/Directory.Build.props ./
+COPY DataHub.Settlement/src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj src/DataHub.Settlement.Simulator/
+RUN dotnet restore src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj
+
+COPY DataHub.Settlement/ ./
+RUN dotnet publish src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj \
+    -c Release -o /app/publish --no-restore
+
+FROM base AS final
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "DataHub.Settlement.Simulator.dll"]

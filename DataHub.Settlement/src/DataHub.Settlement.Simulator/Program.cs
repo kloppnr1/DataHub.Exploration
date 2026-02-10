@@ -48,11 +48,16 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     state.RecordRequest("requestchangeofsupplier", "/v1.0/cim/requestchangeofsupplier", body);
 
     var gsrn = ExtractGsrn(body);
+    var correlationId = Guid.NewGuid().ToString();
+
     if (gsrn is not null && state.IsGsrnActive(gsrn))
     {
+        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+            BuildRsm009Json(correlationId, false, "E16", "Supplier already holds this metering point"));
+
         return Results.Ok(new
         {
-            CorrelationId = Guid.NewGuid().ToString(),
+            CorrelationId = correlationId,
             Accepted = false,
             RejectReason = "E16",
             RejectMessage = "Supplier already holds this metering point",
@@ -62,9 +67,17 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     if (gsrn is not null)
         state.ActivateGsrn(gsrn);
 
+    // Auto-enqueue RSM-009 (acknowledgment) + RSM-007 (master data confirmation)
+    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+        BuildRsm009Json(correlationId, true));
+
+    var effectiveDate = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
+    state.EnqueueMessage("MasterData", "RSM-007", correlationId,
+        ScenarioLoader.BuildRsm007Json(gsrn ?? "571313100000012345", effectiveDate));
+
     return Results.Ok(new
     {
-        CorrelationId = Guid.NewGuid().ToString(),
+        CorrelationId = correlationId,
         Accepted = true,
     });
 });
@@ -75,11 +88,16 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     state.RecordRequest("requestendofsupply", "/v1.0/cim/requestendofsupply", body);
 
     var gsrn = ExtractGsrn(body);
+    var correlationId = Guid.NewGuid().ToString();
+
     if (gsrn is not null && !state.IsGsrnActive(gsrn))
     {
+        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+            BuildRsm009Json(correlationId, false, "E16", "No active supply for this metering point"));
+
         return Results.Ok(new
         {
-            CorrelationId = Guid.NewGuid().ToString(),
+            CorrelationId = correlationId,
             Accepted = false,
             RejectReason = "E16",
             RejectMessage = "No active supply for this metering point",
@@ -89,9 +107,13 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     if (gsrn is not null)
         state.DeactivateGsrn(gsrn);
 
+    // Auto-enqueue RSM-009 only (no RSM-007 for end-of-supply)
+    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+        BuildRsm009Json(correlationId, true));
+
     return Results.Ok(new
     {
-        CorrelationId = Guid.NewGuid().ToString(),
+        CorrelationId = correlationId,
         Accepted = true,
     });
 });
@@ -100,9 +122,15 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
 {
     var body = await new StreamReader(request.Body).ReadToEndAsync();
     state.RecordRequest("requestcancelchangeofsupplier", "/v1.0/cim/requestcancelchangeofsupplier", body);
+
+    var correlationId = Guid.NewGuid().ToString();
+
+    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+        BuildRsm009Json(correlationId, true));
+
     return Results.Ok(new
     {
-        CorrelationId = Guid.NewGuid().ToString(),
+        CorrelationId = correlationId,
         Accepted = true,
     });
 });
@@ -160,6 +188,80 @@ app.MapGet("/admin/requests", () =>
 app.MapGet("/", () => "DataHub Settlement Simulator");
 
 app.Run();
+
+static string BuildRsm009Json(string correlationId, bool accepted, string? rejectCode = null, string? rejectMessage = null)
+{
+    if (accepted)
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = correlationId,
+                MktActivityRecord = new
+                {
+                    status = new { value = "A01" },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+    else
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = correlationId,
+                MktActivityRecord = new
+                {
+                    status = new { value = "A02" },
+                    Reason = new { code = rejectCode ?? "E16", text = rejectMessage ?? "Rejected" },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+}
+
+static string? ExtractEffectiveDate(string body)
+{
+    try
+    {
+        using var doc = JsonDocument.Parse(body);
+        JsonElement md = default;
+        bool found = false;
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Name.Contains("MarketDocument", StringComparison.OrdinalIgnoreCase))
+            {
+                md = prop.Value;
+                found = true;
+                break;
+            }
+        }
+        if (!found) return null;
+
+        if (!md.TryGetProperty("MktActivityRecord", out var mar) &&
+            !md.TryGetProperty("mktActivityRecord", out mar))
+            return null;
+
+        // Try start date (switch/move-in)
+        if (mar.TryGetProperty("start_DateAndOrTime", out var startDt) &&
+            startDt.TryGetProperty("dateTime", out var startVal))
+            return startVal.GetString();
+
+        // Try end date (end-of-supply)
+        if (mar.TryGetProperty("end_DateAndOrTime", out var endDt) &&
+            endDt.TryGetProperty("dateTime", out var endVal))
+            return endVal.GetString();
+    }
+    catch (JsonException)
+    {
+        // Invalid JSON
+    }
+    return null;
+}
 
 static string? ExtractGsrn(string body)
 {
