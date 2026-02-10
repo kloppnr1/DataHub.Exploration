@@ -102,7 +102,7 @@ public class SettlementOrchestrationTests
         public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => Task.FromResult(Product);
 
         // Unused methods
-        public Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, Address? billingAddress, CancellationToken ct) => throw new NotImplementedException();
         public Task<Customer?> GetCustomerByCprCvrAsync(string cprCvr, CancellationToken ct) => throw new NotImplementedException();
         public Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct) => throw new NotImplementedException();
         public Task<Product> CreateProductAsync(string name, string energyModel, decimal marginOrePerKwh, decimal? supplementOrePerKwh, decimal subscriptionKrPerMonth, CancellationToken ct) => throw new NotImplementedException();

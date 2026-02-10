@@ -7,7 +7,7 @@ public interface ISignupRepository
     Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
         string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-        Guid? correctedFromId, CancellationToken ct);
+        Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct);
     Task<string> NextSignupNumberAsync(CancellationToken ct);
     Task<Signup?> GetBySignupNumberAsync(string signupNumber, CancellationToken ct);
     Task<Signup?> GetByIdAsync(Guid id, CancellationToken ct);
@@ -22,4 +22,5 @@ public interface ISignupRepository
     Task<IReadOnlyList<SignupListItem>> GetRecentAsync(int limit, CancellationToken ct);
     Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct);
     Task<IReadOnlyList<SignupCorrectionLink>> GetCorrectionChainAsync(Guid signupId, CancellationToken ct);
+    Task<SignupAddressInfo?> GetAddressInfoAsync(Guid signupId, CancellationToken ct);
 }

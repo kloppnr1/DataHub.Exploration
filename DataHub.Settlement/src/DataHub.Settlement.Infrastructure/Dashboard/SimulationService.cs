@@ -229,7 +229,7 @@ public sealed class SimulationService
         await Task.Delay(1200, ct);
 
         // ── Step 2: Create Customer & Product ──
-        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", ct);
+        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
         var product = await portfolio.CreateProductAsync("Spot Standard", "spot", 4.0m, null, 39.00m, ct);
 
         await onStepCompleted(new SimulationStep(2, "Create Customer & Product",
@@ -872,7 +872,7 @@ public sealed class SimulationService
         await Task.Delay(800, ct);
 
         // ── Step 2: Create Customer & Metering Point ──
-        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", ct);
+        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
         var product = await portfolio.CreateProductAsync($"Spot-{gsrn[^4..]}", "spot", 4.0m, null, 39.00m, ct);
 
         // All per-GSRN inserts are idempotent — GSRN counter resets on app restart but DB persists
@@ -1530,7 +1530,7 @@ public sealed class SimulationService
         await Task.Delay(800, ct);
 
         // ── Step 2: Create Customer & Metering Point ──
-        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", ct);
+        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
         var product = await portfolio.CreateProductAsync($"Spot-{gsrn[^4..]}", "spot", 4.0m, null, 39.00m, ct);
 
         await using (var setupConn = new NpgsqlConnection(_connectionString))
@@ -1939,7 +1939,7 @@ public sealed class SimulationService
         var prices = GenerateSpotPrices("DK1", effectiveStart, hoursInMonth);
         await spotPriceRepo.StorePricesAsync(prices, ct);
 
-        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", ct);
+        var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
         var product = await portfolio.CreateProductAsync($"Spot-{gsrn[^4..]}", "spot", 4.0m, null, 39.00m, ct);
 
         await using (var setupConn = new NpgsqlConnection(_connectionString))

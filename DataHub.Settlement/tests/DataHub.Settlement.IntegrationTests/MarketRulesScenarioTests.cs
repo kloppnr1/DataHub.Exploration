@@ -81,7 +81,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         await SeedReferenceData(ct);
 
         // Create customer, product, metering point, contract in DB
-        var customer = await _portfolio.CreateCustomerAsync("Scenario Kunde", "0101901234", "private", ct);
+        var customer = await _portfolio.CreateCustomerAsync("Scenario Kunde", "0101901234", "private", null, ct);
         var product = await _portfolio.CreateProductAsync("Spot Scenario", "spot", 4.0m, null, 39.00m, ct);
         var mp = new MeteringPoint(gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");
         await _portfolio.CreateMeteringPointAsync(mp, ct);
@@ -187,7 +187,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         await SeedReferenceData(ct);
 
         // ── Phase 1: Onboard via simulator + DB ──
-        var customer = await _portfolio.CreateCustomerAsync("Lifecycle Kunde", "0101901234", "private", ct);
+        var customer = await _portfolio.CreateCustomerAsync("Lifecycle Kunde", "0101901234", "private", null, ct);
         var product = await _portfolio.CreateProductAsync("Spot Lifecycle", "spot", 4.0m, null, 39.00m, ct);
         var mp = new MeteringPoint(gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");
         await _portfolio.CreateMeteringPointAsync(mp, ct);
@@ -483,7 +483,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
     private async Task OnboardGsrn(string gsrn, CancellationToken ct)
     {
-        var customer = await _portfolio.CreateCustomerAsync($"Customer-{gsrn[^4..]}", "0101901234", "private", ct);
+        var customer = await _portfolio.CreateCustomerAsync($"Customer-{gsrn[^4..]}", "0101901234", "private", null, ct);
         var product = await _portfolio.CreateProductAsync($"Spot-{gsrn[^4..]}", "spot", 4.0m, null, 39.00m, ct);
         var mp = new MeteringPoint(gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");
         await _portfolio.CreateMeteringPointAsync(mp, ct);

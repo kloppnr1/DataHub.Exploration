@@ -261,6 +261,18 @@ The Danish energy market has structural complexity that the API must hide from t
 
 **The sales channel's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
 
+#### Three addresses, three roles
+
+The system distinguishes between three potentially different entities and addresses:
+
+| Role | What | Identified by | Address stored |
+|------|------|---------------|----------------|
+| **Supply point** | Where the meter is | GSRN (resolved from DAR ID) | Not stored — implicit in GSRN + grid area |
+| **Customer** | Who holds the contract | CPR/CVR + name | `customer.billing_*` fields (postal address) |
+| **Payer** | Who pays the invoice | `payer.cpr_cvr` | `payer.billing_*` fields |
+
+In most cases, the customer is the payer (default — `contract.payer_id` is NULL). When a separate payer is specified at signup, the system creates a `payer` record and links it to the contract. Examples: parent paying for student child, company paying for employee, landlord paying for tenant.
+
 ---
 
 #### API surface
@@ -287,7 +299,25 @@ POST /api/signup
   "phone": "+4512345678",
   "product_id": "<uuid>",
   "type": "switch",
-  "effective_date": "2026-04-01"
+  "effective_date": "2026-04-01",
+
+  // Billing address (customer's postal address — distinct from supply point)
+  "billing_street": "Nørrebrogade",
+  "billing_house_number": "42",
+  "billing_floor": "3",
+  "billing_door": "th",
+  "billing_postal_code": "2200",
+  "billing_city": "København N",
+
+  // Optional: separate payer (omit if customer pays their own bills)
+  "payer_name": "Jensen Holding ApS",
+  "payer_cpr_cvr": "12345678",
+  "payer_contact_type": "business",
+  "payer_email": "regnskab@jensen.dk",
+  "payer_billing_street": "Strandvejen",
+  "payer_billing_house_number": "100",
+  "payer_billing_postal_code": "2900",
+  "payer_billing_city": "Hellerup"
 }
 
 → 201 Created

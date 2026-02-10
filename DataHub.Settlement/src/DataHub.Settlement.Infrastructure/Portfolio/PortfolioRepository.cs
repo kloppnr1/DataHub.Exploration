@@ -37,24 +37,38 @@ public sealed class PortfolioRepository : IPortfolioRepository
             cancellationToken: ct));
     }
 
-    public async Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, CancellationToken ct)
+    public async Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, Address? billingAddress, CancellationToken ct)
     {
         const string sql = """
-            INSERT INTO portfolio.customer (name, cpr_cvr, contact_type)
-            VALUES (@Name, @CprCvr, @ContactType)
-            RETURNING id, name, cpr_cvr, contact_type, status
+            INSERT INTO portfolio.customer (name, cpr_cvr, contact_type,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
+            VALUES (@Name, @CprCvr, @ContactType,
+                @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
+            RETURNING id, name, cpr_cvr, contact_type, status,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        return await conn.QuerySingleAsync<Customer>(
-            new CommandDefinition(sql, new { Name = name, CprCvr = cprCvr, ContactType = contactType }, cancellationToken: ct));
+        var row = await conn.QuerySingleAsync<CustomerRow>(
+            new CommandDefinition(sql, new
+            {
+                Name = name, CprCvr = cprCvr, ContactType = contactType,
+                BillingStreet = billingAddress?.Street,
+                BillingHouseNumber = billingAddress?.HouseNumber,
+                BillingFloor = billingAddress?.Floor,
+                BillingDoor = billingAddress?.Door,
+                BillingPostalCode = billingAddress?.PostalCode,
+                BillingCity = billingAddress?.City,
+            }, cancellationToken: ct));
+        return row.ToCustomer();
     }
 
     public async Task<Customer?> GetCustomerByCprCvrAsync(string cprCvr, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, name, cpr_cvr, contact_type, status
+            SELECT id, name, cpr_cvr, contact_type, status,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             WHERE cpr_cvr = @CprCvr
             LIMIT 1
@@ -62,8 +76,9 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        return await conn.QuerySingleOrDefaultAsync<Customer>(
+        var row = await conn.QuerySingleOrDefaultAsync<CustomerRow>(
             new CommandDefinition(sql, new { CprCvr = cprCvr }, cancellationToken: ct));
+        return row?.ToCustomer();
     }
 
     public async Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct)
@@ -153,7 +168,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     public async Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date
+            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date, payer_id
             FROM portfolio.contract
             WHERE gsrn = @Gsrn AND end_date IS NULL
             ORDER BY start_date DESC
@@ -273,30 +288,33 @@ public sealed class PortfolioRepository : IPortfolioRepository
     public async Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, name, cpr_cvr, contact_type, status
+            SELECT id, name, cpr_cvr, contact_type, status,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             WHERE id = @Id
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        return await conn.QuerySingleOrDefaultAsync<Customer>(
+        var row = await conn.QuerySingleOrDefaultAsync<CustomerRow>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return row?.ToCustomer();
     }
 
     public async Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken ct)
     {
         const string sql = """
-            SELECT id, name, cpr_cvr, contact_type, status
+            SELECT id, name, cpr_cvr, contact_type, status,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             ORDER BY name
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        var result = await conn.QueryAsync<Customer>(
+        var result = await conn.QueryAsync<CustomerRow>(
             new CommandDefinition(sql, cancellationToken: ct));
-        return result.ToList();
+        return result.Select(r => r.ToCustomer()).ToList();
     }
 
     public async Task<PagedResult<Customer>> GetCustomersPagedAsync(int page, int pageSize, string? search, CancellationToken ct)
@@ -306,7 +324,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
         var countSql = $"SELECT COUNT(*) FROM portfolio.customer {whereClause}";
         var dataSql = $"""
-            SELECT id, name, cpr_cvr, contact_type, status
+            SELECT id, name, cpr_cvr, contact_type, status,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             {whereClause}
             ORDER BY name
@@ -325,10 +344,10 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
         var totalCount = await conn.ExecuteScalarAsync<int>(
             new CommandDefinition(countSql, parameters, cancellationToken: ct));
-        var items = await conn.QueryAsync<Customer>(
+        var items = await conn.QueryAsync<CustomerRow>(
             new CommandDefinition(dataSql, parameters, cancellationToken: ct));
 
-        return new PagedResult<Customer>(items.ToList(), totalCount, page, pageSize);
+        return new PagedResult<Customer>(items.Select(r => r.ToCustomer()).ToList(), totalCount, page, pageSize);
     }
 
     public async Task<DashboardStats> GetDashboardStatsAsync(CancellationToken ct)
@@ -350,7 +369,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     public async Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date
+            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date, payer_id
             FROM portfolio.contract
             WHERE customer_id = @CustomerId
             ORDER BY start_date DESC
@@ -380,5 +399,119 @@ public sealed class PortfolioRepository : IPortfolioRepository
         var result = await conn.QueryAsync<MeteringPointWithSupply>(
             new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
         return result.ToList();
+    }
+
+    public async Task<Payer> CreatePayerAsync(string name, string cprCvr, string contactType,
+        string? email, string? phone, Address? billingAddress, CancellationToken ct)
+    {
+        const string sql = """
+            INSERT INTO portfolio.payer (name, cpr_cvr, contact_type, email, phone,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
+            VALUES (@Name, @CprCvr, @ContactType, @Email, @Phone,
+                @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
+            RETURNING id, name, cpr_cvr, contact_type, email, phone,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var row = await conn.QuerySingleAsync<PayerRow>(
+            new CommandDefinition(sql, new
+            {
+                Name = name, CprCvr = cprCvr, ContactType = contactType, Email = email, Phone = phone,
+                BillingStreet = billingAddress?.Street,
+                BillingHouseNumber = billingAddress?.HouseNumber,
+                BillingFloor = billingAddress?.Floor,
+                BillingDoor = billingAddress?.Door,
+                BillingPostalCode = billingAddress?.PostalCode,
+                BillingCity = billingAddress?.City,
+            }, cancellationToken: ct));
+        return row.ToPayer();
+    }
+
+    public async Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, email, phone,
+                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+            FROM portfolio.payer
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var row = await conn.QuerySingleOrDefaultAsync<PayerRow>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return row?.ToPayer();
+    }
+
+    public async Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT DISTINCT p.id, p.name, p.cpr_cvr, p.contact_type, p.email, p.phone,
+                p.billing_street, p.billing_house_number, p.billing_floor, p.billing_door, p.billing_postal_code, p.billing_city
+            FROM portfolio.payer p
+            JOIN portfolio.contract c ON c.payer_id = p.id
+            WHERE c.customer_id = @CustomerId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<PayerRow>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return result.Select(r => r.ToPayer()).ToList();
+    }
+
+    public async Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE portfolio.customer
+            SET billing_street = @Street, billing_house_number = @HouseNumber,
+                billing_floor = @Floor, billing_door = @Door,
+                billing_postal_code = @PostalCode, billing_city = @City,
+                updated_at = now()
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            Id = customerId,
+            address.Street, address.HouseNumber, address.Floor,
+            address.Door, address.PostalCode, address.City,
+        }, cancellationToken: ct));
+    }
+
+    // --- Internal row types for Dapper mapping ---
+
+    private record CustomerRow(
+        Guid Id, string Name, string CprCvr, string ContactType, string Status,
+        string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
+        string? BillingDoor, string? BillingPostalCode, string? BillingCity)
+    {
+        public Customer ToCustomer()
+        {
+            var hasAddress = BillingStreet is not null || BillingPostalCode is not null || BillingCity is not null;
+            var address = hasAddress
+                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity)
+                : null;
+            return new Customer(Id, Name, CprCvr, ContactType, Status, address);
+        }
+    }
+
+    private record PayerRow(
+        Guid Id, string Name, string CprCvr, string ContactType, string? Email, string? Phone,
+        string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
+        string? BillingDoor, string? BillingPostalCode, string? BillingCity)
+    {
+        public Payer ToPayer()
+        {
+            var hasAddress = BillingStreet is not null || BillingPostalCode is not null || BillingCity is not null;
+            var address = hasAddress
+                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity)
+                : null;
+            return new Payer(Id, Name, CprCvr, ContactType, Email, Phone, address);
+        }
     }
 }

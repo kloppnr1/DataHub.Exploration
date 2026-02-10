@@ -183,16 +183,23 @@ The backoffice currently exposes **12 API endpoints** covering signups, customer
 ### 8. Customer Management (🟢 Low Priority)
 
 **Backend Capabilities:**
-- `CreateCustomerAsync` - Handled automatically
+- `CreateCustomerAsync` - Handled automatically (now includes billing address)
 - `GetCustomerByCprCvrAsync` - Duplicate detection
 - Customer status management
+- Billing address storage (street, house number, floor, door, postal code, city)
+- Separate payer support (payer entity linked to contract)
+- `PUT /api/customers/{id}/billing-address` - Update billing address
+- `POST /api/payers` - Create payer
+- `GET /api/payers/{id}` - Payer detail
 
 **Missing in Backoffice:**
 - ❌ Merge duplicate customers (admin)
 - ❌ Update customer details manually (admin)
 - ❌ View customer creation source (which signup)
+- ❌ Payer management UI (create, edit, link to contract)
+- ❌ Billing address edit form in customer detail
 
-**Impact:** Minor - customers are mostly managed automatically.
+**Impact:** Minor - customers and payers are mostly managed automatically via signup flow.
 
 ---
 
