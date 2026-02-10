@@ -65,6 +65,42 @@ npm run dev                                           # Volt UI at localhost:517
 
 **Demo Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, and 18 outbound requests for testing the back-office UI.
 
+---
+
+#### Azure Deployment
+
+The app is deployed to Azure Container Apps via GitHub Actions. Every push to `main` triggers a build and deploy.
+
+**Live URL:** https://api.livelyfield-80ad7f60.westeurope.azurecontainerapps.io/
+
+**Architecture:**
+```
+Azure Container Apps Environment
+├── postgresql   (internal TCP:5432, TimescaleDB, ephemeral)
+├── api          (external HTTPS, .NET API + React SPA)
+└── worker       (no ingress, background service)
+```
+
+**Seed test data** (clears and re-populates the database):
+```bash
+curl -X POST https://api.livelyfield-80ad7f60.westeurope.azurecontainerapps.io/api/seed
+```
+
+This creates ~460 customers, 230 signups, ~515 metering points, 12 billing periods, 14 settlement runs, ~34k settlement lines, messages, and dead letters. It's idempotent — safe to run multiple times.
+
+**Infrastructure:**
+- `infra/main.bicep` — all Azure resources (Log Analytics, Container Apps Environment, ACR, container apps)
+- `.github/workflows/deploy.yml` — CI/CD pipeline
+- `Dockerfile.api` / `Dockerfile.worker` — multi-stage Docker builds
+
+**One-time setup** (already done):
+```bash
+az group create --name rg-datahub-settlement --location westeurope
+az ad sp create-for-rbac --name "github-datahub-settlement" --role Contributor \
+  --scopes /subscriptions/<sub-id>/resourceGroups/rg-datahub-settlement --sdk-auth
+# Set GitHub secrets: AZURE_CREDENTIALS, POSTGRES_PASSWORD
+```
+
 ### Technology
 
 .NET 9, PostgreSQL 16 + TimescaleDB, Dapper, DbUp migrations, OpenTelemetry, xUnit + FluentAssertions, Docker Compose, GitHub Actions CI.
