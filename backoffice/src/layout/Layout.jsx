@@ -136,10 +136,10 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[240px] bg-teal-600 flex flex-col shrink-0 shadow-2xl shadow-teal-900/20 relative overflow-hidden
+        fixed inset-y-0 left-0 z-50 w-[240px] bg-teal-600 flex flex-col shrink-0 shadow-2xl shadow-teal-900/20 overflow-hidden
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:static md:translate-x-0
+        md:relative md:translate-x-0
       `}>
         {/* Decorative orbs */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />

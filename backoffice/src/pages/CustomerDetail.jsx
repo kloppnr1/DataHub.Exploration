@@ -46,7 +46,7 @@ export default function CustomerDetail() {
           </span>
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{customer.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{customer.name}</h1>
           <p className="text-sm text-slate-500 font-medium">
             {customer.contactType} &middot; <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">{customer.cprCvr}</span>
           </p>

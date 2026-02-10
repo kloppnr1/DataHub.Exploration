@@ -55,7 +55,7 @@ export default function OutboundRequestDetail() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
         <Link to="/messages" className="hover:text-teal-600">{t('outboundDetail.breadcrumbMessages')}</Link>
@@ -65,17 +65,17 @@ export default function OutboundRequestDetail() {
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('outboundDetail.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('outboundDetail.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{request.processType}</p>
       </div>
 
       {/* Request metadata card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('outboundDetail.requestMetadata')}</h2>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-4">
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.requestId')}</dt>
-            <dd className="text-base font-mono text-slate-900 mt-1">{request.id}</dd>
+            <dd className="text-base font-mono text-slate-900 mt-1 break-all">{request.id}</dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.processType')}</dt>
@@ -83,7 +83,7 @@ export default function OutboundRequestDetail() {
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.gsrn')}</dt>
-            <dd className="text-base font-mono text-slate-900 mt-1">{request.gsrn}</dd>
+            <dd className="text-base font-mono text-slate-900 mt-1 break-all">{request.gsrn}</dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.status')}</dt>
@@ -93,7 +93,7 @@ export default function OutboundRequestDetail() {
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.correlationId')}</dt>
-            <dd className="text-base font-mono text-slate-700 mt-1">{request.correlationId || '-'}</dd>
+            <dd className="text-base font-mono text-slate-700 mt-1 break-all">{request.correlationId || '-'}</dd>
           </div>
         </dl>
       </div>
@@ -101,7 +101,7 @@ export default function OutboundRequestDetail() {
       {/* Timestamps */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('outboundDetail.timestamps')}</h2>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-4">
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.sentAt')}</dt>
             <dd className="text-base text-slate-900 mt-1">{new Date(request.sentAt).toLocaleString()}</dd>
@@ -119,7 +119,7 @@ export default function OutboundRequestDetail() {
       {request.errorDetails && (
         <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 animate-fade-in-up" style={{ animationDelay: '180ms' }}>
           <h2 className="text-lg font-semibold text-rose-900 mb-4">{t('outboundDetail.errorDetails')}</h2>
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg overflow-x-auto">
             <pre className="text-sm text-rose-700 whitespace-pre-wrap font-mono">{request.errorDetails}</pre>
           </div>
         </div>

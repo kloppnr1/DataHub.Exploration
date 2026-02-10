@@ -83,12 +83,12 @@ export default function SpotPrices() {
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('spotPrices.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('spotPrices.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{t('spotPrices.subtitle')}</p>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-end gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('spotPrices.priceArea')}</label>
           <div className="flex rounded-lg overflow-hidden border border-slate-300">

@@ -204,7 +204,7 @@ export default function SignupNew() {
     <div className="signup-grid-bg min-h-full">
       <style>{PAGE_STYLES}</style>
 
-      <div className="px-6 py-10 max-w-4xl mx-auto">
+      <div className="px-3 sm:px-6 py-10 max-w-4xl mx-auto">
 
         {/* Breadcrumb */}
         <Link to="/signups" className="group inline-flex items-center gap-2 text-sm text-slate-400 hover:text-teal-600 mb-8 transition-colors font-medium">
@@ -216,7 +216,7 @@ export default function SignupNew() {
 
         {/* Header */}
         <div className="mb-8 wizard-enter">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             {correctedFromId ? t('signupNew.titleCorrected') : t('signupNew.title')}
           </h1>
           <p className="text-slate-400 text-lg mt-1">{STEPS[step]?.desc}</p>
@@ -283,7 +283,7 @@ export default function SignupNew() {
             </div>
           </div>
 
-          <div className="relative p-8 sm:p-10">
+          <div className="relative p-4 sm:p-8">
 
             {/* ─── Step 0: Address ─── */}
             {step === 0 && (
@@ -294,7 +294,7 @@ export default function SignupNew() {
                 </div>
 
                 {/* Mode toggle — pill buttons */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => { setAddressMode('search'); clearAddress(); }}
                     className={`px-4 py-2 text-xs font-bold rounded-lg border-2 transition-all duration-200 ${
@@ -590,7 +590,7 @@ export default function SignupNew() {
                           </div>
 
                           {/* Pricing */}
-                          <div className="flex items-baseline gap-6 mb-2">
+                          <div className="flex flex-wrap items-baseline gap-3 sm:gap-6 mb-2">
                             <div className="flex items-baseline gap-1.5">
                               <span className="text-xl font-black text-slate-900">{p.margin_ore_per_kwh}</span>
                               <span className="text-xs text-slate-400 font-medium">{t('signupNew.marginLabel')}</span>
@@ -815,7 +815,7 @@ export default function SignupNew() {
 function SummaryRow({ label, value, highlight, onEdit }) {
   return (
     <div className="flex items-center px-6 py-3.5 group">
-      <span className="w-36 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{label}</span>
+      <span className="w-24 sm:w-36 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{label}</span>
       <span className={`text-sm flex-1 min-w-0 ${highlight ? 'text-amber-600 font-semibold italic' : 'text-slate-800'}`}>{value}</span>
       {onEdit && (
         <button

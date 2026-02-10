@@ -68,7 +68,7 @@ export default function SignupList() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('signupList.title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('signupList.title')}</h1>
           <p className="text-base text-slate-500 mt-1">{t('signupList.subtitle')}</p>
         </div>
         <Link

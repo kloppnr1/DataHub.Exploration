@@ -97,7 +97,7 @@ export default function SignupDetail() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{signup.signupNumber}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{signup.signupNumber}</h1>
           <StatusBadge status={signup.status} label={t('status.' + signup.status)} />
         </div>
         {canCancel && (
@@ -205,8 +205,8 @@ export default function SignupDetail() {
         <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100">
           <Field label={t('signupDetail.type')} value={signup.type === 'move_in' ? t('signupDetail.typeMoveIn') : t('signupDetail.typeSwitch')} />
           <Field label={t('signupDetail.effectiveDate')} value={signup.effectiveDate} />
-          <Field label={t('signupDetail.gsrn')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600">{signup.gsrn}</span>} />
-          <Field label={t('signupDetail.darId')} value={<span className="font-mono text-xs text-slate-400">{signup.darId}</span>} />
+          <Field label={t('signupDetail.gsrn')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600 break-all">{signup.gsrn}</span>} />
+          <Field label={t('signupDetail.darId')} value={<span className="font-mono text-xs text-slate-400 break-all">{signup.darId}</span>} />
           <Field label={t('signupDetail.product')} value={signup.productName} />
           <Field label={t('signupDetail.created')} value={new Date(signup.createdAt).toLocaleString('da-DK')} />
         </div>

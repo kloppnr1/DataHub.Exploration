@@ -65,7 +65,7 @@ export default function BillingPeriodDetail() {
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('billingDetail.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('billingDetail.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{period.periodStart} to {period.periodEnd}</p>
       </div>
 

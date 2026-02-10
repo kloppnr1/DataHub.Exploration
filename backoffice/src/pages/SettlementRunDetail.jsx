@@ -90,7 +90,7 @@ export default function SettlementRunDetail() {
     : type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
         <Link to="/billing" className="hover:text-teal-600">{t('runDetail.breadcrumbBilling')}</Link>
@@ -102,7 +102,7 @@ export default function SettlementRunDetail() {
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('runDetail.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('runDetail.title')}</h1>
         <div className="flex items-center gap-3 mt-1">
           <p className="text-base text-slate-500">{t('runDetail.version', { version: run.version })}</p>
           <StatusBadge status={run.status} label={t('status.' + run.status)} />
@@ -110,7 +110,7 @@ export default function SettlementRunDetail() {
       </div>
 
       {/* Metrics cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
           <div className="text-sm font-medium text-slate-500 mb-1">{t('runDetail.meteringPoints')}</div>
           <div className="text-3xl font-bold text-slate-900">{run.meteringPointsCount}</div>
@@ -128,7 +128,7 @@ export default function SettlementRunDetail() {
       {/* Run info card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('runDetail.runInfo')}</h2>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-4">
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('runDetail.period')}</dt>
             <dd className="text-base font-semibold text-slate-900 mt-1">{run.periodStart} to {run.periodEnd}</dd>
@@ -188,7 +188,8 @@ export default function SettlementRunDetail() {
                 </div>
 
                 {/* Charge lines for this metering point */}
-                <table className="min-w-full">
+                <div className="overflow-x-auto">
+                <table className="min-w-[600px] w-full">
                   <thead>
                     <tr>
                       <th className="px-6 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('runDetail.colChargeType')}</th>
@@ -215,6 +216,7 @@ export default function SettlementRunDetail() {
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             ))}
           </div>
@@ -222,7 +224,7 @@ export default function SettlementRunDetail() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-sm text-slate-600">
               {t('common.showingRange', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, totalCount), total: totalCount })} {t('runDetail.showingLines')}
             </div>

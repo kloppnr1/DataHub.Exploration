@@ -54,7 +54,7 @@ export default function CustomerList() {
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('customerList.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('customerList.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{t('customerList.subtitle')}</p>
       </div>
 
