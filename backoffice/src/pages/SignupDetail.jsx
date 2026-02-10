@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { shouldShowPendingStep, getPendingEventType } from '../utils/pendingStep';
 
 const statusStyles = {
   registered:            { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
@@ -318,14 +319,14 @@ export default function SignupDetail() {
                   );
                 })}
                 {/* Pending step indicator */}
-                {events.length > 0 && !['completed', 'rejected', 'rejection_reason', 'cancelled', 'cancellation_reason', 'final_settled'].includes(events[0].eventType) && (
+                {shouldShowPendingStep(events) && (
                   <div className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${events.length * 80}ms` }}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 bg-teal-100 border-2 border-teal-300">
                       <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
                     </div>
                     <div className="pb-1 -mt-0.5">
                       <span className="text-sm font-medium text-teal-600">
-                        {tPending(events[0].eventType)}
+                        {tPending(getPendingEventType(events))}
                       </span>
                     </div>
                   </div>
