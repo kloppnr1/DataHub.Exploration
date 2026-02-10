@@ -54,6 +54,7 @@ public record SignupRequest(
     string? PayerBillingCity = null);
 
 public record SignupResponse(
+    Guid Id,
     string SignupId,
     string Status,
     string Gsrn,
