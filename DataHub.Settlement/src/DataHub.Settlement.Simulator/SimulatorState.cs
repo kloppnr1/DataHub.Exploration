@@ -8,7 +8,6 @@ public sealed class SimulatorState
     private readonly ConcurrentBag<OutboundRequest> _requests = new();
     private readonly ConcurrentDictionary<string, string> _activeGsrns = new();
     private readonly ConcurrentBag<PendingEffectuation> _pendingEffectuations = new();
-    private int _messageCounter;
 
     public bool IsGsrnActive(string gsrn) => _activeGsrns.ContainsKey(gsrn);
     public void ActivateGsrn(string gsrn) => _activeGsrns[gsrn] = "active";
@@ -17,7 +16,7 @@ public sealed class SimulatorState
     public string EnqueueMessage(string queue, string messageType, string? correlationId, string payload)
     {
         var q = _queues.GetOrAdd(queue, _ => new ConcurrentQueue<QueueMessage>());
-        var messageId = $"sim-msg-{Interlocked.Increment(ref _messageCounter):D6}";
+        var messageId = $"sim-{Guid.NewGuid():N}";
         q.Enqueue(new QueueMessage(messageId, messageType, correlationId, payload));
         return messageId;
     }
@@ -87,7 +86,6 @@ public sealed class SimulatorState
         _requests.Clear();
         _activeGsrns.Clear();
         _pendingEffectuations.Clear();
-        Interlocked.Exchange(ref _messageCounter, 0);
     }
 }
 
