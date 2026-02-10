@@ -186,6 +186,23 @@ export default {
   'signupNew.createCorrectedSignup': 'Create Corrected Signup',
   'signupNew.createSignup': 'Create Signup',
 
+  // ── Process event labels ──
+  'event.created': 'Created',
+  'event.sent': 'Sent to DataHub',
+  'event.acknowledged': 'Acknowledged by DataHub',
+  'event.awaiting_effectuation': 'Awaiting effectuation',
+  'event.completed': 'Effectuated',
+  'event.rejection_reason': 'Rejected',
+  'event.cancellation_reason': 'Cancelled',
+  'event.offboarding_started': 'Offboarding started',
+  'event.final_settled': 'Final settled',
+
+  // ── Pending step labels ──
+  'event.pending.created': 'Awaiting dispatch to DataHub...',
+  'event.pending.sent': 'Awaiting acknowledgement from DataHub...',
+  'event.pending.acknowledged': 'Awaiting effectuation...',
+  'event.pending.awaiting_effectuation': 'Awaiting effective date...',
+
   // ── Signup Detail ──
   'signupDetail.backToSignups': 'Back to signups',
   'signupDetail.loadingSignup': 'Loading signup...',

@@ -32,6 +32,18 @@ export default function SignupDetail() {
   const [error, setError] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
+  const tEvent = (type) => {
+    const key = 'event.' + type;
+    const val = t(key);
+    return val === key ? type : val;
+  };
+
+  const tPending = (type) => {
+    const key = 'event.pending.' + type;
+    const val = t(key);
+    return val === key ? '' : val;
+  };
+
   useEffect(() => {
     setLoading(true);
     Promise.all([api.getSignup(id), api.getSignupEvents(id)])
@@ -54,8 +66,9 @@ export default function SignupDetail() {
     setCancelling(true);
     try {
       await api.cancelSignup(signup.signupNumber);
-      const s = await api.getSignup(id);
+      const [s, e] = await Promise.all([api.getSignup(id), api.getSignupEvents(id)]);
       setSignup(s);
+      setEvents(e);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -260,29 +273,62 @@ export default function SignupDetail() {
             <div className="relative">
               <div className="absolute left-[14px] top-2 bottom-2 w-px bg-teal-200" />
               <div className="space-y-4">
-                {events.map((evt, i) => (
-                  <div key={i} className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                      i === 0 ? 'bg-teal-500 shadow-md shadow-teal-500/25' : 'bg-slate-100 border-2 border-slate-200'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-slate-400'}`} />
-                    </div>
-                    <div className="pb-1 -mt-0.5">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{evt.eventType}</span>
-                        {evt.source && (
-                          <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md font-medium">{evt.source}</span>
+                {events.map((evt, i) => {
+                  const dotColor = evt.eventType === 'created' ? 'bg-slate-400'
+                    : evt.eventType === 'completed' ? 'bg-emerald-500'
+                    : evt.eventType === 'rejection_reason' ? 'bg-rose-500'
+                    : evt.eventType === 'cancellation_reason' ? 'bg-slate-400'
+                    : 'bg-teal-500';
+                  const isFirst = i === 0;
+                  let payloadReason = null;
+                  if (evt.payload) {
+                    try {
+                      const parsed = JSON.parse(evt.payload);
+                      payloadReason = parsed.reason || null;
+                    } catch { /* not JSON, ignore */ }
+                  }
+                  return (
+                    <div key={i} className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
+                        isFirst ? `${dotColor} shadow-md shadow-teal-500/25` : 'bg-slate-100 border-2 border-slate-200'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full ${isFirst ? 'bg-white' : dotColor}`} />
+                      </div>
+                      <div className="pb-1 -mt-0.5">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-slate-900">
+                            {tEvent(evt.eventType)}
+                          </span>
+                          {evt.source && evt.source !== 'system' && (
+                            <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md font-medium">{evt.source}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                          {new Date(evt.occurredAt).toLocaleString('da-DK')}
+                        </p>
+                        {payloadReason && (
+                          <p className="text-xs text-slate-500 italic mt-1.5">{payloadReason}</p>
+                        )}
+                        {evt.payload && !payloadReason && (
+                          <pre className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-2 overflow-x-auto">{evt.payload}</pre>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                        {new Date(evt.occurredAt).toLocaleString('da-DK')}
-                      </p>
-                      {evt.payload && (
-                        <pre className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-2 overflow-x-auto">{evt.payload}</pre>
-                      )}
+                    </div>
+                  );
+                })}
+                {/* Pending step indicator */}
+                {events.length > 0 && !['completed', 'rejection_reason', 'cancellation_reason', 'final_settled'].includes(events[0].eventType) && (
+                  <div className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${events.length * 80}ms` }}>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 bg-teal-100 border-2 border-teal-300">
+                      <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                    </div>
+                    <div className="pb-1 -mt-0.5">
+                      <span className="text-sm font-medium text-teal-600">
+                        {tPending(events[0].eventType)}
+                      </span>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

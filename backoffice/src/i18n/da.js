@@ -186,6 +186,23 @@ export default {
   'signupNew.createCorrectedSignup': 'Opret korrigeret tilmelding',
   'signupNew.createSignup': 'Opret tilmelding',
 
+  // ── Process event labels ──
+  'event.created': 'Oprettet',
+  'event.sent': 'Sendt til DataHub',
+  'event.acknowledged': 'Bekræftet af DataHub',
+  'event.awaiting_effectuation': 'Afventer effektuering',
+  'event.completed': 'Effektueret',
+  'event.rejection_reason': 'Afvist',
+  'event.cancellation_reason': 'Annulleret',
+  'event.offboarding_started': 'Fraflytning påbegyndt',
+  'event.final_settled': 'Endeligt afregnet',
+
+  // ── Pending step labels ──
+  'event.pending.created': 'Afventer afsendelse til DataHub...',
+  'event.pending.sent': 'Afventer bekræftelse fra DataHub...',
+  'event.pending.acknowledged': 'Afventer effektuering...',
+  'event.pending.awaiting_effectuation': 'Afventer ikrafttrædelsesdato...',
+
   // ── Signup Detail ──
   'signupDetail.backToSignups': 'Tilbage til tilmeldinger',
   'signupDetail.loadingSignup': 'Indlæser tilmelding...',
