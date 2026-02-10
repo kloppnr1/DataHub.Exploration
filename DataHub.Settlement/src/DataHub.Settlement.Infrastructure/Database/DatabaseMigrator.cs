@@ -11,7 +11,19 @@ public static class DatabaseMigrator
     /// </summary>
     public static void Migrate(string connectionString, ILogger logger)
     {
-        EnsureDatabase.For.PostgresqlDatabase(connectionString);
+        for (var attempt = 1; attempt <= 10; attempt++)
+        {
+            try
+            {
+                EnsureDatabase.For.PostgresqlDatabase(connectionString);
+                break;
+            }
+            catch (Exception ex) when (attempt < 10)
+            {
+                logger.LogWarning(ex, "Database not ready (attempt {Attempt}/10). Retrying in 3s...", attempt);
+                Thread.Sleep(3000);
+            }
+        }
 
         var upgrader = DeployChanges.To
             .PostgresqlDatabase(connectionString)

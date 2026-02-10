@@ -50,6 +50,7 @@ var migrationLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLo
 DatabaseMigrator.Migrate(connectionString, migrationLogger);
 
 app.UseCors();
+app.UseStaticFiles();
 
 // Health
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -470,5 +471,7 @@ app.MapGet("/api/metering/spot-prices/latest", async (ISpotPriceRepository repo,
     var dk2 = await repo.GetLatestPriceDateAsync("DK2", ct);
     return Results.Ok(new { dk1, dk2 });
 });
+
+app.MapFallbackToFile("index.html");
 
 app.Run();

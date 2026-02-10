@@ -1,0 +1,23 @@
+# Stage 1: Build .NET Worker
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY DataHub.Settlement/DataHub.Settlement.sln ./
+COPY DataHub.Settlement/src/DataHub.Settlement.Domain/DataHub.Settlement.Domain.csproj src/DataHub.Settlement.Domain/
+COPY DataHub.Settlement/src/DataHub.Settlement.Application/DataHub.Settlement.Application.csproj src/DataHub.Settlement.Application/
+COPY DataHub.Settlement/src/DataHub.Settlement.Infrastructure/DataHub.Settlement.Infrastructure.csproj src/DataHub.Settlement.Infrastructure/
+COPY DataHub.Settlement/src/DataHub.Settlement.Worker/DataHub.Settlement.Worker.csproj src/DataHub.Settlement.Worker/
+COPY DataHub.Settlement/src/DataHub.Settlement.Api/DataHub.Settlement.Api.csproj src/DataHub.Settlement.Api/
+COPY DataHub.Settlement/src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj src/DataHub.Settlement.Simulator/
+COPY DataHub.Settlement/src/DataHub.Settlement.Web/DataHub.Settlement.Web.csproj src/DataHub.Settlement.Web/
+COPY DataHub.Settlement/tests/DataHub.Settlement.UnitTests/DataHub.Settlement.UnitTests.csproj tests/DataHub.Settlement.UnitTests/
+COPY DataHub.Settlement/tests/DataHub.Settlement.IntegrationTests/DataHub.Settlement.IntegrationTests.csproj tests/DataHub.Settlement.IntegrationTests/
+RUN dotnet restore src/DataHub.Settlement.Worker/DataHub.Settlement.Worker.csproj
+
+COPY DataHub.Settlement/ ./
+RUN dotnet publish src/DataHub.Settlement.Worker/DataHub.Settlement.Worker.csproj -c Release -o /app/publish --no-restore
+
+# Stage 2: Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "DataHub.Settlement.Worker.dll"]

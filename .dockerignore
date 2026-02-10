@@ -1,0 +1,10 @@
+.git
+.vs
+.claude
+.github
+**/bin
+**/obj
+**/node_modules
+**/dist
+*.md
+nul

@@ -1,0 +1,68 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: rg-datahub-settlement
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy infrastructure
+        id: bicep
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >
+            location=westeurope
+            postgresPassword=${{ secrets.POSTGRES_PASSWORD }}
+          failOnStdErr: false
+
+      - name: Build and push API image
+        run: |
+          ACR_NAME="${{ steps.bicep.outputs.acrName }}"
+          ACR_LOGIN_SERVER="${{ steps.bicep.outputs.acrLoginServer }}"
+          az acr login --name "$ACR_NAME"
+          docker build -f Dockerfile.api -t "$ACR_LOGIN_SERVER/datahub-api:${{ github.sha }}" .
+          docker push "$ACR_LOGIN_SERVER/datahub-api:${{ github.sha }}"
+
+      - name: Build and push Worker image
+        run: |
+          ACR_NAME="${{ steps.bicep.outputs.acrName }}"
+          ACR_LOGIN_SERVER="${{ steps.bicep.outputs.acrLoginServer }}"
+          az acr login --name "$ACR_NAME"
+          docker build -f Dockerfile.worker -t "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}" .
+          docker push "$ACR_LOGIN_SERVER/datahub-worker:${{ github.sha }}"
+
+      - name: Update API container app
+        run: |
+          az containerapp update \
+            --name api \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image "${{ steps.bicep.outputs.acrLoginServer }}/datahub-api:${{ github.sha }}"
+
+      - name: Update Worker container app
+        run: |
+          az containerapp update \
+            --name worker \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image "${{ steps.bicep.outputs.acrLoginServer }}/datahub-worker:${{ github.sha }}"
+
+      - name: Print deployed URL
+        run: |
+          echo "## Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "API URL: ${{ steps.bicep.outputs.apiUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
