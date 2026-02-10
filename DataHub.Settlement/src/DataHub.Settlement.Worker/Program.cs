@@ -111,6 +111,7 @@ builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(conn
 builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connectionString));
 builder.Services.AddSingleton<ISignupRepository>(new SignupRepository(connectionString));
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
+builder.Services.AddSingleton<IMessageRepository>(new MessageRepository(connectionString));
 builder.Services.AddSingleton<IBrsRequestBuilder, BrsRequestBuilder>();
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 

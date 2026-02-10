@@ -1,5 +1,6 @@
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Domain;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,7 @@ public sealed class ProcessSchedulerService : BackgroundService
     private readonly IDataHubClient _dataHubClient;
     private readonly IBrsRequestBuilder _brsBuilder;
     private readonly IOnboardingService _onboardingService;
+    private readonly IMessageRepository _messageRepo;
     private readonly IClock _clock;
     private readonly ILogger<ProcessSchedulerService> _logger;
 
@@ -25,6 +27,7 @@ public sealed class ProcessSchedulerService : BackgroundService
         IDataHubClient dataHubClient,
         IBrsRequestBuilder brsBuilder,
         IOnboardingService onboardingService,
+        IMessageRepository messageRepo,
         IClock clock,
         ILogger<ProcessSchedulerService> logger)
     {
@@ -33,6 +36,7 @@ public sealed class ProcessSchedulerService : BackgroundService
         _dataHubClient = dataHubClient;
         _brsBuilder = brsBuilder;
         _onboardingService = onboardingService;
+        _messageRepo = messageRepo;
         _clock = clock;
         _logger = logger;
     }
@@ -100,6 +104,11 @@ public sealed class ProcessSchedulerService : BackgroundService
 
                 // Send to DataHub
                 var response = await _dataHubClient.SendRequestAsync(process.ProcessType, cimPayload, ct);
+
+                // Record outbound request for conversation timeline
+                var brsType = process.ProcessType == "supplier_switch" ? "BRS-001" : "BRS-009";
+                var outboundStatus = response.Accepted ? "acknowledged_ok" : "acknowledged_error";
+                await _messageRepo.RecordOutboundRequestAsync(brsType, process.Gsrn, response.CorrelationId, outboundStatus, ct);
 
                 // Transition: pending → sent_to_datahub
                 var stateMachine = new ProcessStateMachine(_processRepo, _clock);

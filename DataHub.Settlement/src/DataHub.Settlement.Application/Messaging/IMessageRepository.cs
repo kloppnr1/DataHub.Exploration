@@ -14,4 +14,5 @@ public interface IMessageRepository
     Task<PagedResult<ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct);
     Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct);
     Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct);
+    Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct);
 }

@@ -367,6 +367,26 @@ public sealed class MessageRepository : IMessageRepository
             r.ErrorCount)).ToList();
     }
 
+    public async Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct)
+    {
+        const string sql = """
+            INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at)
+            VALUES (@Id, @ProcessType, @Gsrn, @Status, @CorrelationId, @SentAt)
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            Id = Guid.NewGuid(),
+            ProcessType = processType,
+            Gsrn = gsrn,
+            Status = status,
+            CorrelationId = correlationId,
+            SentAt = DateTime.UtcNow,
+        }, cancellationToken: ct));
+    }
+
 }
 
 // DTOs for Dapper mapping

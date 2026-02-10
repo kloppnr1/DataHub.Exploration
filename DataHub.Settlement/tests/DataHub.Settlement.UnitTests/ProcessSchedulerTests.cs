@@ -1,5 +1,6 @@
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Infrastructure.DataHub;
@@ -18,6 +19,7 @@ public class ProcessSchedulerTests
     private readonly StubDataHubClient _dataHubClient = new();
     private readonly StubBrsRequestBuilder _brsBuilder = new();
     private readonly StubOnboardingService _onboardingService = new();
+    private readonly StubMessageRepository _messageRepo = new();
 
     private ProcessSchedulerService CreateSut() => new(
         _processRepo,
@@ -25,6 +27,7 @@ public class ProcessSchedulerTests
         _dataHubClient,
         _brsBuilder,
         _onboardingService,
+        _messageRepo,
         _clock,
         NullLogger<ProcessSchedulerService>.Instance);
 
@@ -139,5 +142,32 @@ public class ProcessSchedulerTests
             => throw new NotImplementedException();
         public Task SyncFromProcessAsync(Guid processRequestId, string processStatus, string? reason, CancellationToken ct)
             => Task.CompletedTask;
+    }
+
+    private sealed class StubMessageRepository : IMessageRepository
+    {
+        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct)
+            => Task.CompletedTask;
+
+        public Task<Application.Common.PagedResult<InboundMessageSummary>> GetInboundMessagesAsync(MessageFilter filter, int page, int pageSize, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<InboundMessageDetail?> GetInboundMessageAsync(Guid messageId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<OutboundRequestSummary>> GetOutboundRequestsAsync(OutboundFilter filter, int page, int pageSize, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<OutboundRequestDetail?> GetOutboundRequestAsync(Guid requestId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<DeadLetterSummary>> GetDeadLettersAsync(bool? resolvedOnly, int page, int pageSize, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<DeadLetterDetail?> GetDeadLetterAsync(Guid deadLetterId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<MessageStats> GetMessageStatsAsync(CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct)
+            => throw new NotImplementedException();
     }
 }
