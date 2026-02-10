@@ -172,6 +172,7 @@ export default {
   'signupNew.activeProcess': 'Active process',
   'signupNew.allMeteringPointsBlocked': 'All metering points at this address have active processes. Please wait for them to complete or choose a different address.',
   'signupNew.billingAddress': 'Billing Address',
+  'signupNew.sameAsSupply': 'Same as supply address',
   'signupNew.street': 'Street',
   'signupNew.streetPlaceholder': 'Vestergade',
   'signupNew.houseNumber': 'Number',

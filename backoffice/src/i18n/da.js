@@ -172,6 +172,7 @@ export default {
   'signupNew.activeProcess': 'Aktiv proces',
   'signupNew.allMeteringPointsBlocked': 'Alle målepunkter på denne adresse har aktive processer. Vent venligst til de er afsluttet, eller vælg en anden adresse.',
   'signupNew.billingAddress': 'Faktureringsadresse',
+  'signupNew.sameAsSupply': 'Samme som leveringsadresse',
   'signupNew.street': 'Vej',
   'signupNew.streetPlaceholder': 'Vestergade',
   'signupNew.houseNumber': 'Nr.',

@@ -29,6 +29,12 @@ export function useDawaSearch(query, { enabled = true, limit = 8 } = {}) {
             data.map((item) => ({
               text: item.tekst,
               darId: item.adresse.id,
+              street: item.adresse.vejnavn || '',
+              houseNumber: item.adresse.husnr || '',
+              floor: item.adresse.etage || '',
+              door: item.adresse.dør || '',
+              postalCode: item.adresse.postnr || '',
+              city: item.adresse.postnrnavn || '',
             }))
           );
         })
