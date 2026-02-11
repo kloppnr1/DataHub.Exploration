@@ -61,6 +61,7 @@ export default function SignupDetail() {
         .then(([s, e]) => { setSignup(s); setEvents(e); });
     }, 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, signup?.status]);
 
   async function handleCancel() {

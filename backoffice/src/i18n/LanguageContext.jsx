@@ -27,6 +27,7 @@ export function LanguageProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTranslation() {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error('useTranslation must be used within a LanguageProvider');
