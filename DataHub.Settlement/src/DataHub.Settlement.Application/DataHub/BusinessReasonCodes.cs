@@ -50,4 +50,25 @@ public static class RsmMessageTypes
 
     /// <summary>RSM-024 — Annullering (cancellation request).</summary>
     public const string Cancellation = "RSM-024";
+
+    /// <summary>RSM-028 — Kundedata (customer master data).</summary>
+    public const string CustomerData = "RSM-028";
+
+    /// <summary>RSM-031 — Prisbilag (price/tariff attachments).</summary>
+    public const string PriceAttachments = "RSM-031";
+}
+
+/// <summary>
+/// RSM-004 reason codes for different notification types.
+/// </summary>
+public static class Rsm004ReasonCodes
+{
+    /// <summary>D11 — Auto-cancellation (customer data deadline exceeded).</summary>
+    public const string AutoCancel = "D11";
+
+    /// <summary>D46 — Special rules for start of supply.</summary>
+    public const string SpecialRules = "D46";
+
+    /// <summary>E03 — Stop of supply notification.</summary>
+    public const string StopOfSupply = "E03";
 }

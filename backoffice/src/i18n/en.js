@@ -408,6 +408,8 @@ export default {
   'messages.activationConfirmed': 'Activation confirmed',
   'messages.acknowledgementReceived': 'Acknowledgement received',
   'messages.received': '{type} received',
+  'messages.customerDataReceived': 'Customer data received',
+  'messages.priceAttachmentsReceived': 'Price attachments received',
   'messages.noDeliveriesFound': 'No data deliveries found.',
   'messages.meteringData': 'Metering Data',
   'messages.aggregation': 'Aggregation',

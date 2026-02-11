@@ -365,6 +365,8 @@ public class ProcessTimelineTests
         public Domain.MasterData.ParsedMasterData ParseRsm022(string json) => throw new NotImplementedException();
         public Rsm004Result ParseRsm004(string json) => throw new NotImplementedException();
         public Rsm014Aggregation ParseRsm014(string json) => throw new NotImplementedException();
+        public Rsm028Result ParseRsm028(string json) => throw new NotImplementedException();
+        public Rsm031Result ParseRsm031(string json) => throw new NotImplementedException();
     }
 
     /// <summary>No-op IMessageLog for tests.</summary>

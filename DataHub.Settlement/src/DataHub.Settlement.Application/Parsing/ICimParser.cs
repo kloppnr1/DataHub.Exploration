@@ -11,4 +11,6 @@ public interface ICimParser
     Rsm004Result ParseRsm004(string json);
     Rsm014Aggregation ParseRsm014(string json);
     Rsm001ResponseResult ParseRsm001Response(string json);
+    Rsm028Result ParseRsm028(string json);
+    Rsm031Result ParseRsm031(string json);
 }

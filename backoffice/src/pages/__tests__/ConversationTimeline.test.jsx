@@ -686,6 +686,78 @@ describe('ConversationTimeline', () => {
   });
 
   // ══════════════════════════════════════════════════════════════
+  //  RSM-028: Customer data received
+  // ══════════════════════════════════════════════════════════════
+
+  it('renders RSM-028 inbound with "Customer data received" label', async () => {
+    api.getConversation.mockResolvedValue({
+      correlationId: 'corr-028',
+      outbound: [],
+      inbound: [
+        makeInbound({ id: 'in-1', messageType: 'RSM-028', receivedAt: '2025-06-01T10:15:00Z' }),
+      ],
+    });
+
+    renderTimeline('corr-028');
+
+    await waitFor(() => {
+      expect(screen.getByText('RSM-028')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Customer data received')).toBeInTheDocument();
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  //  RSM-031: Price attachments received
+  // ══════════════════════════════════════════════════════════════
+
+  it('renders RSM-031 inbound with "Price attachments received" label', async () => {
+    api.getConversation.mockResolvedValue({
+      correlationId: 'corr-031',
+      outbound: [],
+      inbound: [
+        makeInbound({ id: 'in-1', messageType: 'RSM-031', receivedAt: '2025-06-01T10:16:00Z' }),
+      ],
+    });
+
+    renderTimeline('corr-031');
+
+    await waitFor(() => {
+      expect(screen.getByText('RSM-031')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Price attachments received')).toBeInTheDocument();
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  //  FULL BRS-001 FLOW: RSM-001 → RSM-028 → RSM-031 → RSM-022
+  // ══════════════════════════════════════════════════════════════
+
+  it('renders full BRS-001 flow with RSM-028 and RSM-031', async () => {
+    api.getConversation.mockResolvedValue({
+      correlationId: 'corr-full-brs001',
+      outbound: [
+        makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
+      ],
+      inbound: [
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-028', receivedAt: '2025-06-01T10:15:00Z' }),
+        makeInbound({ id: 'in-3', messageType: 'RSM-031', receivedAt: '2025-06-01T10:16:00Z' }),
+        makeInbound({ id: 'in-4', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
+      ],
+    });
+
+    renderTimeline('corr-full-brs001');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Acknowledgement received')).toBeInTheDocument();
+    expect(screen.getByText('Customer data received')).toBeInTheDocument();
+    expect(screen.getByText('Price attachments received')).toBeInTheDocument();
+    expect(screen.getByText('Activation confirmed')).toBeInTheDocument();
+  });
+
+  // ══════════════════════════════════════════════════════════════
   //  OUTBOUND ICON: outbound events show ">" icon
   //  INBOUND ICON: inbound events show "<" icon
   // ══════════════════════════════════════════════════════════════

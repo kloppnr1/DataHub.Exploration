@@ -297,11 +297,55 @@ public sealed class QueuePollerService : BackgroundService
                     process.Id, process.Gsrn, reason);
             }
         }
+        else if (message.MessageType is "RSM-028" or "rsm-028" or "RSM028")
+        {
+            var customerData = _parser.ParseRsm028(message.RawPayload);
+
+            _logger.LogInformation(
+                "RSM-028: Received customer data for {Gsrn} — {CustomerName} ({CustomerType})",
+                customerData.MeteringPointId, customerData.CustomerName, customerData.CustomerType);
+        }
+        else if (message.MessageType is "RSM-031" or "rsm-031" or "RSM031")
+        {
+            var priceData = _parser.ParseRsm031(message.RawPayload);
+
+            _logger.LogInformation(
+                "RSM-031: Received {TariffCount} tariff attachments for {Gsrn}",
+                priceData.Tariffs.Count, priceData.MeteringPointId);
+        }
         else if (message.MessageType is "RSM-004" or "rsm-004" or "RSM004")
         {
             var change = _parser.ParseRsm004(message.RawPayload);
 
-            if (change.NewGridAreaCode is not null)
+            // Handle reason codes for D11 (auto-cancel), D46 (special rules), E03 (stop of supply)
+            if (change.ReasonCode == "D11")
+            {
+                // Auto-cancellation: customer data deadline exceeded
+                var signup = await _signupRepo.GetActiveByGsrnAsync(change.Gsrn, ct);
+                if (signup?.ProcessRequestId is not null)
+                {
+                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                    await stateMachine.MarkAutoCancelledAsync(
+                        signup.ProcessRequestId.Value,
+                        "DataHub auto-cancellation: customer data deadline exceeded (D11)",
+                        ct);
+                    await _onboardingService.SyncFromProcessAsync(
+                        signup.ProcessRequestId.Value, "cancelled", null, ct);
+
+                    _logger.LogWarning("RSM-004/D11: Auto-cancelled process for {Gsrn}", change.Gsrn);
+                }
+                else
+                {
+                    _logger.LogWarning("RSM-004/D11: No active signup/process found for {Gsrn}", change.Gsrn);
+                }
+            }
+            else if (change.ReasonCode == "D46")
+            {
+                _logger.LogInformation(
+                    "RSM-004/D46: Special rules for start of supply on {Gsrn}, effective {Date}",
+                    change.Gsrn, change.EffectiveDate);
+            }
+            else if (change.NewGridAreaCode is not null)
             {
                 var priceArea = change.NewGridAreaCode.StartsWith("7") ? "DK2" : "DK1";
                 await _portfolioRepo.UpdateMeteringPointGridAreaAsync(

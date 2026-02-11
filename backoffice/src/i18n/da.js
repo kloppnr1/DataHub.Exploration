@@ -408,6 +408,8 @@ export default {
   'messages.activationConfirmed': 'Aktivering bekræftet',
   'messages.acknowledgementReceived': 'Kvittering modtaget',
   'messages.received': '{type} modtaget',
+  'messages.customerDataReceived': 'Kundedata modtaget',
+  'messages.priceAttachmentsReceived': 'Prisbilag modtaget',
   'messages.noDeliveriesFound': 'Ingen dataleverancer fundet.',
   'messages.meteringData': 'Måledata',
   'messages.aggregation': 'Aggregering',

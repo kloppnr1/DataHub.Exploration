@@ -79,6 +79,23 @@ public sealed class ProcessStateMachine
         }
     }
 
+    public async Task MarkAutoCancelledAsync(Guid requestId, string reason, CancellationToken ct)
+    {
+        var request = await _repository.GetAsync(requestId, ct)
+            ?? throw new InvalidOperationException($"Process request {requestId} not found");
+
+        // D11 auto-cancel can arrive when process is effectuation_pending
+        // Use existing transition path: effectuation_pending → cancellation_pending is not needed here;
+        // we go directly effectuation_pending → cancelled via a two-step internal transition
+        if (request.Status == "effectuation_pending")
+        {
+            await TransitionAsync(requestId, "cancellation_pending", null, "auto_cancellation_initiated", ct);
+        }
+
+        await TransitionAsync(requestId, "cancelled", null, "cancelled", ct);
+        await _repository.AddEventAsync(requestId, "cancellation_reason", reason, "datahub", ct);
+    }
+
     public async Task MarkOffboardingAsync(Guid requestId, CancellationToken ct)
     {
         await TransitionAsync(requestId, "offboarding", null, "offboarding_started", ct);

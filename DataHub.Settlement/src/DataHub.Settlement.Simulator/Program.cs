@@ -81,6 +81,8 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     if (gsrn is not null)
         state.ActivateGsrn(gsrn);
 
+    var effectiveDateStr = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
+
     // RSM-001 response (acknowledgment) after 15s delay
     _ = Task.Run(async () =>
     {
@@ -89,8 +91,23 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
             BuildRsm001ResponseJson(correlationId, true));
     });
 
+    // RSM-028 (customer data) after 16s delay
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(16_000);
+        state.EnqueueMessage("MasterData", "RSM-028", correlationId,
+            ScenarioLoader.BuildRsm028Json(gsrn ?? "571313100000012345", "Simulated Customer", "0000000000"));
+    });
+
+    // RSM-031 (price attachments) after 17s delay
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(17_000);
+        state.EnqueueMessage("MasterData", "RSM-031", correlationId,
+            ScenarioLoader.BuildRsm031Json(gsrn ?? "571313100000012345", effectiveDateStr));
+    });
+
     // RSM-022 (master data confirmation) — scheduled for the effective date
-    var effectiveDateStr = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
     var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed) ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
     state.ScheduleEffectuation(gsrn ?? "571313100000012345", correlationId, effectiveDate);
 
@@ -189,7 +206,7 @@ app.MapPost("/admin/scenario/{name}", (string name) =>
     {
         ScenarioLoader.Load(state, name);
         // Auto-register the default GSRN as active for scenarios that include RSM-007
-        if (name is "sunshine" or "full_lifecycle" or "cancellation" or "move_in" or "move_out")
+        if (name is "sunshine" or "full_lifecycle" or "cancellation" or "move_in" or "move_out" or "auto_cancel")
             state.ActivateGsrn("571313100000012345");
         return Results.Ok(new { Scenario = name, Status = "loaded" });
     }

@@ -135,6 +135,10 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'ConnectionStrings__SettlementDb'
               value: 'Host=postgresql;Port=5432;Database=datahub_settlement;Username=settlement;Password=${postgresPassword}'
             }
+            {
+              name: 'DataHub__BaseUrl'
+              value: 'http://simulator'
+            }
           ]
           probes: [
             {

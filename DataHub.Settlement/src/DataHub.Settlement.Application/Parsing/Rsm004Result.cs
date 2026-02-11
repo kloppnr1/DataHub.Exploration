@@ -5,4 +5,5 @@ public record Rsm004Result(
     string? NewGridAreaCode,
     string? NewSettlementMethod,
     string? NewConnectionStatus,
-    DateTimeOffset EffectiveDate);
+    DateTimeOffset EffectiveDate,
+    string? ReasonCode = null);

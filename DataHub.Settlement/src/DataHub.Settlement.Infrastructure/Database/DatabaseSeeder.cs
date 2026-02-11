@@ -544,7 +544,19 @@ public static class DatabaseSeeder
                 "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
                 new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
 
-            var rsm007At = rsm009At.AddHours(rng.Next(1, 48));
+            // RSM-028: Customer data
+            var rsm028At = rsm009At.AddMinutes(rng.Next(1, 15));
+            await conn.ExecuteAsync(
+                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-028', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(600, 1200), Recv = rsm028At, Proc = rsm028At.AddSeconds(rng.Next(1, 5)) });
+
+            // RSM-031: Price attachments
+            var rsm031At = rsm028At.AddMinutes(rng.Next(1, 10));
+            await conn.ExecuteAsync(
+                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-031', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(500, 1000), Recv = rsm031At, Proc = rsm031At.AddSeconds(rng.Next(1, 5)) });
+
+            var rsm007At = rsm031At.AddHours(rng.Next(1, 48));
             await conn.ExecuteAsync(
                 "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-022', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
                 new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm007At, Proc = rsm007At.AddSeconds(rng.Next(1, 10)) });

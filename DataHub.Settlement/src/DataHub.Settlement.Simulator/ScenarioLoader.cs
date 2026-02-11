@@ -28,6 +28,9 @@ public static class ScenarioLoader
             case "move_out":
                 LoadMoveOut(state);
                 break;
+            case "auto_cancel":
+                LoadAutoCancel(state);
+                break;
             default:
                 throw new ArgumentException($"Unknown scenario: {scenarioName}");
         }
@@ -35,6 +38,14 @@ public static class ScenarioLoader
 
     private static void LoadSunshine(SimulatorState state)
     {
+        // RSM-028: Customer data
+        state.EnqueueMessage("MasterData", "RSM-028", "corr-sim-001",
+            BuildRsm028Json("571313100000012345", "Anders Hansen", "1234567890"));
+
+        // RSM-031: Price attachments
+        state.EnqueueMessage("MasterData", "RSM-031", "corr-sim-001",
+            BuildRsm031Json("571313100000012345", "2025-01-01T00:00:00Z"));
+
         // RSM-022: Master data confirmation
         state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-001", BuildRsm022Json());
 
@@ -57,8 +68,21 @@ public static class ScenarioLoader
         state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-cancel", BuildRsm022Json());
     }
 
+    private static void LoadAutoCancel(SimulatorState state)
+    {
+        // RSM-004/D11: Auto-cancellation due to customer data deadline
+        state.EnqueueMessage("MasterData", "RSM-004", "corr-sim-autocancel",
+            BuildRsm004D11Json("571313100000012345", "2025-02-01T00:00:00Z"));
+    }
+
     private static void LoadFullLifecycle(SimulatorState state)
     {
+        // Phase 0: Customer data and price attachments
+        state.EnqueueMessage("MasterData", "RSM-028", "corr-sim-lifecycle",
+            BuildRsm028Json("571313100000012345", "Lars Nielsen", "9876543210"));
+        state.EnqueueMessage("MasterData", "RSM-031", "corr-sim-lifecycle",
+            BuildRsm031Json("571313100000012345", "2025-01-01T00:00:00Z"));
+
         // Phase 1: Onboarding
         state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-lifecycle", BuildRsm022Json());
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
@@ -183,6 +207,76 @@ public static class ScenarioLoader
                 mRID = $"msg-reject-{Guid.NewGuid():N}",
                 type = "E59",
                 Reason = new { code = errorCode, text = errorMessage },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildRsm028Json(string gsrn, string customerName, string cprCvr, string customerType = "person")
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = $"msg-rsm028-{Guid.NewGuid():N}",
+                type = "E44",
+                MktActivityRecord = new
+                {
+                    MarketEvaluationPoint = new { mRID = gsrn },
+                    Customer = new
+                    {
+                        name = customerName,
+                        mRID = cprCvr,
+                        type = customerType,
+                        phone = "+45 12345678",
+                        email = $"{customerName.ToLower().Replace(" ", ".")}@example.dk",
+                    },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildRsm031Json(string gsrn, string effectiveDate)
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = $"msg-rsm031-{Guid.NewGuid():N}",
+                type = "E44",
+                MktActivityRecord = new
+                {
+                    MarketEvaluationPoint = new { mRID = gsrn },
+                    ChargeType = new[]
+                    {
+                        new { mRID = "40000", type = "grid", effectiveDate = effectiveDate, terminationDate = (string?)null },
+                        new { mRID = "45013", type = "transmission", effectiveDate = effectiveDate, terminationDate = (string?)null },
+                        new { mRID = "40010", type = "system", effectiveDate = effectiveDate, terminationDate = (string?)null },
+                    },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildRsm004D11Json(string gsrn, string effectiveDate)
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = $"msg-rsm004-d11-{Guid.NewGuid():N}",
+                type = "E44",
+                MktActivityRecord = new
+                {
+                    MarketEvaluationPoint = new
+                    {
+                        mRID = gsrn,
+                    },
+                    Reason = new { code = "D11", text = "Customer data deadline exceeded" },
+                    Period = new { timeInterval = new { start = effectiveDate } },
+                },
             },
         };
         return JsonSerializer.Serialize(doc);

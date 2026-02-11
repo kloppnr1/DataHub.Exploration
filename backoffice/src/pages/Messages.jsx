@@ -103,9 +103,15 @@ export function ConversationTimeline({ correlationId }) {
             );
           } else {
             const i = e.data;
-            const color = i.messageType === 'RSM-022' ? 'emerald' : i.messageType === 'RSM-001' ? 'sky' : 'slate';
+            const color = i.messageType === 'RSM-022' ? 'emerald'
+              : i.messageType === 'RSM-001' ? 'sky'
+              : i.messageType === 'RSM-028' ? 'green'
+              : i.messageType === 'RSM-031' ? 'green'
+              : 'slate';
             const desc = i.messageType === 'RSM-022' ? t('messages.activationConfirmed')
               : i.messageType === 'RSM-001' ? t('messages.acknowledgementReceived')
+              : i.messageType === 'RSM-028' ? t('messages.customerDataReceived')
+              : i.messageType === 'RSM-031' ? t('messages.priceAttachmentsReceived')
               : t('messages.received', { type: i.messageType });
             return (
               <TimelineEvent

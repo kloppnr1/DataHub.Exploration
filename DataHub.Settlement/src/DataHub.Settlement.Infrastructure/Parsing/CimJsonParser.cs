@@ -137,7 +137,14 @@ public sealed class CimJsonParser : ICimParser
         var effectiveDate = DateTimeOffset.Parse(
             activity.GetProperty("Period").GetProperty("timeInterval").GetProperty("start").GetString()!);
 
-        return new Rsm004Result(gsrn, newGridAreaCode, newSettlementMethod, newConnectionStatus, effectiveDate);
+        string? reasonCode = null;
+        if (activity.TryGetProperty("Reason", out var reason) &&
+            reason.TryGetProperty("code", out var rc))
+        {
+            reasonCode = rc.GetString();
+        }
+
+        return new Rsm004Result(gsrn, newGridAreaCode, newSettlementMethod, newConnectionStatus, effectiveDate, reasonCode);
     }
 
     public Rsm014Aggregation ParseRsm014(string json)
@@ -177,6 +184,61 @@ public sealed class CimJsonParser : ICimParser
             DateOnly.FromDateTime(periodEnd.UtcDateTime),
             totalKwh,
             points);
+    }
+
+    public Rsm028Result ParseRsm028(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement.GetProperty("MarketDocument");
+        var messageId = root.GetProperty("mRID").GetString()!;
+
+        var activity = root.GetProperty("MktActivityRecord");
+        var mp = activity.GetProperty("MarketEvaluationPoint");
+        var gsrn = mp.GetProperty("mRID").GetString()!;
+
+        var customer = activity.GetProperty("Customer");
+        var customerName = customer.GetProperty("name").GetString()!;
+        var cprCvr = customer.GetProperty("mRID").GetString()!;
+        var customerType = customer.TryGetProperty("type", out var ct) ? ct.GetString()! : "person";
+
+        string? phone = null;
+        if (customer.TryGetProperty("phone", out var ph))
+            phone = ph.GetString();
+
+        string? email = null;
+        if (customer.TryGetProperty("email", out var em))
+            email = em.GetString();
+
+        return new Rsm028Result(messageId, gsrn, customerName, cprCvr, customerType, phone, email);
+    }
+
+    public Rsm031Result ParseRsm031(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement.GetProperty("MarketDocument");
+        var messageId = root.GetProperty("mRID").GetString()!;
+
+        var activity = root.GetProperty("MktActivityRecord");
+        var mp = activity.GetProperty("MarketEvaluationPoint");
+        var gsrn = mp.GetProperty("mRID").GetString()!;
+
+        var tariffs = new List<TariffAttachment>();
+        if (activity.TryGetProperty("ChargeType", out var chargeTypes))
+        {
+            foreach (var charge in chargeTypes.EnumerateArray())
+            {
+                var tariffId = charge.GetProperty("mRID").GetString()!;
+                var tariffType = charge.TryGetProperty("type", out var tt) ? tt.GetString()! : "grid";
+                var validFrom = DateOnly.Parse(charge.GetProperty("effectiveDate").GetString()!.Split('T')[0]);
+                DateOnly? validTo = null;
+                if (charge.TryGetProperty("terminationDate", out var td) && td.ValueKind == JsonValueKind.String)
+                    validTo = DateOnly.Parse(td.GetString()!.Split('T')[0]);
+
+                tariffs.Add(new TariffAttachment(tariffId, tariffType, validFrom, validTo));
+            }
+        }
+
+        return new Rsm031Result(messageId, gsrn, tariffs);
     }
 
     public Rsm001ResponseResult ParseRsm001Response(string json)
