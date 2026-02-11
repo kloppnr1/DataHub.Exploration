@@ -63,42 +63,37 @@ builder.Services.AddOpenTelemetry()
 var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
     ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
 
-// DataHub client: use HTTP + resilience when configured, otherwise stub
-var dataHubBaseUrl = builder.Configuration["DataHub:BaseUrl"];
-if (!string.IsNullOrEmpty(dataHubBaseUrl))
+// DataHub client: requires DataHub__BaseUrl to be configured
+var dataHubBaseUrl = builder.Configuration["DataHub:BaseUrl"]
+    ?? throw new InvalidOperationException("DataHub:BaseUrl is not configured. Set the DataHub__BaseUrl environment variable.");
+
+builder.Services.AddHttpClient<HttpDataHubClient>(client =>
 {
-    builder.Services.AddHttpClient<HttpDataHubClient>(client =>
-    {
-        client.BaseAddress = new Uri(dataHubBaseUrl);
-    });
+    client.BaseAddress = new Uri(dataHubBaseUrl);
+});
 
-    builder.Services.AddHttpClient<OAuth2TokenProvider>();
+builder.Services.AddHttpClient<OAuth2TokenProvider>();
 
-    builder.Services.AddSingleton<IAuthTokenProvider>(sp =>
-    {
-        var options = new AuthTokenOptions(
-            builder.Configuration["DataHub:TenantId"] ?? "",
-            builder.Configuration["DataHub:ClientId"] ?? "",
-            builder.Configuration["DataHub:ClientSecret"] ?? "",
-            builder.Configuration["DataHub:Scope"] ?? "");
-        var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
-        return new OAuth2TokenProvider(httpClient, options);
-    });
-
-    builder.Services.AddSingleton<IDataHubClient>(sp =>
-    {
-        var innerHttpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
-        innerHttpClient.BaseAddress = new Uri(dataHubBaseUrl);
-        var inner = new HttpDataHubClient(innerHttpClient);
-        var tokenProvider = sp.GetRequiredService<IAuthTokenProvider>();
-        var logger = sp.GetRequiredService<ILogger<ResilientDataHubClient>>();
-        return new ResilientDataHubClient(inner, tokenProvider, logger);
-    });
-}
-else
+builder.Services.AddSingleton<IAuthTokenProvider>(sp =>
 {
-    builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
-}
+    var options = new AuthTokenOptions(
+        builder.Configuration["DataHub:TenantId"] ?? "",
+        builder.Configuration["DataHub:ClientId"] ?? "",
+        builder.Configuration["DataHub:ClientSecret"] ?? "",
+        builder.Configuration["DataHub:Scope"] ?? "");
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    return new OAuth2TokenProvider(httpClient, options);
+});
+
+builder.Services.AddSingleton<IDataHubClient>(sp =>
+{
+    var innerHttpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    innerHttpClient.BaseAddress = new Uri(dataHubBaseUrl);
+    var inner = new HttpDataHubClient(innerHttpClient);
+    var tokenProvider = sp.GetRequiredService<IAuthTokenProvider>();
+    var logger = sp.GetRequiredService<ILogger<ResilientDataHubClient>>();
+    return new ResilientDataHubClient(inner, tokenProvider, logger);
+});
 
 // Core services
 builder.Services.AddSingleton<IClock, SystemClock>();

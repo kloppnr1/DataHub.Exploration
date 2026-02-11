@@ -21,6 +21,8 @@ using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
 using DataHub.Settlement.Infrastructure.Tariff;
+using DataHub.Settlement.Application.Authentication;
+using DataHub.Settlement.Infrastructure.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +46,35 @@ builder.Services.AddSingleton<IAddressLookupClient, StubAddressLookupClient>();
 builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(connectionString));
 builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connectionString));
 builder.Services.AddSingleton<ISignupRepository>(new SignupRepository(connectionString));
-builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
+// DataHub client: requires DataHub__BaseUrl to be configured
+var dataHubBaseUrl = builder.Configuration["DataHub:BaseUrl"]
+    ?? throw new InvalidOperationException("DataHub:BaseUrl is not configured. Set the DataHub__BaseUrl environment variable.");
+
+builder.Services.AddHttpClient<HttpDataHubClient>(client =>
+{
+    client.BaseAddress = new Uri(dataHubBaseUrl);
+});
+
+builder.Services.AddSingleton<IDataHubClient>(sp =>
+{
+    var innerHttpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    innerHttpClient.BaseAddress = new Uri(dataHubBaseUrl);
+    var inner = new HttpDataHubClient(innerHttpClient);
+    var tokenProvider = sp.GetRequiredService<IAuthTokenProvider>();
+    var logger = sp.GetRequiredService<ILogger<ResilientDataHubClient>>();
+    return new ResilientDataHubClient(inner, tokenProvider, logger);
+});
+
+builder.Services.AddSingleton<IAuthTokenProvider>(sp =>
+{
+    var options = new AuthTokenOptions(
+        builder.Configuration["DataHub:TenantId"] ?? "",
+        builder.Configuration["DataHub:ClientId"] ?? "",
+        builder.Configuration["DataHub:ClientSecret"] ?? "",
+        builder.Configuration["DataHub:Scope"] ?? "");
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    return new OAuth2TokenProvider(httpClient, options);
+});
 builder.Services.AddSingleton<IBrsRequestBuilder, BrsRequestBuilder>();
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 builder.Services.AddSingleton<IBillingRepository>(new BillingRepository(connectionString));
