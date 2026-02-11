@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -289,9 +289,8 @@ export default function Messages() {
                   <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">{t('messages.noConversations')}</td></tr>
                 ) : (
                   convItems.map((conv) => (
-                    <>
+                    <Fragment key={conv.correlationId}>
                       <tr
-                        key={conv.correlationId}
                         className="hover:bg-slate-50 transition-colors cursor-pointer"
                         onClick={() => setExpandedCorr(expandedCorr === conv.correlationId ? null : conv.correlationId)}
                       >
@@ -326,13 +325,13 @@ export default function Messages() {
                         </td>
                       </tr>
                       {expandedCorr === conv.correlationId && (
-                        <tr key={`${conv.correlationId}-detail`}>
+                        <tr>
                           <td colSpan="6" className="p-0">
                             <ConversationTimeline correlationId={conv.correlationId} />
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 )}
               </tbody>
