@@ -9,7 +9,8 @@ public sealed class ProcessStateMachine
         ["pending"] = ["sent_to_datahub", "cancelled"],
         ["sent_to_datahub"] = ["acknowledged", "rejected"],
         ["acknowledged"] = ["effectuation_pending"],
-        ["effectuation_pending"] = ["completed", "cancelled"],
+        ["effectuation_pending"] = ["completed", "cancellation_pending"],
+        ["cancellation_pending"] = ["cancelled"],
         ["completed"] = ["offboarding"],
         ["offboarding"] = ["final_settled"],
     };
@@ -55,6 +56,12 @@ public sealed class ProcessStateMachine
         {
             await _repository.AddEventAsync(requestId, "rejection_reason", reason, "datahub", ct);
         }
+    }
+
+    public async Task MarkCancellationSentAsync(Guid requestId, string cancelCorrelationId, CancellationToken ct)
+    {
+        await TransitionAsync(requestId, "cancellation_pending", null, "cancellation_sent", ct);
+        await _repository.SetCancelCorrelationIdAsync(requestId, cancelCorrelationId, ct);
     }
 
     public async Task MarkCancelledAsync(Guid requestId, string? reason, CancellationToken ct)

@@ -99,17 +99,60 @@ public class ProcessStateMachineTests
     }
 
     [Fact]
-    public async Task Cancellation_from_effectuation_pending_transitions_correctly()
+    public async Task Cancellation_from_effectuation_pending_transitions_through_cancellation_pending()
     {
         var sut = CreateSut();
         var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
 
-        await sut.MarkCancelledAsync(request.Id, "BRS-003 cancel before activation", CancellationToken.None);
+        // Step 1: Mark cancellation sent (transition to cancellation_pending)
+        await sut.MarkCancellationSentAsync(request.Id, "cancel-corr-456", CancellationToken.None);
+
+        var afterCancellationSent = await _repo.GetAsync(request.Id, CancellationToken.None);
+        afterCancellationSent!.Status.Should().Be("cancellation_pending");
+        afterCancellationSent.CancelCorrelationId.Should().Be("cancel-corr-456");
+
+        var events = await _repo.GetEventsAsync(request.Id, CancellationToken.None);
+        events.Should().Contain(e => e.EventType == "cancellation_sent");
+
+        // Step 2: DataHub acknowledges cancellation (transition to cancelled)
+        await sut.MarkCancelledAsync(request.Id, "Cancellation acknowledged by DataHub", CancellationToken.None);
+
+        var afterCancelled = await _repo.GetAsync(request.Id, CancellationToken.None);
+        afterCancelled!.Status.Should().Be("cancelled");
+    }
+
+    [Fact]
+    public async Task Cancellation_from_effectuation_pending_rejects_direct_cancelled()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
+        await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+
+        // Direct MarkCancelledAsync from effectuation_pending should fail (must go through cancellation_pending)
+        var act = () => sut.MarkCancelledAsync(request.Id, "Cancelled by user", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Invalid transition*");
+    }
+
+    [Fact]
+    public async Task Cancellation_from_pending_still_works()
+    {
+        var sut = CreateSut();
+        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+
+        // Direct cancellation from pending should still work (no DataHub involvement)
+        await sut.MarkCancelledAsync(request.Id, "Cancelled by user before sending", CancellationToken.None);
 
         var after = await _repo.GetAsync(request.Id, CancellationToken.None);
         after!.Status.Should().Be("cancelled");
+
+        var events = await _repo.GetEventsAsync(request.Id, CancellationToken.None);
+        events.Should().Contain(e => e.EventType == "cancelled");
+        events.Should().Contain(e => e.EventType == "cancellation_reason");
     }
 
     [Fact]
@@ -188,6 +231,19 @@ public class ProcessStateMachineTests
         {
             var request = _requests.Values.FirstOrDefault(r => r.DatahubCorrelationId == correlationId);
             return Task.FromResult(request);
+        }
+
+        public Task<ProcessRequest?> GetByCancelCorrelationIdAsync(string cancelCorrelationId, CancellationToken ct)
+        {
+            var request = _requests.Values.FirstOrDefault(r => r.CancelCorrelationId == cancelCorrelationId);
+            return Task.FromResult(request);
+        }
+
+        public Task SetCancelCorrelationIdAsync(Guid id, string cancelCorrelationId, CancellationToken ct)
+        {
+            var existing = _requests[id];
+            _requests[id] = existing with { CancelCorrelationId = cancelCorrelationId };
+            return Task.CompletedTask;
         }
 
         public Task UpdateStatusAsync(Guid id, string status, string? correlationId, CancellationToken ct)

@@ -198,7 +198,7 @@ public sealed class OnboardingService : IOnboardingService
 
             case "processing":
             case "awaiting_effectuation":
-                // Already sent to DataHub — send BRS-003 cancellation, then cancel locally
+                // Already sent to DataHub — send BRS-003 cancellation, await DataHub acknowledgement
                 if (signup.ProcessRequestId.HasValue)
                 {
                     var process = await _processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
@@ -212,13 +212,19 @@ public sealed class OnboardingService : IOnboardingService
                         _logger.LogInformation(
                             "Sent BRS-003 cancel to DataHub for GSRN {Gsrn}, correlation={CorrelationId}",
                             process.Gsrn, response.CorrelationId);
-                    }
 
-                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
-                    await stateMachine.MarkCancelledAsync(signup.ProcessRequestId.Value, "Cancelled by user", ct);
+                        var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                        await stateMachine.MarkCancellationSentAsync(signup.ProcessRequestId.Value, response.CorrelationId, ct);
+                    }
+                    else
+                    {
+                        // No correlation ID — cancel locally without DataHub interaction
+                        var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                        await stateMachine.MarkCancelledAsync(signup.ProcessRequestId.Value, "Cancelled by user", ct);
+                    }
                 }
-                await _signupRepo.UpdateStatusAsync(signup.Id, "cancelled", null, ct);
-                _logger.LogInformation("Signup {SignupNumber} cancelled (was processing)", signupNumber);
+                await _signupRepo.UpdateStatusAsync(signup.Id, "cancellation_pending", null, ct);
+                _logger.LogInformation("Signup {SignupNumber} cancellation sent to DataHub (was {Status})", signupNumber, signup.Status);
                 break;
 
             case "active":
@@ -320,6 +326,7 @@ public sealed class OnboardingService : IOnboardingService
             "pending" => "registered",
             "sent_to_datahub" or "acknowledged" => "processing",
             "effectuation_pending" => "awaiting_effectuation",
+            "cancellation_pending" => "cancellation_pending",
             "completed" => "active",
             "rejected" => "rejected",
             "cancelled" => "cancelled",

@@ -6,6 +6,8 @@ public interface IProcessRepository
     Task<ProcessRequest> CreateWithEventAsync(string processType, string gsrn, DateOnly effectiveDate, CancellationToken ct);
     Task<ProcessRequest?> GetAsync(Guid id, CancellationToken ct);
     Task<ProcessRequest?> GetByCorrelationIdAsync(string correlationId, CancellationToken ct);
+    Task<ProcessRequest?> GetByCancelCorrelationIdAsync(string cancelCorrelationId, CancellationToken ct);
+    Task SetCancelCorrelationIdAsync(Guid id, string cancelCorrelationId, CancellationToken ct);
     Task UpdateStatusAsync(Guid id, string status, string? correlationId, CancellationToken ct);
     Task TransitionWithEventAsync(Guid id, string newStatus, string expectedStatus, string? correlationId, string eventType, CancellationToken ct);
     Task AddEventAsync(Guid processRequestId, string eventType, string? payload, string? source, CancellationToken ct);

@@ -55,8 +55,8 @@ describe('SignupDetail - pending step indicator', () => {
   it('shows pending indicator when latest event is non-terminal', async () => {
     api.getSignup.mockResolvedValue(makeSignup());
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
     ]);
 
     renderSignupDetail();
@@ -82,9 +82,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "completed"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'active' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
-      { eventType: 'awaiting_effectuation', occurredAt: '2025-06-01T11:00:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'awaiting_effectuation', occurredAt: '2025-06-01T11:00:00Z' },
+      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
     ]);
 
     renderSignupDetail();
@@ -98,9 +98,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "cancelled"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'cancelled' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'cancelled', occurredAt: '2025-06-01T11:00:00Z' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'cancelled', occurredAt: '2025-06-01T11:00:00Z' },
     ]);
 
     renderSignupDetail();
@@ -114,10 +114,10 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "cancellation_reason"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'cancelled' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'cancellation_reason', occurredAt: '2025-06-01T11:01:00Z', payload: '{"reason":"Cancelled by user"}' },
-      { eventType: 'cancelled', occurredAt: '2025-06-01T11:00:00Z' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'cancelled', occurredAt: '2025-06-01T11:00:00Z' },
+      { eventType: 'cancellation_reason', occurredAt: '2025-06-01T11:01:00Z', payload: '{"reason":"Cancelled by user"}' },
     ]);
 
     renderSignupDetail();
@@ -131,9 +131,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "rejection_reason"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'rejected', rejectionReason: 'Invalid GSRN' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'rejection_reason', occurredAt: '2025-06-01T11:00:00Z', payload: '{"reason":"Invalid GSRN"}' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'rejection_reason', occurredAt: '2025-06-01T11:00:00Z', payload: '{"reason":"Invalid GSRN"}' },
     ]);
 
     renderSignupDetail();
@@ -149,9 +149,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('shows "Awaiting effectuation..." after "acknowledged" event', async () => {
     api.getSignup.mockResolvedValue(makeSignup());
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'acknowledged', occurredAt: '2025-06-01T10:10:00Z' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'acknowledged', occurredAt: '2025-06-01T10:10:00Z' },
     ]);
 
     renderSignupDetail();
@@ -164,10 +164,10 @@ describe('SignupDetail - pending step indicator', () => {
   it('shows "Awaiting effective date..." after "awaiting_effectuation" event', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'awaiting_effectuation' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'awaiting_effectuation', occurredAt: '2025-06-01T10:15:00Z' },
-      { eventType: 'acknowledged', occurredAt: '2025-06-01T10:10:00Z' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'acknowledged', occurredAt: '2025-06-01T10:10:00Z' },
+      { eventType: 'awaiting_effectuation', occurredAt: '2025-06-01T10:15:00Z' },
     ]);
 
     renderSignupDetail();
@@ -177,12 +177,29 @@ describe('SignupDetail - pending step indicator', () => {
     });
   });
 
+  it('shows "Awaiting cancellation acknowledgement..." after "cancellation_sent" event', async () => {
+    api.getSignup.mockResolvedValue(makeSignup({ status: 'cancellation_pending' }));
+    api.getSignupEvents.mockResolvedValue([
+      { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'acknowledged', occurredAt: '2025-06-01T10:10:00Z' },
+      { eventType: 'awaiting_effectuation', occurredAt: '2025-06-01T10:15:00Z' },
+      { eventType: 'cancellation_sent', occurredAt: '2025-06-01T10:20:00Z' },
+    ]);
+
+    renderSignupDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText('Awaiting cancellation acknowledgement...')).toBeInTheDocument();
+    });
+  });
+
   it('shows pending indicator (no text) after "offboarding_started" event', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'active' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'offboarding_started', occurredAt: '2025-06-01T13:00:00Z' },
-      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
+      { eventType: 'offboarding_started', occurredAt: '2025-06-01T13:00:00Z' },
     ]);
 
     renderSignupDetail();
@@ -201,9 +218,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "final_settled"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'active' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'final_settled', occurredAt: '2025-06-01T14:00:00Z' },
-      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'completed', occurredAt: '2025-06-01T12:00:00Z' },
+      { eventType: 'final_settled', occurredAt: '2025-06-01T14:00:00Z' },
     ]);
 
     renderSignupDetail();
@@ -217,9 +234,9 @@ describe('SignupDetail - pending step indicator', () => {
   it('does NOT show pending indicator when latest event is "rejected"', async () => {
     api.getSignup.mockResolvedValue(makeSignup({ status: 'rejected', rejectionReason: 'Bad data' }));
     api.getSignupEvents.mockResolvedValue([
-      { eventType: 'rejected', occurredAt: '2025-06-01T11:00:00Z' },
-      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
       { eventType: 'created', occurredAt: '2025-06-01T10:00:00Z' },
+      { eventType: 'sent', occurredAt: '2025-06-01T10:05:00Z' },
+      { eventType: 'rejected', occurredAt: '2025-06-01T11:00:00Z' },
     ]);
 
     renderSignupDetail();

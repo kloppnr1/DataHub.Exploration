@@ -43,6 +43,7 @@ export default {
   'status.active': 'aktiv',
   'status.rejected': 'afvist',
   'status.cancelled': 'annulleret',
+  'status.cancellation_pending': 'afventer annullering',
   'status.pending': 'afventer',
   'status.sent_to_datahub': 'sendt til datahub',
   'status.acknowledged': 'bekræftet',
@@ -194,6 +195,7 @@ export default {
   'event.completed': 'Effektueret',
   'event.rejection_reason': 'Afvist',
   'event.cancelled': 'Annulleret',
+  'event.cancellation_sent': 'Annullering sendt til DataHub',
   'event.cancellation_reason': 'Annulleringsårsag',
   'event.offboarding_started': 'Fraflytning påbegyndt',
   'event.final_settled': 'Endeligt afregnet',
@@ -203,6 +205,7 @@ export default {
   'event.pending.sent': 'Afventer bekræftelse fra DataHub...',
   'event.pending.acknowledged': 'Afventer effektuering...',
   'event.pending.awaiting_effectuation': 'Afventer ikrafttrædelsesdato...',
+  'event.pending.cancellation_sent': 'Afventer bekræftelse af annullering...',
 
   // ── Signup Detail ──
   'signupDetail.backToSignups': 'Tilbage til tilmeldinger',

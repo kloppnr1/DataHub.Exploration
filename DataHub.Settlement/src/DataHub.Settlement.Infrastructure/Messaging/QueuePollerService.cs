@@ -244,8 +244,22 @@ public sealed class QueuePollerService : BackgroundService
             var receipt = _parser.ParseRsm009(message.RawPayload);
 
             var process = await _processRepo.GetByCorrelationIdAsync(receipt.CorrelationId, ct);
+
+            // If no match on datahub_correlation_id, try cancel_correlation_id (RSM-009 for cancellation ack)
             if (process is null)
             {
+                process = await _processRepo.GetByCancelCorrelationIdAsync(receipt.CorrelationId, ct);
+                if (process is not null && process.Status == "cancellation_pending")
+                {
+                    var cancelStateMachine = new ProcessStateMachine(_processRepo, _clock);
+                    await cancelStateMachine.MarkCancelledAsync(process.Id, "Cancellation acknowledged by DataHub", ct);
+                    await _onboardingService.SyncFromProcessAsync(process.Id, "cancelled", null, ct);
+
+                    _logger.LogInformation("RSM-009: Cancellation acknowledged for process {ProcessId}, GSRN {Gsrn}",
+                        process.Id, process.Gsrn);
+                    return;
+                }
+
                 _logger.LogWarning("RSM-009: No process found for correlation {CorrelationId}", receipt.CorrelationId);
                 return;
             }

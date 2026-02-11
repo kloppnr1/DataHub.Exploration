@@ -72,7 +72,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<ProcessRequest?> GetAsync(Guid id, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
             FROM lifecycle.process_request
             WHERE id = @Id
             """;
@@ -86,7 +86,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<ProcessRequest?> GetByCorrelationIdAsync(string correlationId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
             FROM lifecycle.process_request
             WHERE datahub_correlation_id = @CorrelationId
             """;
@@ -95,6 +95,34 @@ public sealed class ProcessRepository : IProcessRepository
         await conn.OpenAsync(ct);
         return await conn.QuerySingleOrDefaultAsync<ProcessRequest>(
             new CommandDefinition(sql, new { CorrelationId = correlationId }, cancellationToken: ct));
+    }
+
+    public async Task<ProcessRequest?> GetByCancelCorrelationIdAsync(string cancelCorrelationId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
+            FROM lifecycle.process_request
+            WHERE cancel_correlation_id = @CancelCorrelationId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<ProcessRequest>(
+            new CommandDefinition(sql, new { CancelCorrelationId = cancelCorrelationId }, cancellationToken: ct));
+    }
+
+    public async Task SetCancelCorrelationIdAsync(Guid id, string cancelCorrelationId, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE lifecycle.process_request
+            SET cancel_correlation_id = @CancelCorrelationId, updated_at = now()
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Id = id, CancelCorrelationId = cancelCorrelationId }, cancellationToken: ct));
     }
 
     public async Task UpdateStatusAsync(Guid id, string status, string? correlationId, CancellationToken ct)
@@ -205,7 +233,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
             FROM lifecycle.process_request
             WHERE status = @Status
             ORDER BY effective_date

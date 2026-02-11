@@ -10,6 +10,7 @@ const statusStyles = {
   awaiting_effectuation: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
   active:                { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
   rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+  cancellation_pending: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
   cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };
 
@@ -54,7 +55,7 @@ export default function SignupDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!signup || !['registered', 'processing', 'awaiting_effectuation'].includes(signup.status)) return;
+    if (!signup || !['registered', 'processing', 'awaiting_effectuation', 'cancellation_pending'].includes(signup.status)) return;
     const interval = setInterval(() => {
       Promise.all([api.getSignup(id), api.getSignupEvents(id)])
         .then(([s, e]) => { setSignup(s); setEvents(e); });
@@ -279,6 +280,7 @@ export default function SignupDetail() {
                     : evt.eventType === 'completed' ? 'bg-emerald-500'
                     : evt.eventType === 'rejection_reason' ? 'bg-rose-500'
                     : evt.eventType === 'cancelled' ? 'bg-slate-400'
+                    : evt.eventType === 'cancellation_sent' ? 'bg-amber-400'
                     : evt.eventType === 'cancellation_reason' ? 'bg-slate-400'
                     : 'bg-teal-500';
                   const isFirst = i === 0;
