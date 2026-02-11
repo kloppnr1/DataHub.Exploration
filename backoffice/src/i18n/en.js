@@ -197,6 +197,8 @@ export default {
   'event.cancelled': 'Cancelled',
   'event.cancellation_sent': 'Cancellation sent to DataHub',
   'event.cancellation_reason': 'Cancellation reason',
+  'event.cancellation_rejected': 'Cancellation rejected by DataHub',
+  'event.cancellation_rejection_reason': 'Cancellation rejection reason',
   'event.offboarding_started': 'Offboarding started',
   'event.final_settled': 'Final settled',
 
@@ -206,6 +208,7 @@ export default {
   'event.pending.acknowledged': 'Awaiting effectuation...',
   'event.pending.awaiting_effectuation': 'Awaiting effective date...',
   'event.pending.cancellation_sent': 'Awaiting cancellation acknowledgement...',
+  'event.pending.cancellation_rejected': 'Awaiting effectuation...',
 
   // ── Signup Detail ──
   'signupDetail.backToSignups': 'Back to signups',

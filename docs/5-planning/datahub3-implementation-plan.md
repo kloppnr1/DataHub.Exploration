@@ -286,7 +286,7 @@ Golden Master #2: Partial period (mid-month start)
 | **Simulator** | + BRS-002/003/005/009/010/043/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle | Integration: full lifecycle scenario |
 | **Master data** | RSM-004 parser (grid area change, metering point updates). Tariff reassignment on grid area change | Unit: fixtures. Integration: simulator |
 | **Rejection handling** | RSM-009 rejected → update process, notify CRM. Retry with corrected data | Unit: state machine. Integration: simulator |
-| **Cancellation** | BRS-003 (cancel switch before effective date) | Unit: state machine. Integration: simulator |
+| **Cancellation** | RSM-002 cancel within BRS-001 (before effective date, same correlation ID) | Unit: state machine. Integration: simulator |
 | **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer). BRS-043 (short notice switch). BRS-009 (move-in). BRS-015 (customer master data) | Unit + integration: simulator |
 | **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
 | **Aconto** | Aconto estimation (static annual consumption estimate). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
@@ -329,10 +329,10 @@ Golden Master #4: Final settlement at offboarding (partial quarter)
 
 **Scenario: Cancellation before activation**
 ```
-1. BRS-001 → accepted
-2. Customer withdraws → BRS-003 sent
-3. Simulator confirms cancellation
-4. State machine: Acknowledged → Cancelled
+1. BRS-001 (RSM-001) → accepted (RSM-009)
+2. Customer withdraws → RSM-002 cancel sent (same correlation ID)
+3. Simulator confirms cancellation (RSM-002 accept, same correlation ID)
+4. State machine: EffectuationPending → CancellationPending → Cancelled
 5. Billing plans cleaned up
 ```
 

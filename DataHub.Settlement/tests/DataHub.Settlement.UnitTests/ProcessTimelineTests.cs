@@ -92,11 +92,10 @@ public class ProcessTimelineTests
         await sm.MarkAcknowledgedAsync(request.Id, ct);
 
         // BRS-003 sent → cancellation_pending
-        await sm.MarkCancellationSentAsync(request.Id, "cancel-corr-001", ct);
+        await sm.MarkCancellationSentAsync(request.Id, ct);
 
         var midProcess = await _processRepo.GetAsync(request.Id, ct);
         midProcess!.Status.Should().Be("cancellation_pending");
-        midProcess.CancelCorrelationId.Should().Be("cancel-corr-001");
 
         // DataHub acknowledges cancellation
         await sm.MarkCancelledAsync(request.Id, "Cancellation acknowledged by DataHub", ct);
@@ -254,17 +253,17 @@ public class ProcessTimelineTests
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-003", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
-        await sm.MarkCancellationSentAsync(request.Id, "cancel-corr-003", ct);
+        await sm.MarkCancellationSentAsync(request.Id, ct);
 
         var processBefore = await _processRepo.GetAsync(request.Id, ct);
         processBefore!.Status.Should().Be("cancellation_pending");
 
-        // RSM-009 arrives with the cancel correlation ID
-        var parser = new StubCimParser(new Rsm009Result("cancel-corr-003", true, null, null));
+        // RSM-009 arrives with the same original correlation ID (status-based disambiguation)
+        var parser = new StubCimParser(new Rsm009Result("corr-poller-003", true, null, null));
         var poller = CreatePoller(parser);
 
         _dataHubClient.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm009-cancel", "RSM-009", "cancel-corr-003", "{}"));
+            new DataHubMessage("msg-rsm009-cancel", "RSM-009", "corr-poller-003", "{}"));
 
         await poller.PollQueueAsync(QueueName.MasterData, ct);
 
@@ -275,6 +274,71 @@ public class ProcessTimelineTests
         events.Select(e => e.EventType).Should().ContainInOrder(
             "created", "sent", "acknowledged", "awaiting_effectuation",
             "cancellation_sent", "cancelled");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  STATE MACHINE: cancellation_pending → effectuation_pending via RevertCancellationAsync
+    // ══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Cancellation_rejected_reverts_to_effectuation_pending()
+    {
+        var ct = CancellationToken.None;
+        var sm = CreateStateMachine();
+
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        await sm.MarkSentAsync(request.Id, "corr-revert-001", ct);
+        await sm.MarkAcknowledgedAsync(request.Id, ct);
+        await sm.MarkCancellationSentAsync(request.Id, ct);
+
+        var midProcess = await _processRepo.GetAsync(request.Id, ct);
+        midProcess!.Status.Should().Be("cancellation_pending");
+
+        // DataHub rejects the cancellation
+        await sm.RevertCancellationAsync(request.Id, "E47: Cancellation deadline exceeded", ct);
+
+        var events = await _processRepo.GetEventsAsync(request.Id, ct);
+        events.Select(e => e.EventType).Should().ContainInOrder(
+            "created", "sent", "acknowledged", "awaiting_effectuation",
+            "cancellation_sent", "cancellation_rejected", "cancellation_rejection_reason");
+
+        var process = await _processRepo.GetAsync(request.Id, ct);
+        process!.Status.Should().Be("effectuation_pending");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  QUEUE POLLER: RSM-009 cancellation rejection via cancel_correlation_id
+    // ══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task QueuePoller_RSM009_cancellation_rejected_reverts_to_effectuation_pending()
+    {
+        var ct = CancellationToken.None;
+        var sm = CreateStateMachine();
+
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        await sm.MarkSentAsync(request.Id, "corr-poller-004", ct);
+        await sm.MarkAcknowledgedAsync(request.Id, ct);
+        await sm.MarkCancellationSentAsync(request.Id, ct);
+
+        var processBefore = await _processRepo.GetAsync(request.Id, ct);
+        processBefore!.Status.Should().Be("cancellation_pending");
+
+        // RSM-009 arrives with same original correlation ID but Accepted=false (status-based disambiguation)
+        var parser = new StubCimParser(new Rsm009Result("corr-poller-004", false, "E47: Cancellation deadline exceeded", "E47"));
+        var poller = CreatePoller(parser);
+
+        _dataHubClient.Enqueue(QueueName.MasterData,
+            new DataHubMessage("msg-rsm009-cancel-reject", "RSM-009", "corr-poller-004", "{}"));
+
+        await poller.PollQueueAsync(QueueName.MasterData, ct);
+
+        var process = await _processRepo.GetAsync(request.Id, ct);
+        process!.Status.Should().Be("effectuation_pending");
+
+        var events = await _processRepo.GetEventsAsync(request.Id, ct);
+        events.Should().Contain(e => e.EventType == "cancellation_rejected");
+        events.Should().Contain(e => e.EventType == "cancellation_rejection_reason");
     }
 
     // ══════════════════════════════════════════════════════════════

@@ -317,17 +317,17 @@ public sealed class MessageRepository : IMessageRepository
     public async Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct)
     {
         const string outboundSql = """
-            SELECT id, process_type, gsrn, status, correlation_id, sent_at, response_at
-            FROM datahub.outbound_request
-            WHERE correlation_id = @CorrelationId
-            ORDER BY sent_at ASC
+            SELECT o.id, o.process_type, o.gsrn, o.status, o.correlation_id, o.sent_at, o.response_at
+            FROM datahub.outbound_request o
+            WHERE o.correlation_id = @CorrelationId
+            ORDER BY o.sent_at ASC
             """;
 
         const string inboundSql = """
-            SELECT id, datahub_message_id, message_type, correlation_id, queue_name, status, received_at, processed_at
-            FROM datahub.inbound_message
-            WHERE correlation_id = @CorrelationId
-            ORDER BY received_at ASC
+            SELECT i.id, i.datahub_message_id, i.message_type, i.correlation_id, i.queue_name, i.status, i.received_at, i.processed_at
+            FROM datahub.inbound_message i
+            WHERE i.correlation_id = @CorrelationId
+            ORDER BY i.received_at ASC
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);

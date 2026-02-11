@@ -448,10 +448,10 @@ POST /api/signup/{id}/cancel:
     - Cancel process internally
     - Sync signup: registered → cancelled
 
-  - If signup status is "processing" (BRS sent, before effective date):
-    - Send BRS-003 (cancel switch) to DataHub
-    - Wait for confirmation
-    - Sync signup: processing → cancelled
+  - If signup status is "processing" or "awaiting_effectuation" (BRS sent, before effective date):
+    - Send RSM-002 cancel within BRS-001 (same correlation ID) to DataHub
+    - Wait for confirmation (RSM-002 accept/reject)
+    - Sync signup: processing → cancellation_pending → cancelled
 
   - If signup status is "active":
     - Return 409 — too late, use offboarding (BRS-002) instead
@@ -511,7 +511,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 | RSM-007 → creates metering point + contract + supply period from signup | Integration |
 | Status reflects simplified external states | Integration |
 | Cancel before send (registered → cancelled) | Integration |
-| Cancel after send (processing → BRS-003 → cancelled) | Integration |
+| Cancel after send (processing → RSM-002 cancel → cancellation_pending → cancelled) | Integration |
 | Cancel after activation returns 409 | Integration |
 | Full flow: signup → BRS-001 → RSM-009 → RSM-007 → portfolio created → status = active | Integration (simulator) |
 

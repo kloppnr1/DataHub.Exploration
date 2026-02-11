@@ -107,11 +107,10 @@ public class ProcessStateMachineTests
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
 
         // Step 1: Mark cancellation sent (transition to cancellation_pending)
-        await sut.MarkCancellationSentAsync(request.Id, "cancel-corr-456", CancellationToken.None);
+        await sut.MarkCancellationSentAsync(request.Id, CancellationToken.None);
 
         var afterCancellationSent = await _repo.GetAsync(request.Id, CancellationToken.None);
         afterCancellationSent!.Status.Should().Be("cancellation_pending");
-        afterCancellationSent.CancelCorrelationId.Should().Be("cancel-corr-456");
 
         var events = await _repo.GetEventsAsync(request.Id, CancellationToken.None);
         events.Should().Contain(e => e.EventType == "cancellation_sent");
@@ -231,19 +230,6 @@ public class ProcessStateMachineTests
         {
             var request = _requests.Values.FirstOrDefault(r => r.DatahubCorrelationId == correlationId);
             return Task.FromResult(request);
-        }
-
-        public Task<ProcessRequest?> GetByCancelCorrelationIdAsync(string cancelCorrelationId, CancellationToken ct)
-        {
-            var request = _requests.Values.FirstOrDefault(r => r.CancelCorrelationId == cancelCorrelationId);
-            return Task.FromResult(request);
-        }
-
-        public Task SetCancelCorrelationIdAsync(Guid id, string cancelCorrelationId, CancellationToken ct)
-        {
-            var existing = _requests[id];
-            _requests[id] = existing with { CancelCorrelationId = cancelCorrelationId };
-            return Task.CompletedTask;
         }
 
         public Task UpdateStatusAsync(Guid id, string status, string? correlationId, CancellationToken ct)

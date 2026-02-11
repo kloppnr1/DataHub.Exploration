@@ -254,29 +254,32 @@ public sealed class QueuePollerService : BackgroundService
             var receipt = _parser.ParseRsm009(message.RawPayload);
 
             var process = await _processRepo.GetByCorrelationIdAsync(receipt.CorrelationId, ct);
-
-            // If no match on datahub_correlation_id, try cancel_correlation_id (RSM-009 for cancellation ack)
             if (process is null)
             {
-                process = await _processRepo.GetByCancelCorrelationIdAsync(receipt.CorrelationId, ct);
-                if (process is not null && process.Status == "cancellation_pending")
-                {
-                    var cancelStateMachine = new ProcessStateMachine(_processRepo, _clock);
-                    await cancelStateMachine.MarkCancelledAsync(process.Id, "Cancellation acknowledged by DataHub", ct);
-                    await _onboardingService.SyncFromProcessAsync(process.Id, "cancelled", null, ct);
-
-                    _logger.LogInformation("RSM-009: Cancellation acknowledged for process {ProcessId}, GSRN {Gsrn}",
-                        process.Id, process.Gsrn);
-                    return;
-                }
-
                 _logger.LogWarning("RSM-009: No process found for correlation {CorrelationId}", receipt.CorrelationId);
                 return;
             }
 
             var stateMachine = new ProcessStateMachine(_processRepo, _clock);
 
-            if (receipt.Accepted)
+            // Status-based disambiguation: same correlation ID is used for both original and cancel RSM-009
+            if (process.Status == "cancellation_pending")
+            {
+                if (receipt.Accepted)
+                {
+                    await stateMachine.MarkCancelledAsync(process.Id, "Cancellation acknowledged by DataHub", ct);
+                    await _onboardingService.SyncFromProcessAsync(process.Id, "cancelled", null, ct);
+                    _logger.LogInformation("RSM-009: Cancellation acknowledged for process {ProcessId}", process.Id);
+                }
+                else
+                {
+                    var reason = receipt.RejectionReason ?? receipt.RejectionCode ?? "Cancellation rejected";
+                    await stateMachine.RevertCancellationAsync(process.Id, reason, ct);
+                    await _onboardingService.SyncFromProcessAsync(process.Id, "effectuation_pending", null, ct);
+                    _logger.LogWarning("RSM-009: Cancellation rejected for process {ProcessId}: {Reason}", process.Id, reason);
+                }
+            }
+            else if (receipt.Accepted)
             {
                 await stateMachine.MarkAcknowledgedAsync(process.Id, ct);
                 await _onboardingService.SyncFromProcessAsync(process.Id, "effectuation_pending", null, ct);

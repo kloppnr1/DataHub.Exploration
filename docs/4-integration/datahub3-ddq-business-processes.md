@@ -89,7 +89,7 @@ Source: CIM Webservice Interface (Dok. 22/03077-1); GitHub Energinet-DataHub/ARC
 |----------|---------|
 | `POST /v1.0/cim/requestchangeofsupplier` | BRS-001 / BRS-043: Supplier switch |
 | `POST /v1.0/cim/requestendofsupply` | BRS-002 / BRS-005: End of supply |
-| `POST /v1.0/cim/requestcancelchangeofsupplier` | BRS-003 / BRS-042: Cancel incorrect switch ⚠ VERIFY path |
+| `POST /v1.0/cim/requestcancelchangeofsupplier` | RSM-002: Cancel switch within BRS-001 (before effective date). Also used for BRS-003/BRS-042 (erroneous switch, after effective date) |
 | `POST /v1.0/cim/requestcustomerdata` | BRS-015: Submit customer master data ⚠ VERIFY path |
 | `POST /v1.0/cim/requestvalidatedmeasuredata` | RSM-015: Request historical metering data |
 | `POST /v1.0/cim/requestaggregatedmeasuredata` | RSM-016: Request aggregated data |
@@ -250,15 +250,42 @@ These processes govern how supply obligations are created, transferred, and term
 - After end of supply, the metering point enters "supplier of last resort" ⚠ VERIFY
 - The current DDQ can cancel end of supply (e.g., if customer pays) before effective date
 
-### 4.3 BRS-003: Cancel Change of Supplier (Annuller leverandørskifte)
+### 4.3 Pre-Effective-Date Cancellation (RSM-002 within BRS-001)
 
-- **RSM message:** RSM-003 (RequestCancelChangeOfSupplier) ⚠ VERIFY
-- **Initiator:** New DDQ (the gaining supplier) or DataHub
+- **RSM message:** RSM-002 (Annuller start af leverance) — part of BRS-001, **not** a separate process
+- **Initiator:** New DDQ (the gaining supplier)
 - **Purpose:** Cancel an already-requested BRS-001 supplier switch before it takes effect
+- **Correlation:** Uses the **same correlation ID** as the original RSM-001 — references it via the `Reference` field
 
 **Key facts:**
-- Must be sent before the effective date of the original switch
-- DataHub notifies both old and new DDQ of the cancellation
+- Must be submitted no later than the day before the effective date (skæringsdato)
+- DataHub responds with RSM-002 accept/reject
+- DataHub notifies old DDQ of the cancellation
+- If the cancellation deadline has passed, use BRS-003 instead
+
+**Validation rules** (§4.1.10):
+- E10: Metering point must be identifiable
+- D05: Metering point must match the original message
+- E16: Supplier must be the same as in the original request
+- E17: Must be within the official deadline
+- D06: Reference must match the original transaction ID
+
+> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.1.9–4.1.10.
+
+### 4.3b BRS-003: Erroneous Supplier Switch (Fejlagtigt leverandørskift)
+
+- **RSM message:** RSM-003 (Anmod om genoptagelse af leverance)
+- **Initiator:** Old/current DDQ (the party who identifies the error) — initiated via DataHub screen
+- **Purpose:** Reverse a supplier switch that was performed in error, **after** the effective date
+
+**Key facts:**
+- Partially manual process — involves screen-based interaction with DataHub
+- Can only be initiated on the most recent switch, within 180 calendar days
+- Cannot be cancelled once initiated
+- Old DDQ can accept or reject resumption of supply
+- DataHub sends RSM-003 accept/reject, then master data (RSM-022) and customer data (RSM-028) to old DDQ
+
+> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.3.
 
 ### 4.4 BRS-005: End of Supply — Forced (Tvunget leveranceophør) ⚠ VERIFY
 
@@ -267,16 +294,19 @@ These processes govern how supply obligations are created, transferred, and term
 
 ⚠ VERIFY: BRS-005 may cover a different scenario. Cross-reference with latest BRS document.
 
-### 4.5 BRS-042: Incorrect Change of Supplier — Rollback (Fejlagtigt leverandørskifte)
+### 4.5 BRS-042: Customer-Initiated Cancellation (Kundens adgang til annullering)
 
-- **RSM message:** RSM-003 ⚠ VERIFY
-- **Initiator:** The DDQ who identifies the error
-- **Purpose:** Reverse a supplier switch that was performed in error (after effective date)
+- **Initiator:** Customer via DataHub's customer portal (kundeportalen)
+- **Purpose:** Customer reports an erroneous supplier switch directly to DataHub
 
 **Key facts:**
-- Can be initiated after the switch has already taken effect (retroactive)
-- DataHub validates the rollback request and recalculates supply periods
-- ⚠ VERIFY: Time limits apply — typically within 20 business days of effective date
+- Customer activates cancellation process by reporting to DataHub
+- DataHub notifies the current/future DDQ via webform
+- DDQ must respond within a deadline: accept or reject
+- **Before cancellation deadline:** DataHub cancels the switch immediately (within BRS-001)
+- **After cancellation deadline:** Continues with BRS-003 (fejlagtigt leverandørskift)
+
+> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.42.
 
 ### 4.6 BRS-043: Change of Supplier at Short Notice (Leverandørskifte med kort varsel)
 
@@ -498,7 +528,7 @@ These processes handle wholesale settlement calculations and provide aggregated 
 |-----------------|---------|---------|
 | `requestchangeofsupplier` ⚠ VERIFY | BRS-001/043, RSM-001 | Supplier switch |
 | `requestendofsupply` ⚠ VERIFY | BRS-002/005, RSM-005 | End of supply |
-| `requestcancelchangeofsupplier` ⚠ VERIFY | BRS-003/042 | Cancel/rollback switch |
+| `requestcancelchangeofsupplier` ⚠ VERIFY | RSM-002 (BRS-001 cancel) / BRS-003 (erroneous switch) | Cancel switch before or after effective date |
 | `requestvalidatedmeasuredata` ⚠ VERIFY | RSM-015 | Request historical data |
 | `requestaggregatedmeasuredata` ⚠ VERIFY | RSM-016 | Request aggregated data |
 | `requestcustomerdata` ⚠ VERIFY | BRS-015 | Submit customer data |

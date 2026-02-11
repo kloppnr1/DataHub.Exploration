@@ -78,6 +78,15 @@ public sealed class SimulatorState
         }
     }
 
+    public void CancelEffectuation(string gsrn)
+    {
+        foreach (var pe in _pendingEffectuations)
+        {
+            if (pe.Gsrn == gsrn && !pe.Enqueued)
+                pe.Enqueued = true; // Mark as enqueued so FlushReadyEffectuations skips it
+        }
+    }
+
     public IReadOnlyList<PendingEffectuation> GetPendingEffectuations() => _pendingEffectuations.ToList();
 
     public void Reset()

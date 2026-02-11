@@ -12,6 +12,7 @@ const processStatusStyles = {
   effectuation_pending: { dot: 'bg-blue-400', badge: 'bg-blue-50 text-blue-700' },
   completed: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
   rejected: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+  cancellation_pending: { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700' },
   cancelled: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
 };
 

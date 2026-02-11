@@ -211,7 +211,7 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 | Feature | Deferred to |
 |---------|-------------|
 | Offboarding (BRS-002, BRS-010) | MVP 2 |
-| Cancellations / rejections (BRS-003, RSM-009 rejected) | MVP 2 |
+| Cancellations / rejections (RSM-002 cancel, RSM-009 rejected) | MVP 2 |
 | Aconto calculation and settlement | MVP 2 |
 | Standalone HTTP DataHub simulator | MVP 2 |
 | Invoice generation (PDF/document) | MVP 2 |

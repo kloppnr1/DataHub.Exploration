@@ -6,8 +6,7 @@ public record ProcessRequest(
     string Gsrn,
     string Status,
     DateOnly? EffectiveDate,
-    string? DatahubCorrelationId,
-    string? CancelCorrelationId = null);
+    string? DatahubCorrelationId);
 
 public record ProcessEvent(
     Guid Id,

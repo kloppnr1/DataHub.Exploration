@@ -325,8 +325,9 @@ DataHub                    Our system                  Settlement
 |---------|----------|--------|
 | BRS-001 supplier switch (notice period) | Min. 15 business days | Regulation H1 (Forskrift H1) |
 | BRS-043 short notice | 1 business day (WARNING: VERIFY) | Regulation H1 (Forskrift H1) |
-| BRS-003 cancel switch | Before the effective date | Regulation H1 (Forskrift H1) |
-| BRS-042 reversal | 20 business days after effective date (WARNING: VERIFY) | Regulation H1 (Forskrift H1) |
+| RSM-002 cancel within BRS-001 | No later than the day before the effective date | Energinet BRS §4.1.9, Forskrift H1 |
+| BRS-003 erroneous switch (fejlagtigt leverandørskift) | Within 180 calendar days of the original switch | Energinet BRS §4.3, Forskrift H1 |
+| BRS-042 customer-initiated cancellation | Depends on DDQ response deadline | Energinet BRS §4.42, Forskrift H1 |
 | BRS-044 cancel termination | Before the effective date | Regulation H1 (Forskrift H1) |
 | Final invoice at offboarding | 4 weeks after customer departure | Electricity Supply Order section 17 (Elleveringsbekendtgørelsen §17) |
 | Customer data archiving | 5 years (WARNING: VERIFY) | GDPR / Danish Bookkeeping Act (bogføringsloven) |

@@ -48,7 +48,43 @@ sequenceDiagram
 
 **Deadlines:** Min. 15 business days notice (BRS-001) or 1 business day (BRS-043 short notice).
 
-**Cancellation:** Customer withdraws → send BRS-003 before effective date.
+**Cancellation:** Customer withdraws before effective date → send **RSM-002** (Annuller start af leverance) within the same BRS-001 process, referencing the original RSM-001 transaction. DataHub responds with RSM-002 accept/reject. Same correlation ID throughout. Must be submitted no later than the day before the effective date. After the cancellation deadline, use BRS-003 (fejlagtigt leverandørskift) instead.
+
+> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.1.9–4.1.10, §4.1.14.
+
+### 1b. BRS-001 Cancellation (before effective date)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant DDQ as Supplier (DDQ)
+    participant DH as DataHub
+    participant GmlDDQ as Old DDQ
+
+    Note over DDQ: Customer withdraws
+
+    DDQ->>DH: RSM-002 (Annuller start af leverance)<br/>Reference = original RSM-001 transaction ID<br/>Same correlation ID as BRS-001
+    DH-->>DDQ: RSM-002: accepted/rejected
+
+    alt Accepted
+        DH->>GmlDDQ: Cancellation notification
+        Note over DDQ: Mark process cancelled<br/>Clean up billing plans
+    else Rejected (E17: deadline exceeded)
+        Note over DDQ: Use BRS-003 (fejlagtigt<br/>leverandørskift) instead
+    end
+```
+
+**Validation rules** (§4.1.10):
+| Code | Rule |
+|------|------|
+| E10 | Metering point must be identifiable |
+| D05 | Metering point must match original RSM-001 |
+| E16 | Supplier must be the same as in original request |
+| E17 | Must be within deadline (day before effective date) |
+| D06 | Reference must match original transaction ID |
+| D19 | Function code must be "Annullering" (cancellation) |
+
+**Note:** BRS-003 (Håndtering af fejlagtigt leverandørskift) is a completely separate process for reversing a switch **after** the effective date. It uses RSM-003 and is initiated by the old/current DDQ — not covered in our current implementation.
 
 ---
 
@@ -276,5 +312,6 @@ flowchart LR
 - [RSM-012 Meter Data Reference](rsm-012-datahub3-measure-data.md)
 - [Proposed System Architecture](datahub3-proposed-architecture.md)
 - [Authentication and Security](datahub3-authentication-security.md)
+- [Energinet BRS-forretningsprocesser for det danske elmarked](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf) (Doc. 15/00718-195, primary reference for all BRS/RSM flows)
 - CIM Webservice Interface (Doc. 22/03077-1)
 - CIM EDI Guide (Doc. 15/00718-191)

@@ -215,7 +215,7 @@ CRM / Sales                         Our system
     │      (pending / accepted / rejected)│
     │                                    │
     │ Customer cancels                   │
-    ├───── Cancel request ──────────────►│ Send BRS-003 (cancel switch)
+    ├───── Cancel request ──────────────►│ Send RSM-002 cancel (within BRS-001)
     │◄──── Cancellation confirmed ───────┤
     │                                    │
     │ Query portfolio                    │
@@ -232,7 +232,7 @@ CRM / Sales                         Our system
 | `/api/customers/{id}/switch` | POST | Initiate a supplier switch (BRS-001 / BRS-043) |
 | `/api/customers/{id}/move-in` | POST | Initiate a move-in (BRS-009) |
 | `/api/processes/{id}` | GET | Check the status of a pending DataHub process |
-| `/api/processes/{id}/cancel` | POST | Cancel a pending process (BRS-003) |
+| `/api/processes/{id}/cancel` | POST | Cancel a pending process (RSM-002 within BRS-001) |
 | `/api/portfolio/summary` | GET | Overview of active customers and metering points |
 
 **Onboarding data required from CRM:**

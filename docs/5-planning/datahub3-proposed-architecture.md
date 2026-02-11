@@ -88,7 +88,8 @@ All communication with the DataHub 3 B2B API.
 |--------|---------|
 | Supplier switch (leverandørskifte) | BRS-001, BRS-043 |
 | End of supply (leveranceophør) | BRS-002, BRS-005 |
-| Cancel switch / reversal (tilbageførsel) | BRS-003, BRS-042 |
+| Cancel switch before effective date | RSM-002 within BRS-001 |
+| Erroneous switch reversal (fejlagtigt leverandørskift) | BRS-003 (RSM-003), BRS-042 |
 | Cancel end of supply | BRS-044 |
 | Request historical data | RSM-015 |
 | Request aggregated data | RSM-016 |
@@ -148,7 +149,8 @@ Manages the supplier's customer portfolio, metering point associations, and life
 **Business processes:**
 - **BRS-001** — Standard supplier switch (leverandørskifte)
 - **BRS-002** — End of supply (leveranceophør)
-- **BRS-003** — Cancel pending switch
+- **BRS-001 cancel** — RSM-002 cancel within BRS-001 (before effective date)
+- **BRS-003** — Erroneous supplier switch reversal (fejlagtigt leverandørskift, after effective date)
 - **BRS-005** — Forced end of supply
 - **BRS-006** — Change of balance responsible party (balanceansvarlig)
 - **BRS-009** — Move-in (tilflytning)

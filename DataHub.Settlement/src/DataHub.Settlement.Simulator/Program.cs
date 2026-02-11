@@ -150,7 +150,13 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
     var body = await new StreamReader(request.Body).ReadToEndAsync();
     state.RecordRequest("requestcancelchangeofsupplier", "/v1.0/cim/requestcancelchangeofsupplier", body);
 
-    var correlationId = Guid.NewGuid().ToString();
+    // Reuse the original BRS-001 correlation ID — pre-effective-date cancel is part of the same process
+    var correlationId = ExtractOriginalTransactionId(body) ?? Guid.NewGuid().ToString();
+
+    // Cancel pending effectuation so RSM-007 doesn't fire after cancel
+    var gsrn = ExtractGsrn(body);
+    if (gsrn is not null)
+        state.CancelEffectuation(gsrn);
 
     _ = Task.Run(async () =>
     {
@@ -302,6 +308,37 @@ static string? ExtractEffectiveDate(string body)
     {
         // Invalid JSON
     }
+    return null;
+}
+
+static string? ExtractOriginalTransactionId(string body)
+{
+    try
+    {
+        using var doc = JsonDocument.Parse(body);
+        JsonElement md = default;
+        bool found = false;
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Name.Contains("MarketDocument", StringComparison.OrdinalIgnoreCase))
+            {
+                md = prop.Value;
+                found = true;
+                break;
+            }
+        }
+        if (!found) return null;
+
+        if (!md.TryGetProperty("MktActivityRecord", out var mar) &&
+            !md.TryGetProperty("mktActivityRecord", out mar))
+            return null;
+
+        if (mar.TryGetProperty("originalTransactionIDReference_MktActivityRecord.mRID", out var otid))
+            return otid.GetString();
+        if (mar.TryGetProperty("originalTransactionID", out var ot))
+            return ot.GetString();
+    }
+    catch (JsonException) { }
     return null;
 }
 

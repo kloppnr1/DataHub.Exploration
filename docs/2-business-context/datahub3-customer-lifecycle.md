@@ -15,7 +15,7 @@ Trigger:      Contract signed — customer selects us as supplier
 DataHub:      → BRS-001 (supplier switch / leverandørskifte) with GSRN + desired date + CPR/CVR
               → BRS-043 (short notice) or → BRS-009 (move-in / tilflytning)
               → BRS-015 (submit customer master data / kundestamdata)
-              → BRS-003 (cancel if the customer withdraws)
+              → RSM-002 cancel within BRS-001 (if the customer withdraws before effective date)
 Billing:      Create customer record, select product/tariff plan
               Set up billing schedule (monthly/quarterly)
               Calculate aconto estimate based on expected annual consumption
@@ -100,7 +100,8 @@ SPECIAL CASES (can occur in any phase)
 | BRS-043 (short-notice switch) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
 | BRS-009 (move-in / tilflytning) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
 | BRS-015 (customer master data / kundestamdata) | 1 - Onboarding | We submit | No direct consequence |
-| BRS-003 (cancel switch) | 1 - Onboarding | We initiate (if customer cancels before activation) | Cancel created billing plan |
+| RSM-002 cancel (within BRS-001) | 1 - Onboarding | We initiate (if customer cancels before effective date) | Cancel created billing plan |
+| BRS-003 (erroneous switch / fejlagtigt leverandørskift) | 1 - Onboarding | Old DDQ initiates (after effective date, via RSM-003) | Rollback supplier switch |
 | RSM-007 (master data snapshot) | 2 - Activation | We receive | Assign tariffs and product plan |
 | RSM-012 (metering data / måledata) | 2-6 | We receive (ongoing) | Calculation basis for settlement |
 | RSM-014 (aggregated data) | 3-4 | We receive (periodic) | Reconciliation against wholesale settlement |
@@ -246,21 +247,27 @@ Invoice total  = sum of all lines + VAT
 ### What Can Go Wrong
 
 - **Rejection:** DataHub rejects the request (incorrect GSRN, conflicting process, CPR mismatch) -> correct data and resubmit
-- **Customer cancellation:** The customer changes their mind -> send **BRS-003** to cancel before the effective date
+- **Customer cancellation:** The customer changes their mind → send **RSM-002** cancellation within the same BRS-001 process before the effective date
 
-### Cancelling a Supplier Switch (BRS-003)
+### Cancelling a Supplier Switch (RSM-002 within BRS-001)
 
-If the customer withdraws **before** the effective date:
+If the customer withdraws **before** the effective date, cancellation is part of the same BRS-001 process using RSM-002 (Annuller start af leverance). The same correlation ID is used throughout.
 
 | Step | Action |
 |------|--------|
-| 1 | DDQ -> DataHub: **BRS-003** cancellation request |
-| 2 | DataHub -> DDQ: Receipt (accepted/rejected) |
-| 3 | DataHub -> old DDQ: Notification of cancellation |
+| 1 | DDQ → DataHub: **RSM-002** cancellation request (references original RSM-001) |
+| 2 | DataHub → DDQ: RSM-002 accept/reject |
+| 3 | DataHub → old DDQ: Cancellation notification (if applicable) |
 | 4 | Internal: Mark ProcessRequest as `cancelled` |
 | 5 | Internal: Remove prepared billing plans, aconto estimates, etc. |
 
-Cannot be cancelled after the effective date — use BRS-042 (erroneous switch) instead. See [Edge Cases](datahub3-edge-cases.md#2-erroneous-processes).
+**Deadline:** Must be submitted no later than the day before the effective date (skæringsdato).
+
+After the cancellation deadline has passed, use **BRS-003** (Håndtering af fejlagtigt leverandørskift / erroneous supplier switch) instead — this is a completely separate process initiated by the old DDQ via RSM-003. See [Edge Cases](datahub3-edge-cases.md#2-erroneous-processes).
+
+> **Note:** Our simulator currently maps the cancellation to `requestcancelchangeofsupplier` and uses the same correlation ID. The RSM-002 vs RSM-003 distinction matters for the CIM message format but not for process routing — both use the same correlation ID approach.
+>
+> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.1.9–4.1.10 (BRS-001 cancellation) and §4.3 (BRS-003 erroneous switch).
 
 ---
 

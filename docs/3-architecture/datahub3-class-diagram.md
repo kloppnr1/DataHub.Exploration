@@ -596,8 +596,10 @@ stateDiagram-v2
     SentToDataHub --> Rejected : RSM-009 rejected
     Acknowledged --> EffectuationPending : Awaiting effectuation
     EffectuationPending --> Completed : RSM-007 + RSM-012 received
-    Pending --> Cancelled : BRS-003 cancellation
-    Acknowledged --> Cancelled : BRS-003 cancellation
+    Pending --> Cancelled : Internal cancellation (before send)
+    EffectuationPending --> CancellationPending : RSM-002 cancel sent
+    CancellationPending --> Cancelled : RSM-002 accepted
+    CancellationPending --> EffectuationPending : RSM-002 rejected
     Rejected --> [*]
     Completed --> [*]
     Cancelled --> [*]
