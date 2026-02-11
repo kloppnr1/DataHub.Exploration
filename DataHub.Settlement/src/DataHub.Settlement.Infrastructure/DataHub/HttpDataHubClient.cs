@@ -21,6 +21,7 @@ public sealed class HttpDataHubClient : IDataHubClient
         ["move_out"] = "requestendofsupply",
         ["cancel_switch"] = "requestcancelchangeofsupplier",
         ["cancel_end_of_supply"] = "requestcancelchangeofsupplier",
+        ["customer_data_update"] = "requestcustomerdataupdate",
     };
 
     public HttpDataHubClient(HttpClient http)

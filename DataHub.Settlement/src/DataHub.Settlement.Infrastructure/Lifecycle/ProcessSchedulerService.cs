@@ -73,28 +73,43 @@ public sealed class ProcessSchedulerService : BackgroundService
         {
             try
             {
-                // Look up signup to get CPR/CVR for BRS request
-                var signup = await _signupRepo.GetByProcessRequestIdAsync(process.Id, ct);
-                if (signup is null)
-                {
-                    _logger.LogWarning("No signup found for pending process {ProcessId}, skipping", process.Id);
-                    continue;
-                }
+                string? cimPayload;
 
-                var cprCvr = await _signupRepo.GetCustomerCprCvrAsync(signup.Id, ct);
-                if (cprCvr is null)
+                if (process.ProcessType is "end_of_supply" or "move_out")
                 {
-                    _logger.LogWarning("No customer found for signup {SignupId}, skipping", signup.Id);
-                    continue;
+                    // BRS-002/BRS-010 don't need CPR/CVR
+                    cimPayload = process.ProcessType switch
+                    {
+                        "end_of_supply" => _brsBuilder.BuildBrs002(process.Gsrn, process.EffectiveDate!.Value),
+                        "move_out" => _brsBuilder.BuildBrs010(process.Gsrn, process.EffectiveDate!.Value),
+                        _ => null,
+                    };
                 }
-
-                // Build the BRS request
-                var cimPayload = process.ProcessType switch
+                else
                 {
-                    "supplier_switch" => _brsBuilder.BuildBrs001(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
-                    "move_in" => _brsBuilder.BuildBrs009(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
-                    _ => null,
-                };
+                    // Look up signup to get CPR/CVR for BRS request
+                    var signup = await _signupRepo.GetByProcessRequestIdAsync(process.Id, ct);
+                    if (signup is null)
+                    {
+                        _logger.LogWarning("No signup found for pending process {ProcessId}, skipping", process.Id);
+                        continue;
+                    }
+
+                    var cprCvr = await _signupRepo.GetCustomerCprCvrAsync(signup.Id, ct);
+                    if (cprCvr is null)
+                    {
+                        _logger.LogWarning("No customer found for signup {SignupId}, skipping", signup.Id);
+                        continue;
+                    }
+
+                    // Build the BRS request
+                    cimPayload = process.ProcessType switch
+                    {
+                        "supplier_switch" => _brsBuilder.BuildBrs001(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
+                        "move_in" => _brsBuilder.BuildBrs009(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
+                        _ => null,
+                    };
+                }
 
                 if (cimPayload is null)
                 {

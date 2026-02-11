@@ -92,5 +92,6 @@ public class SettlementDataLoaderTests
         public Task SeedGridTariffAsync(string gridAreaCode, string tariffType, DateOnly validFrom, IReadOnlyList<TariffRateRow> rates, CancellationToken ct) => Task.CompletedTask;
         public Task SeedSubscriptionAsync(string gridAreaCode, string subscriptionType, decimal amountPerMonth, DateOnly validFrom, CancellationToken ct) => Task.CompletedTask;
         public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => Task.CompletedTask;
+        public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => Task.CompletedTask;
     }
 }

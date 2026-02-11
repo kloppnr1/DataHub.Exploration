@@ -486,6 +486,36 @@ public sealed class PortfolioRepository : IPortfolioRepository
         }, cancellationToken: ct));
     }
 
+    public async Task StageCustomerDataAsync(string gsrn, string customerName, string? cprCvr, string customerType, string? phone, string? email, string? correlationId, CancellationToken ct)
+    {
+        const string sql = """
+            INSERT INTO portfolio.customer_data_staging (gsrn, customer_name, cpr_cvr, customer_type, phone, email, correlation_id)
+            VALUES (@Gsrn, @CustomerName, @CprCvr, @CustomerType, @Phone, @Email, @CorrelationId)
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql,
+            new { Gsrn = gsrn, CustomerName = customerName, CprCvr = cprCvr, CustomerType = customerType, Phone = phone, Email = email, CorrelationId = correlationId },
+            cancellationToken: ct));
+    }
+
+    public async Task<StagedCustomerData?> GetStagedCustomerDataAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT gsrn, customer_name, cpr_cvr, customer_type, phone, email, correlation_id
+            FROM portfolio.customer_data_staging
+            WHERE gsrn = @Gsrn
+            ORDER BY created_at DESC
+            LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<StagedCustomerData>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
     // --- Internal row types for Dapper mapping ---
 
     private record CustomerRow(

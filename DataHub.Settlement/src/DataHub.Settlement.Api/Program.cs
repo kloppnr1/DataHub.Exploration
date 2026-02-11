@@ -658,6 +658,24 @@ app.MapGet("/api/processes/{id:guid}/events", async (Guid id, IProcessRepository
     }));
 });
 
+// POST /api/processes/end-of-supply — initiate end of supply
+app.MapPost("/api/processes/end-of-supply", async (ProcessInitRequest request, IProcessRepository processRepo, IClock clock, CancellationToken ct) =>
+{
+    var stateMachine = new ProcessStateMachine(processRepo, clock);
+    var process = await stateMachine.CreateRequestAsync(request.Gsrn, "end_of_supply", request.EffectiveDate, ct);
+    return Results.Ok(new { process.Id, process.ProcessType, process.Gsrn, process.Status, process.EffectiveDate });
+});
+
+// POST /api/processes/move-out — initiate move-out
+app.MapPost("/api/processes/move-out", async (ProcessInitRequest request, IProcessRepository processRepo, IClock clock, CancellationToken ct) =>
+{
+    var stateMachine = new ProcessStateMachine(processRepo, clock);
+    var process = await stateMachine.CreateRequestAsync(request.Gsrn, "move_out", request.EffectiveDate, ct);
+    return Results.Ok(new { process.Id, process.ProcessType, process.Gsrn, process.Status, process.EffectiveDate });
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);

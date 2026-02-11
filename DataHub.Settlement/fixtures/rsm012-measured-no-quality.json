@@ -1,6 +1,6 @@
 {
   "MarketDocument": {
-    "mRID": "msg-missing-qty-001",
+    "mRID": "msg-measured-001",
     "type": "E66",
     "Process": { "ProcessType": "E23" },
     "Sender_MarketParticipant": {
@@ -14,7 +14,7 @@
     "createdDateTime": "2025-01-02T06:00:00Z",
     "Series": [
       {
-        "mRID": "txn-missing-qty-001",
+        "mRID": "txn-measured-001",
         "MarketEvaluationPoint": {
           "mRID": "571313100000012345",
           "type": "E17"
@@ -29,9 +29,9 @@
             "end": "2025-01-01T03:00Z"
           },
           "Point": [
-            { "position": 1, "quantity": 0.300, "quality": "A03" },
-            { "position": 2, "quality": "A02" },
-            { "position": 3, "quantity": 0.500, "quality": "A01" }
+            { "position": 1, "quantity": 0.300 },
+            { "position": 2, "quantity": 0.500 },
+            { "position": 3, "quantity": 0.400, "quality": "A01" }
           ]
         }
       }

@@ -21,6 +21,7 @@
         },
         "Product": "8716867000030",
         "Quantity_Measure_Unit": { "name": "KWH" },
+        "Registration_DateAndOrTime": { "dateTime": "2025-01-02T06:00:00Z" },
         "Period": {
           "resolution": "PT1H",
           "timeInterval": {

@@ -51,6 +51,9 @@ public static class RsmMessageTypes
     /// <summary>RSM-024 — Annullering (cancellation request).</summary>
     public const string Cancellation = "RSM-024";
 
+    /// <summary>RSM-027 — Customer data update (outbound post-switch).</summary>
+    public const string CustomerDataUpdate = "RSM-027";
+
     /// <summary>RSM-028 — Kundedata (customer master data).</summary>
     public const string CustomerData = "RSM-028";
 
@@ -66,9 +69,24 @@ public static class Rsm004ReasonCodes
     /// <summary>D11 — Auto-cancellation (customer data deadline exceeded).</summary>
     public const string AutoCancel = "D11";
 
+    /// <summary>D31 — Forced transfer (metering point override, BRS-044).</summary>
+    public const string ForcedTransfer = "D31";
+
+    /// <summary>D34 — Correction accepted (BRS-003 acceptance).</summary>
+    public const string CorrectionAccepted = "D34";
+
+    /// <summary>D35 — Correction rejected (BRS-003 rejection).</summary>
+    public const string CorrectionRejected = "D35";
+
     /// <summary>D46 — Special rules for start of supply.</summary>
     public const string SpecialRules = "D46";
 
+    /// <summary>E01 — Stop of supply (another supplier taking over).</summary>
+    public const string StopOfSupplyByOtherSupplier = "E01";
+
     /// <summary>E03 — Stop of supply notification.</summary>
     public const string StopOfSupply = "E03";
+
+    /// <summary>E20 — End of supply stop notification.</summary>
+    public const string EndOfSupplyStop = "E20";
 }

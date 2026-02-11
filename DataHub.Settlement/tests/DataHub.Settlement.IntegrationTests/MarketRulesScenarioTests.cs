@@ -325,7 +325,9 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         var signupRepo = new SignupRepository(Conn);
         var poller = new QueuePollerService(
             _datahub, parser, meteringRepo, _portfolio, processRepo, signupRepo,
-            NullOnboardingService.Instance, new TestClock(), messageLog,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(Conn),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            new TestClock(), messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

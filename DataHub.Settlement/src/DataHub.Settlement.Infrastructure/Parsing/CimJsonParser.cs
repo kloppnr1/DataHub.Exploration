@@ -20,6 +20,11 @@ public sealed class CimJsonParser : ICimParser
         var root = doc.RootElement.GetProperty("MarketDocument");
         var seriesArray = root.GetProperty("Series");
 
+        // Registration timestamp: per-series or fall back to document-level createdDateTime
+        var documentCreated = root.TryGetProperty("createdDateTime", out var cdProp)
+            ? DateTimeOffset.Parse(cdProp.GetString()!)
+            : DateTimeOffset.UtcNow;
+
         var result = new List<ParsedTimeSeries>();
 
         foreach (var series in seriesArray.EnumerateArray())
@@ -28,20 +33,34 @@ public sealed class CimJsonParser : ICimParser
             var gsrn = series.GetProperty("MarketEvaluationPoint").GetProperty("mRID").GetString()!;
             var mpType = series.GetProperty("MarketEvaluationPoint").GetProperty("type").GetString()!;
 
+            // Parse registration timestamp (series-level > document-level)
+            var registrationTimestamp = documentCreated;
+            if (series.TryGetProperty("Registration_DateAndOrTime", out var regProp) &&
+                regProp.TryGetProperty("dateTime", out var regDt))
+            {
+                registrationTimestamp = DateTimeOffset.Parse(regDt.GetString()!);
+            }
+
             var period = series.GetProperty("Period");
             var resolution = period.GetProperty("resolution").GetString()!;
             var interval = period.GetProperty("timeInterval");
             var periodStart = DateTimeOffset.Parse(interval.GetProperty("start").GetString()!);
             var periodEnd = DateTimeOffset.Parse(interval.GetProperty("end").GetString()!);
 
-            var step = GetStep(resolution, periodStart, periodEnd);
+            var step = GetStep(resolution);
             var points = new List<TimeSeriesPoint>();
 
             foreach (var point in period.GetProperty("Point").EnumerateArray())
             {
                 var position = point.GetProperty("position").GetInt32();
-                var timestamp = ComputeTimestamp(periodStart, position, step, resolution);
-                var quality = point.GetProperty("quality").GetString()!;
+                var timestamp = ComputeTimestamp(periodStart, position, step);
+
+                // Quality is optional — measured data has no quality element
+                string? quality = null;
+                if (point.TryGetProperty("quality", out var qualProp))
+                {
+                    quality = qualProp.GetString();
+                }
 
                 decimal quantity = 0m;
                 if (point.TryGetProperty("quantity", out var qProp))
@@ -54,7 +73,7 @@ public sealed class CimJsonParser : ICimParser
 
             result.Add(new ParsedTimeSeries(
                 transactionId, gsrn, mpType, resolution,
-                periodStart, periodEnd, points));
+                periodStart, periodEnd, registrationTimestamp, points));
         }
 
         return result;
@@ -163,7 +182,7 @@ public sealed class CimJsonParser : ICimParser
         var periodStart = DateTimeOffset.Parse(interval.GetProperty("start").GetString()!);
         var periodEnd = DateTimeOffset.Parse(interval.GetProperty("end").GetString()!);
         var resolution = period.GetProperty("resolution").GetString()!;
-        var step = GetStep(resolution, periodStart, periodEnd);
+        var step = GetStep(resolution);
 
         var points = new List<AggregationPoint>();
         decimal totalKwh = 0m;
@@ -171,7 +190,7 @@ public sealed class CimJsonParser : ICimParser
         foreach (var point in period.GetProperty("Point").EnumerateArray())
         {
             var position = point.GetProperty("position").GetInt32();
-            var timestamp = ComputeTimestamp(periodStart, position, step, resolution);
+            var timestamp = ComputeTimestamp(periodStart, position, step);
             var quantity = point.GetProperty("quantity").GetDecimal();
 
             points.Add(new AggregationPoint(timestamp.UtcDateTime, quantity));
@@ -241,6 +260,12 @@ public sealed class CimJsonParser : ICimParser
         return new Rsm031Result(messageId, gsrn, tariffs);
     }
 
+    public Rsm001ResponseResult ParseRsm005Response(string json)
+        => ParseRsm001Response(json); // RSM-005 has identical accept/reject structure
+
+    public Rsm001ResponseResult ParseRsm024Response(string json)
+        => ParseRsm001Response(json); // RSM-024 response has identical accept/reject structure
+
     public Rsm001ResponseResult ParseRsm001Response(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -265,23 +290,17 @@ public sealed class CimJsonParser : ICimParser
         return new Rsm001ResponseResult(correlationId, accepted, rejectionReason, rejectionCode);
     }
 
-    private static TimeSpan GetStep(string resolution, DateTimeOffset periodStart, DateTimeOffset periodEnd)
+    private static TimeSpan GetStep(string resolution)
     {
         if (ResolutionMap.TryGetValue(resolution, out var step))
             return step;
-
-        if (resolution == "P1M")
-            return periodEnd - periodStart; // single point for monthly
 
         throw new ArgumentException($"Unknown resolution: {resolution}");
     }
 
     private static DateTimeOffset ComputeTimestamp(
-        DateTimeOffset periodStart, int position, TimeSpan step, string resolution)
+        DateTimeOffset periodStart, int position, TimeSpan step)
     {
-        if (resolution == "P1M")
-            return periodStart;
-
         return periodStart + (position - 1) * step;
     }
 }

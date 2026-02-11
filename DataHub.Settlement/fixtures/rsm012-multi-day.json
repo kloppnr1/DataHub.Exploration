@@ -29,6 +29,9 @@
         "Quantity_Measure_Unit": {
           "name": "KWH"
         },
+        "Registration_DateAndOrTime": {
+          "dateTime": "2025-02-01T06:00:00Z"
+        },
         "Period": {
           "resolution": "PT1H",
           "timeInterval": {

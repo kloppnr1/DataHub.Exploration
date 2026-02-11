@@ -48,6 +48,42 @@ public sealed class BrsRequestBuilder : IBrsRequestBuilder
         return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.ForcedSwitch);
     }
 
+    public string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId)
+    {
+        var doc = new
+        {
+            RequestCustomerDataUpdate_MarketDocument = new
+            {
+                mRID = Guid.NewGuid().ToString(),
+                process = new { processType = new { value = BusinessReasonCodes.SupplierSwitch } },
+                sender_MarketParticipant = new
+                {
+                    mRID = new { value = OurGln, codingScheme = "A10" },
+                    marketRole = new { type = new { value = "DDQ" } },
+                },
+                receiver_MarketParticipant = new
+                {
+                    mRID = new { value = DataHubGln, codingScheme = "A10" },
+                    marketRole = new { type = new { value = "DGL" } },
+                },
+                createdDateTime = DateTime.UtcNow.ToString("O"),
+                originalTransactionIDReference = correlationId,
+                MktActivityRecord = new
+                {
+                    mRID = Guid.NewGuid().ToString(),
+                    marketEvaluationPoint = new { mRID = new { value = gsrn, codingScheme = "A10" } },
+                    customer_MarketParticipant = new
+                    {
+                        mRID = new { value = cprCvr },
+                        name = customerName,
+                    },
+                },
+            },
+        };
+
+        return JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = false });
+    }
+
     private static string BuildChangeOfSupplier(string gsrn, string cprCvr, DateOnly effectiveDate, string processType)
     {
         var doc = new

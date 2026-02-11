@@ -4,5 +4,6 @@ public record MeteringDataRow(
     DateTime Timestamp,
     string Resolution,
     decimal QuantityKwh,
-    string QualityCode,
-    string SourceMessageId);
+    string? QualityCode,
+    string SourceMessageId,
+    DateTime? RegistrationTimestamp = null);

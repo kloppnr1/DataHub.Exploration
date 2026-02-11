@@ -353,6 +353,9 @@ public class ProcessTimelineTests
             _processRepo,
             new ThrowSignupRepo(),
             NullOnboardingService.Instance,
+            new ThrowTariffRepo(),
+            new ThrowBrsBuilder(),
+            new ThrowMessageRepo(),
             _clock,
             new NullMessageLog(),
             NullLogger<QueuePollerService>.Instance);
@@ -365,6 +368,8 @@ public class ProcessTimelineTests
         public Domain.MasterData.ParsedMasterData ParseRsm022(string json) => throw new NotImplementedException();
         public Rsm004Result ParseRsm004(string json) => throw new NotImplementedException();
         public Rsm014Aggregation ParseRsm014(string json) => throw new NotImplementedException();
+        public Rsm001ResponseResult ParseRsm005Response(string json) => throw new NotImplementedException();
+        public Rsm001ResponseResult ParseRsm024Response(string json) => throw new NotImplementedException();
         public Rsm028Result ParseRsm028(string json) => throw new NotImplementedException();
         public Rsm031Result ParseRsm031(string json) => throw new NotImplementedException();
     }
@@ -417,6 +422,47 @@ public class ProcessTimelineTests
         public Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct) => throw new NotImplementedException();
         public Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct) => throw new NotImplementedException();
+        public Task StageCustomerDataAsync(string gsrn, string customerName, string? cprCvr, string customerType, string? phone, string? email, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<StagedCustomerData?> GetStagedCustomerDataAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
+    }
+
+    private sealed class ThrowTariffRepo : Application.Tariff.ITariffRepository
+    {
+        public Task<IReadOnlyList<Application.Tariff.TariffRateRow>> GetRatesAsync(string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task<decimal> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task<decimal> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task SeedGridTariffAsync(string gridAreaCode, string tariffType, DateOnly validFrom, IReadOnlyList<Application.Tariff.TariffRateRow> rates, CancellationToken ct) => throw new NotImplementedException();
+        public Task SeedSubscriptionAsync(string gridAreaCode, string subscriptionType, decimal amountPerMonth, DateOnly validFrom, CancellationToken ct) => throw new NotImplementedException();
+        public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => throw new NotImplementedException();
+        public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
+    }
+
+    private sealed class ThrowBrsBuilder : Application.DataHub.IBrsRequestBuilder
+    {
+        public string BuildBrs001(string gsrn, string cprCvr, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildBrs002(string gsrn, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildBrs003(string gsrn, string originalCorrelationId) => throw new NotImplementedException();
+        public string BuildBrs009(string gsrn, string cprCvr, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildBrs010(string gsrn, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildBrs044(string gsrn, string originalCorrelationId) => throw new NotImplementedException();
+        public string BuildBrs042(string gsrn, DateOnly effectiveDate) => throw new NotImplementedException();
+        public string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId) => throw new NotImplementedException();
+    }
+
+    private sealed class ThrowMessageRepo : Application.Messaging.IMessageRepository
+    {
+        public Task<Application.Common.PagedResult<Application.Messaging.InboundMessageSummary>> GetInboundMessagesAsync(Application.Messaging.MessageFilter filter, int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Messaging.InboundMessageDetail?> GetInboundMessageAsync(Guid messageId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<Application.Messaging.OutboundRequestSummary>> GetOutboundRequestsAsync(Application.Messaging.OutboundFilter filter, int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Messaging.OutboundRequestDetail?> GetOutboundRequestAsync(Guid requestId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<Application.Messaging.DeadLetterSummary>> GetDeadLettersAsync(bool? resolvedOnly, int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Messaging.DeadLetterDetail?> GetDeadLetterAsync(Guid deadLetterId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Messaging.MessageStats> GetMessageStatsAsync(CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Common.PagedResult<Application.Messaging.ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Messaging.ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Application.Messaging.DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct) => throw new NotImplementedException();
+        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct) => throw new NotImplementedException();
     }
 
     /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches signup (directly).</summary>

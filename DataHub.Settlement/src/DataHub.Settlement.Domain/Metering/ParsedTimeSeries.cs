@@ -7,10 +7,11 @@ public record ParsedTimeSeries(
     string Resolution,
     DateTimeOffset PeriodStart,
     DateTimeOffset PeriodEnd,
+    DateTimeOffset RegistrationTimestamp,
     IReadOnlyList<TimeSeriesPoint> Points);
 
 public record TimeSeriesPoint(
     int Position,
     DateTimeOffset Timestamp,
     decimal QuantityKwh,
-    string QualityCode);
+    string? QualityCode);

@@ -133,7 +133,9 @@ public class SunshineScenarioTests
 
         var poller = new QueuePollerService(
             fakeClient, parser, _meteringRepo, _portfolio, _processRepo, new SignupRepository(TestDatabase.ConnectionString),
-            NullOnboardingService.Instance, new TestClock(), _messageLog,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

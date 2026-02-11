@@ -120,4 +120,66 @@ public class CimJsonParserTests
         ts.TransactionId.Should().Be("txn-single-day-001");
         ts.MeteringPointId.Should().Be("571313100000012345");
     }
+
+    [Fact]
+    public void Measured_data_without_quality_code_parses_as_null()
+    {
+        var json = LoadFixture("rsm012-measured-no-quality.json");
+
+        var result = _sut.ParseRsm012(json);
+        var points = result[0].Points;
+
+        points.Should().HaveCount(3);
+
+        // Positions 1 and 2 have no quality element — should be null
+        points[0].QualityCode.Should().BeNull();
+        points[0].QuantityKwh.Should().Be(0.300m);
+        points[1].QualityCode.Should().BeNull();
+        points[1].QuantityKwh.Should().Be(0.500m);
+
+        // Position 3 has quality A01
+        points[2].QualityCode.Should().Be("A01");
+        points[2].QuantityKwh.Should().Be(0.400m);
+    }
+
+    [Fact]
+    public void Registration_timestamp_is_parsed_from_series()
+    {
+        var json = LoadFixture("rsm012-single-day.json");
+
+        var ts = _sut.ParseRsm012(json)[0];
+
+        ts.RegistrationTimestamp.Should().Be(DateTimeOffset.Parse("2025-01-02T06:00:00Z"));
+    }
+
+    [Fact]
+    public void Registration_timestamp_falls_back_to_createdDateTime()
+    {
+        // Build a minimal RSM-012 without Registration_DateAndOrTime at series level
+        var json = """
+        {
+          "MarketDocument": {
+            "mRID": "msg-fallback",
+            "createdDateTime": "2025-03-15T10:00:00Z",
+            "Series": [
+              {
+                "mRID": "txn-fallback",
+                "MarketEvaluationPoint": { "mRID": "571313100000099999", "type": "E17" },
+                "Period": {
+                  "resolution": "PT1H",
+                  "timeInterval": { "start": "2025-03-15T00:00Z", "end": "2025-03-15T01:00Z" },
+                  "Point": [
+                    { "position": 1, "quantity": 1.0, "quality": "A01" }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+        """;
+
+        var ts = _sut.ParseRsm012(json)[0];
+
+        ts.RegistrationTimestamp.Should().Be(DateTimeOffset.Parse("2025-03-15T10:00:00Z"));
+    }
 }

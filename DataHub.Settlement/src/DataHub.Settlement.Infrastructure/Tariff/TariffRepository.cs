@@ -1,4 +1,5 @@
 using Dapper;
+using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Infrastructure.Database;
 using Npgsql;
@@ -142,5 +143,28 @@ public sealed class TariffRepository : ITariffRepository
         await conn.ExecuteAsync(new CommandDefinition(sql,
             new { RatePerKwh = ratePerKwh, ValidFrom = validFrom },
             cancellationToken: ct));
+    }
+
+    public async Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<TariffAttachment> tariffs, string? correlationId, CancellationToken ct)
+    {
+        const string sql = """
+            INSERT INTO tariff.metering_point_tariff_attachment (gsrn, tariff_id, tariff_type, valid_from, valid_to, correlation_id)
+            VALUES (@Gsrn, @TariffId, @TariffType, @ValidFrom, @ValidTo, @CorrelationId)
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var rows = tariffs.Select(t => new
+        {
+            Gsrn = gsrn,
+            TariffId = t.TariffId,
+            TariffType = t.TariffType,
+            ValidFrom = t.ValidFrom,
+            ValidTo = t.ValidTo,
+            CorrelationId = correlationId,
+        });
+
+        await conn.ExecuteAsync(new CommandDefinition(sql, rows, cancellationToken: ct));
     }
 }

@@ -31,4 +31,8 @@ public interface IPortfolioRepository
     Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct);
     Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct);
     Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct);
+
+    // Customer data staging (RSM-028 arrives before RSM-022)
+    Task StageCustomerDataAsync(string gsrn, string customerName, string? cprCvr, string customerType, string? phone, string? email, string? correlationId, CancellationToken ct);
+    Task<StagedCustomerData?> GetStagedCustomerDataAsync(string gsrn, CancellationToken ct);
 }

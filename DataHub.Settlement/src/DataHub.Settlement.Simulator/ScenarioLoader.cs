@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DataHub.Settlement.Application.DataHub;
 
 namespace DataHub.Settlement.Simulator;
 
@@ -181,17 +182,35 @@ public static class ScenarioLoader
             points.Add(new { position = i, quantity = kwh, quality = "A01" });
         }
 
+        var registrationTime = end.AddHours(6).ToString("O"); // Typically available ~6h after period ends
+
         var doc = new
         {
             MarketDocument = new
             {
                 mRID = $"msg-rsm012-{Guid.NewGuid():N}",
+                type = "E66",
+                Process = new { ProcessType = "E23" },
+                Sender_MarketParticipant = new
+                {
+                    mRID = "5790001330552",
+                    MarketRole = new { type = "DGL" },
+                },
+                Receiver_MarketParticipant = new
+                {
+                    mRID = "5790002000000",
+                    MarketRole = new { type = "DDQ" },
+                },
+                createdDateTime = registrationTime,
                 Series = new[]
                 {
                     new
                     {
                         mRID = $"txn-{Guid.NewGuid():N}",
                         MarketEvaluationPoint = new { mRID = "571313100000012345", type = "E17" },
+                        Product = "8716867000030",
+                        Quantity_Measure_Unit = new { name = "KWH" },
+                        Registration_DateAndOrTime = new { dateTime = registrationTime },
                         Period = new
                         {
                             resolution = "PT1H",
@@ -320,6 +339,41 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
+    internal static string BuildRsm005ResponseJson(string correlationId, bool accepted, string? rejectCode = null, string? rejectMessage = null)
+    {
+        if (accepted)
+        {
+            var doc = new
+            {
+                MarketDocument = new
+                {
+                    mRID = correlationId,
+                    MktActivityRecord = new
+                    {
+                        status = new { value = "A01" },
+                    },
+                },
+            };
+            return JsonSerializer.Serialize(doc);
+        }
+        else
+        {
+            var doc = new
+            {
+                MarketDocument = new
+                {
+                    mRID = correlationId,
+                    MktActivityRecord = new
+                    {
+                        status = new { value = "A02" },
+                        Reason = new { code = rejectCode ?? "E16", text = rejectMessage ?? "Rejected" },
+                    },
+                },
+            };
+            return JsonSerializer.Serialize(doc);
+        }
+    }
+
     internal static string BuildRsm001AcceptJson(string correlationId)
     {
         var doc = new
@@ -350,7 +404,7 @@ public static class ScenarioLoader
                     {
                         mRID = gsrn,
                     },
-                    Reason = new { code = "D31", text = "Overdragelse af målepunkt" },
+                    Reason = new { code = Rsm004ReasonCodes.ForcedTransfer, text = "Overdragelse af målepunkt" },
                     Period = new { timeInterval = new { start = effectiveDate } },
                 },
             },

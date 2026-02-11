@@ -19,4 +19,6 @@ public interface ITariffRepository
         DateOnly validFrom, CancellationToken ct);
 
     Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct);
+
+    Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct);
 }

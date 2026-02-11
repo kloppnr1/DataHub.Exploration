@@ -45,7 +45,9 @@ public class QueuePollerTests
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
         var poller = new QueuePollerService(
             client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new TestClock(), _messageLog,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
@@ -75,7 +77,9 @@ public class QueuePollerTests
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
         var poller = new QueuePollerService(
             client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new TestClock(), _messageLog,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
@@ -104,7 +108,9 @@ public class QueuePollerTests
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
         var poller = new QueuePollerService(
             client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new TestClock(), _messageLog,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));
@@ -148,7 +154,9 @@ public class QueuePollerTests
 
         var poller = new QueuePollerService(
             client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            onboardingService, clock, _messageLog,
+            onboardingService, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
+            clock, _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         // 2. Ensure grid area exists (required for RSM-022)

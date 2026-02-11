@@ -143,8 +143,8 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
         _ = Task.Run(async () =>
         {
             await Task.Delay(15_000);
-            state.EnqueueMessage("MasterData", "RSM-001", correlationId,
-                BuildRsm001ResponseJson(correlationId, false, "E16", "No active supply for this metering point"));
+            state.EnqueueMessage("MasterData", "RSM-005", correlationId,
+                ScenarioLoader.BuildRsm005ResponseJson(correlationId, false, "E16", "No active supply for this metering point"));
         });
 
         return Results.Ok(new
@@ -159,12 +159,12 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     if (gsrn is not null)
         state.DeactivateGsrn(gsrn);
 
-    // RSM-001 response only (no RSM-022 for end-of-supply) after 15s delay
+    // RSM-005 response (no RSM-022 for end-of-supply) after 15s delay
     _ = Task.Run(async () =>
     {
         await Task.Delay(15_000);
-        state.EnqueueMessage("MasterData", "RSM-001", correlationId,
-            BuildRsm001ResponseJson(correlationId, true));
+        state.EnqueueMessage("MasterData", "RSM-005", correlationId,
+            ScenarioLoader.BuildRsm005ResponseJson(correlationId, true));
     });
 
     return Results.Ok(new
@@ -193,6 +193,21 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
         state.EnqueueMessage("MasterData", "RSM-001", correlationId,
             BuildRsm001ResponseJson(correlationId, true));
     });
+
+    return Results.Ok(new
+    {
+        CorrelationId = correlationId,
+        Accepted = true,
+    });
+});
+
+// ── RSM-027: Customer data update (post-switch) ──
+app.MapPost("/v1.0/cim/requestcustomerdataupdate", async (HttpRequest request) =>
+{
+    var body = await new StreamReader(request.Body).ReadToEndAsync();
+    state.RecordRequest("requestcustomerdataupdate", "/v1.0/cim/requestcustomerdataupdate", body);
+
+    var correlationId = Guid.NewGuid().ToString();
 
     return Results.Ok(new
     {

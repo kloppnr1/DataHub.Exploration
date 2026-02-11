@@ -126,6 +126,8 @@ public class ProcessSchedulerTests
             => throw new NotImplementedException();
         public string BuildBrs042(string gsrn, DateOnly effectiveDate)
             => throw new NotImplementedException();
+        public string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId)
+            => throw new NotImplementedException();
     }
 
     private sealed class StubOnboardingService : IOnboardingService
