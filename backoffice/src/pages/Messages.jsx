@@ -77,7 +77,7 @@ export function ConversationTimeline({ correlationId }) {
   ].sort((a, b) => new Date(a.time) - new Date(b.time));
 
   return (
-    <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+    <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
       <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('messages.conversationTimeline')}</div>
       <div className="space-y-1 relative">
         <div className="absolute left-[13px] top-4 bottom-4 w-px bg-slate-200" />
@@ -282,7 +282,7 @@ export default function Messages() {
         {/* ── Inbound Messages Tab ── */}
         {tab === 'inbound' && (
           <>
-            <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap gap-3">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap gap-3">
               <select
                 value={inboundFilters.messageType}
                 onChange={(e) => { setInboundPage(1); setInboundFilters(f => ({ ...f, messageType: e.target.value })); }}
@@ -318,30 +318,30 @@ export default function Messages() {
               </select>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colMessageType')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCorrelation')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colReceivedAt')}</th>
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colMessageType')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCorrelation')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colReceivedAt')}</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100">
                   {loading && inboundItems.length === 0 ? (
-                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
+                    <tr><td colSpan="5" className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
                   ) : inboundItems.length === 0 ? (
-                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">{t('messages.noInboundMessages')}</td></tr>
+                    <tr><td colSpan="5" className="px-4 py-12 text-center text-slate-500">{t('messages.noInboundMessages')}</td></tr>
                   ) : (
                     inboundItems.map((msg) => (
                       <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2.5 whitespace-nowrap">
                           <Link to={`/datahub/messages/inbound/${msg.id}`} className="text-teal-600 font-medium hover:text-teal-700">
                             {msg.messageType}
                           </Link>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2.5 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             msg.status === 'processed' ? 'bg-emerald-100 text-emerald-700'
                               : msg.status === 'dead_lettered' ? 'bg-rose-100 text-rose-700'
@@ -350,15 +350,15 @@ export default function Messages() {
                             {t('status.' + msg.status)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{msg.queueName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{msg.queueName}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
                           {msg.correlationId ? (
                             <span className="font-mono text-xs text-slate-400">{msg.correlationId.slice(0, 8)}</span>
                           ) : (
                             <span className="text-slate-300">&mdash;</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(msg.receivedAt).toLocaleString()}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{new Date(msg.receivedAt).toLocaleString()}</td>
                       </tr>
                     ))
                   )}
@@ -367,7 +367,7 @@ export default function Messages() {
             </div>
 
             {inboundPages > 1 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-sm text-slate-600">
                   {t('common.showingRange', { from: (inboundPage - 1) * PAGE_SIZE + 1, to: Math.min(inboundPage * PAGE_SIZE, inboundTotal), total: inboundTotal })} {t('messages.showingItems')}
                 </div>
@@ -396,9 +396,9 @@ export default function Messages() {
         {tab === 'deliveries' && (
           <div className="divide-y divide-slate-200">
             {loading && !deliveries ? (
-              <div className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</div>
+              <div className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</div>
             ) : deliveryDates.length === 0 ? (
-              <div className="px-6 py-12 text-center text-slate-500">{t('messages.noDeliveriesFound')}</div>
+              <div className="px-4 py-12 text-center text-slate-500">{t('messages.noDeliveriesFound')}</div>
             ) : (
               deliveryDates.map((date) => {
                 const dateStr = new Date(date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
@@ -406,7 +406,7 @@ export default function Messages() {
                 const totalCount = dayDeliveries.reduce((sum, d) => sum + d.messageCount, 0);
 
                 return (
-                  <div key={date} className="px-6 py-4">
+                  <div key={date} className="px-5 py-3.5">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-semibold text-slate-900">{dateStr}</div>
                       <div className="text-xs text-slate-400">{t('messages.deliveryMessages', { count: totalCount })}</div>
@@ -460,37 +460,37 @@ export default function Messages() {
         {tab === 'dead-letters' && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colErrorReason')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colResolved')}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colFailedAt')}</th>
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colErrorReason')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colResolved')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colFailedAt')}</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100">
                   {loading && dlItems.length === 0 ? (
-                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
+                    <tr><td colSpan="4" className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
                   ) : dlItems.length === 0 ? (
-                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">{t('messages.noDeadLetters')}</td></tr>
+                    <tr><td colSpan="4" className="px-4 py-12 text-center text-slate-500">{t('messages.noDeadLetters')}</td></tr>
                   ) : (
                     dlItems.map((dl) => (
                       <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2.5 whitespace-nowrap">
                           <Link to={`/datahub/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
                             {dl.queueName}
                           </Link>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-700 max-w-md truncate">{dl.errorReason}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2.5 text-sm text-slate-700 max-w-md truncate">{dl.errorReason}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             dl.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                           }`}>
                             {dl.resolved ? t('common.yes') : t('common.no')}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(dl.failedAt).toLocaleString()}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{new Date(dl.failedAt).toLocaleString()}</td>
                       </tr>
                     ))
                   )}
@@ -499,7 +499,7 @@ export default function Messages() {
             </div>
 
             {dlPages > 1 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-sm text-slate-600">
                   {t('common.showingRange', { from: (dlPage - 1) * PAGE_SIZE + 1, to: Math.min(dlPage * PAGE_SIZE, dlTotal), total: dlTotal })} {t('messages.showingDeadLetters')}
                 </div>

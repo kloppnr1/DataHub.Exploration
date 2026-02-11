@@ -153,42 +153,42 @@ export default function CorrectionDetail() {
 
       {/* Lines table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
-        <div className="px-6 py-4 border-b border-slate-200">
+        <div className="px-5 py-3.5 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-slate-900">{t('correctionDetail.lines')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('correctionDetail.linesSubtitle')}</p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colChargeType')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colDeltaKwh')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colDeltaAmount')}</th>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colChargeType')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colDeltaKwh')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('correctionDetail.colDeltaAmount')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100">
               {(detail.lines || []).map((line) => (
                 <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-3 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
-                  <td className="px-6 py-3 text-right text-sm text-slate-600 tabular-nums">{line.deltaKwh.toFixed(3)}</td>
-                  <td className="px-6 py-3 text-right text-sm text-slate-900 tabular-nums font-medium">{line.deltaAmount.toFixed(2)} DKK</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
+                  <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.deltaKwh.toFixed(3)}</td>
+                  <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums font-medium">{line.deltaAmount.toFixed(2)} DKK</td>
                 </tr>
               ))}
               <tr className="bg-slate-50/80">
-                <td className="px-6 py-3 text-sm font-semibold text-slate-900">{t('correctionDetail.subtotal')}</td>
+                <td className="px-4 py-2.5 text-sm font-semibold text-slate-900">{t('correctionDetail.subtotal')}</td>
                 <td />
-                <td className="px-6 py-3 text-right text-sm font-semibold text-slate-900 tabular-nums">{detail.subtotal.toFixed(2)} DKK</td>
+                <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-900 tabular-nums">{detail.subtotal.toFixed(2)} DKK</td>
               </tr>
               <tr className="bg-slate-50/50">
-                <td className="px-6 py-3 text-sm font-medium text-slate-600">{t('correctionDetail.vat')}</td>
+                <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{t('correctionDetail.vat')}</td>
                 <td />
-                <td className="px-6 py-3 text-right text-sm font-medium text-slate-600 tabular-nums">{detail.vatAmount.toFixed(2)} DKK</td>
+                <td className="px-4 py-2.5 text-right text-sm font-medium text-slate-600 tabular-nums">{detail.vatAmount.toFixed(2)} DKK</td>
               </tr>
               <tr className="bg-teal-50/50">
-                <td className="px-6 py-3 text-sm font-bold text-slate-900">{t('correctionDetail.total')}</td>
+                <td className="px-4 py-2.5 text-sm font-bold text-slate-900">{t('correctionDetail.total')}</td>
                 <td />
-                <td className="px-6 py-3 text-right text-sm font-bold text-teal-700 tabular-nums">{detail.total.toFixed(2)} DKK</td>
+                <td className="px-4 py-2.5 text-right text-sm font-bold text-teal-700 tabular-nums">{detail.total.toFixed(2)} DKK</td>
               </tr>
             </tbody>
           </table>

@@ -97,7 +97,7 @@ export default function CustomerBillingSummary() {
       </div>
 
       {/* Billing Periods */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-teal-500" />
@@ -113,15 +113,15 @@ export default function CustomerBillingSummary() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[450px]">
               <thead>
-                <tr className="border-b border-slate-50 bg-slate-50/50">
-                  <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colPeriod')}</th>
-                  <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colAmount')}</th>
-                  <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colVat')}</th>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colPeriod')}</th>
+                  <th className="text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colAmount')}</th>
+                  <th className="text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colVat')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                 {data.billingPeriods.map((bp, i) => (
-                  <tr key={bp.billingPeriodId} className={`transition-colors duration-150 animate-slide-in ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                  <tr key={bp.billingPeriodId} className={`hover:bg-slate-50 transition-colors animate-slide-in`} style={{ animationDelay: `${i * 40}ms` }}>
                     <td className="px-4 py-2.5">
                       <Link to={`/billing/periods/${bp.billingPeriodId}`} className="text-sm text-teal-600 hover:text-teal-700 font-medium">
                         {bp.periodStart} — {bp.periodEnd}
@@ -138,7 +138,7 @@ export default function CustomerBillingSummary() {
       </div>
 
       {/* Aconto Payments */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-teal-500" />
@@ -154,15 +154,15 @@ export default function CustomerBillingSummary() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[350px]">
               <thead>
-                <tr className="border-b border-slate-50 bg-slate-50/50">
-                  <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colDate')}</th>
-                  <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colAmount')}</th>
-                  <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('billingSummary.colCurrency')}</th>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colDate')}</th>
+                  <th className="text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colAmount')}</th>
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('billingSummary.colCurrency')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {data.acontoPayments.map((ap, i) => (
-                  <tr key={ap.id} className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+              <tbody className="divide-y divide-slate-100">
+                {data.acontoPayments.map((ap) => (
+                  <tr key={ap.id} className={`hover:bg-slate-50 transition-colors`}>
                     <td className="px-4 py-2.5 text-sm text-slate-700">{ap.paymentDate}</td>
                     <td className="px-4 py-2.5 text-right text-sm tabular-nums font-semibold text-slate-900">{ap.amount.toFixed(2)}</td>
                     <td className="px-4 py-2.5 text-sm text-slate-500">{ap.currency}</td>
@@ -176,3 +176,4 @@ export default function CustomerBillingSummary() {
     </div>
   );
 }
+

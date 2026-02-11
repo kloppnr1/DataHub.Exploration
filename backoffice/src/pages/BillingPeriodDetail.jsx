@@ -98,47 +98,47 @@ export default function BillingPeriodDetail() {
 
       {/* Settlement runs */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-        <div className="px-6 py-4 border-b border-slate-200">
+        <div className="px-5 py-3.5 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-slate-900">{t('billingDetail.settlementRuns')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('billingDetail.totalRuns', { count: period.settlementRuns.length })}</p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colRun')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colStatus')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colMeteringPoints')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colGridArea')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colExecutedAt')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colCompletedAt')}</th>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colRun')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colStatus')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colMeteringPoints')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colGridArea')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colExecutedAt')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colCompletedAt')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100">
               {period.settlementRuns.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="6" className="px-4 py-12 text-center text-slate-500">
                     {t('billingDetail.noRunsFound')}
                   </td>
                 </tr>
               ) : (
                 period.settlementRuns.map((run) => (
                   <tr key={run.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <Link to={`/billing/runs/${run.id}`} className="text-teal-600 font-medium hover:text-teal-700">
                         v{run.version}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <StatusBadge status={run.status} label={t('status.' + run.status)} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{run.meteringPointsCount}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{run.gridAreaCode || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{run.meteringPointsCount}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{run.gridAreaCode || '-'}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">
                       {new Date(run.executedAt).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">
                       {run.completedAt ? new Date(run.completedAt).toLocaleString() : '-'}
                     </td>
                   </tr>

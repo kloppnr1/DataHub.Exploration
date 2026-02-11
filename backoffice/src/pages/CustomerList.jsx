@@ -93,7 +93,7 @@ export default function CustomerList() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         {customers.length === 0 ? (
           <div className="p-14 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
@@ -110,18 +110,18 @@ export default function CustomerList() {
           <div className="overflow-x-auto">
           <table className="w-full min-w-[500px]">
             <thead>
-              <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colName')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colCprCvr')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colType')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colStatus')}</th>
-                <th className="px-4 py-2"><span className="sr-only">View</span></th>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerList.colName')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerList.colCprCvr')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerList.colType')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerList.colStatus')}</th>
+                <th className="px-4 py-2.5"><span className="sr-only">View</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {customers.map((c, i) => (
-                <tr key={c.id} className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`}>
-                  <td className="px-4 py-1.5">
+            <tbody className="divide-y divide-slate-100">
+              {customers.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-2.5">
                     <Link to={`/customers/${c.id}`} className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-teal-500 flex items-center justify-center shadow-sm">
                         <span className="text-[10px] font-bold text-white">
@@ -133,11 +133,11 @@ export default function CustomerList() {
                       </span>
                     </Link>
                   </td>
-                  <td className="px-4 py-1.5">
+                  <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{c.cprCvr}</span>
                   </td>
-                  <td className="px-4 py-1.5 text-xs text-slate-500 capitalize">{c.contactType}</td>
-                  <td className="px-4 py-1.5">
+                  <td className="px-4 py-2.5 text-xs text-slate-500 capitalize">{c.contactType}</td>
+                  <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                     }`}>
@@ -145,7 +145,7 @@ export default function CustomerList() {
                       {t('status.' + c.status)}
                     </span>
                   </td>
-                  <td className="px-4 py-1.5 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <Link to={`/customers/${c.id}`} className="text-slate-300 hover:text-teal-500 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />

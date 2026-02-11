@@ -164,21 +164,21 @@ export default function SpotPrices() {
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colTimestamp')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colDate')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colHour')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPrice')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPriceDkk')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colResolution')}</th>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colTimestamp')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colDate')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colHour')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPrice')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPriceDkk')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colResolution')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100">
               {items.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <td colSpan="6" className="px-4 py-12 text-center text-slate-500">
                     {t('spotPrices.noPrices')}
                   </td>
                 </tr>
@@ -190,18 +190,18 @@ export default function SpotPrices() {
                   const dkkPerMwh = item.pricePerKwh * 10;
                   return (
                     <tr key={`${item.timestamp}-${item.priceArea}`} className={`transition-colors ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50/50 hover:bg-teal-50/50'}`}>
-                      <td className="px-6 py-2.5 whitespace-nowrap text-sm font-mono text-slate-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-600">
                         {ts.toISOString().slice(0, 16).replace('T', ' ')}
                       </td>
-                      <td className="px-6 py-2.5 whitespace-nowrap text-sm text-slate-700">{dateStr}</td>
-                      <td className="px-6 py-2.5 whitespace-nowrap text-sm text-slate-700">{timeStr}</td>
-                      <td className="px-6 py-2.5 whitespace-nowrap text-sm text-right font-semibold text-slate-900">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{dateStr}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{timeStr}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right font-semibold text-slate-900">
                         {item.pricePerKwh.toFixed(4)}
                       </td>
-                      <td className="px-6 py-2.5 whitespace-nowrap text-sm text-right text-slate-500">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-slate-500">
                         {dkkPerMwh.toFixed(2)}
                       </td>
-                      <td className="px-6 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
                           item.resolution === 'PT15M'
                             ? 'bg-purple-100 text-purple-700'
@@ -220,7 +220,7 @@ export default function SpotPrices() {
 
         {/* Footer with pagination */}
         {items.length > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-sm text-slate-600">
               {t('common.totalItems', { count: totalCount, label: t('spotPrices.showingPrices') })}
             </div>

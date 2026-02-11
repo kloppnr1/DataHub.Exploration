@@ -180,21 +180,21 @@ export default function SettlementRunDetail() {
 
       {/* Settlement lines grouped by metering point */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
-        <div className="px-6 py-4 border-b border-slate-200">
+        <div className="px-5 py-3.5 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-slate-900">{t('runDetail.settlementLines')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('runDetail.totalLines', { count: totalCount })}</p>
         </div>
 
         {linesLoading && lines.length === 0 ? (
-          <div className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</div>
+          <div className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</div>
         ) : grouped.length === 0 ? (
-          <div className="px-6 py-12 text-center text-slate-500">{t('runDetail.noLinesFound')}</div>
+          <div className="px-4 py-12 text-center text-slate-500">{t('runDetail.noLinesFound')}</div>
         ) : (
           <div className="divide-y divide-slate-200">
             {grouped.map((group) => (
               <div key={group.gsrn}>
                 {/* Metering point header */}
-                <div className="px-6 py-3 bg-slate-50 border-b border-slate-100">
+                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100">
                   <span className="text-sm font-semibold text-slate-900">{t('runDetail.colMeteringPoint')}: </span>
                   <span className="text-sm font-mono text-slate-700">{group.gsrn}</span>
                 </div>
@@ -204,27 +204,27 @@ export default function SettlementRunDetail() {
                 <table className="min-w-[600px] w-full">
                   <thead>
                     <tr>
-                      <th className="px-6 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('runDetail.colChargeType')}</th>
-                      <th className="px-6 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('runDetail.colKwh')}</th>
-                      <th className="px-6 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('runDetail.colAmount')}</th>
-                      <th className="px-6 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('runDetail.colVat')}</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colChargeType')}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colKwh')}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colAmount')}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colVat')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {group.lines.map((line) => (
                       <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
-                        <td className="px-6 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.totalKwh.toFixed(3)}</td>
-                        <td className="px-6 py-2.5 text-right text-sm text-slate-900 tabular-nums">{line.totalAmount.toFixed(2)}</td>
-                        <td className="px-6 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.vatAmount.toFixed(2)}</td>
+                        <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
+                        <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.totalKwh.toFixed(3)}</td>
+                        <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums">{line.totalAmount.toFixed(2)}</td>
+                        <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.vatAmount.toFixed(2)}</td>
                       </tr>
                     ))}
                     {/* Subtotal row */}
                     <tr className="bg-slate-50/80">
-                      <td className="px-6 py-2.5 text-sm font-semibold text-slate-900">{t('runDetail.subtotal')}</td>
+                      <td className="px-4 py-2.5 text-sm font-semibold text-slate-900">{t('runDetail.subtotal')}</td>
                       <td />
-                      <td className="px-6 py-2.5 text-right text-sm font-semibold text-slate-900 tabular-nums">{group.totalAmount.toFixed(2)} DKK</td>
-                      <td className="px-6 py-2.5 text-right text-sm font-semibold text-slate-600 tabular-nums">{group.totalVat.toFixed(2)} DKK</td>
+                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-900 tabular-nums">{group.totalAmount.toFixed(2)} DKK</td>
+                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-600 tabular-nums">{group.totalVat.toFixed(2)} DKK</td>
                     </tr>
                   </tbody>
                 </table>
@@ -236,7 +236,7 @@ export default function SettlementRunDetail() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-sm text-slate-600">
               {t('common.showingRange', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, totalCount), total: totalCount })} {t('runDetail.showingLines')}
             </div>
@@ -263,39 +263,39 @@ export default function SettlementRunDetail() {
       {/* Related Corrections */}
       {corrections.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
-          <div className="px-6 py-4 border-b border-slate-200">
+          <div className="px-5 py-3.5 border-b border-slate-200">
             <h2 className="text-lg font-semibold text-slate-900">{t('runDetail.relatedCorrections')}</h2>
             <p className="text-sm text-slate-500 mt-1">{t('runDetail.relatedCorrectionsSubtitle')}</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColId')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColMeteringPoint')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTrigger')}</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColDeltaKwh')}</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTotal')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColCreated')}</th>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColId')}</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColMeteringPoint')}</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTrigger')}</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColDeltaKwh')}</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColTotal')}</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.corrColCreated')}</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100">
                 {corrections.map((c) => (
                   <tr key={c.correctionBatchId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <Link to={`/billing/corrections/${c.correctionBatchId}`} className="text-teal-600 font-medium hover:text-teal-700 font-mono text-sm">
                         {c.correctionBatchId.substring(0, 8)}...
                       </Link>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm font-mono text-slate-700">{c.meteringPointId}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-700">{c.meteringPointId}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${triggerStyles[c.triggerType] || triggerStyles.manual}`}>
                         {t('corrections.trigger_' + c.triggerType)}
                       </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-right text-sm tabular-nums text-slate-600">{c.totalDeltaKwh.toFixed(3)}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-right text-sm tabular-nums font-semibold text-slate-900">{c.total.toFixed(2)} DKK</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{new Date(c.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm tabular-nums text-slate-600">{c.totalDeltaKwh.toFixed(3)}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm tabular-nums font-semibold text-slate-900">{c.total.toFixed(2)} DKK</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{new Date(c.createdAt).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

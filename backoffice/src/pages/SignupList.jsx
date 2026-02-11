@@ -110,7 +110,7 @@ export default function SignupList() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         {signups.length === 0 ? (
           <div className="p-14 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
@@ -127,40 +127,40 @@ export default function SignupList() {
           <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colSignup')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colCustomer')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colGsrn')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colType')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colEffective')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colStatus')}</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colCreated')}</th>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colSignup')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colCustomer')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colGsrn')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colType')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colEffective')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colStatus')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('signupList.colCreated')}</th>
                 <th className="px-4 py-2"><span className="sr-only">View</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {signups.map((s, i) => (
-                <tr key={s.id} className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`}>
-                  <td className="px-4 py-1.5">
+            <tbody className="divide-y divide-slate-100">
+              {signups.map((s) => (
+                <tr key={s.id} className={`transition-colors duration-150 hover:bg-slate-50`}>
+                  <td className="px-4 py-2.5">
                     <Link to={`/signups/${s.id}`} className="text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
-                  <td className="px-4 py-1.5 text-xs text-slate-700 font-medium">{s.customerName}</td>
-                  <td className="px-4 py-1.5">
+                  <td className="px-4 py-2.5 text-xs text-slate-700 font-medium">{s.customerName}</td>
+                  <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                       {s.gsrn}
                     </span>
                   </td>
-                  <td className="px-4 py-1.5 text-xs text-slate-500">
+                  <td className="px-4 py-2.5 text-xs text-slate-500">
                     {s.type === 'move_in' ? t('signupList.typeMoveIn') : t('signupList.typeSwitch')}
                   </td>
-                  <td className="px-4 py-1.5 text-xs text-slate-500">{s.effectiveDate}</td>
-                  <td className="px-4 py-1.5"><StatusBadge status={s.status} label={t('status.' + s.status)} /></td>
-                  <td className="px-4 py-1.5 text-xs text-slate-400">
+                  <td className="px-4 py-2.5 text-xs text-slate-500">{s.effectiveDate}</td>
+                  <td className="px-4 py-2.5"><StatusBadge status={s.status} label={t('status.' + s.status)} /></td>
+                  <td className="px-4 py-2.5 text-xs text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
-                  <td className="px-4 py-1.5 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <Link to={`/signups/${s.id}`} className="text-slate-300 hover:text-teal-500 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -211,3 +211,6 @@ export default function SignupList() {
     </div>
   );
 }
+
+
+

@@ -177,43 +177,43 @@ export default function Corrections() {
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colId')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colMeteringPoint')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colPeriod')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colTrigger')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colDeltaKwh')}</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colTotal')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colCreated')}</th>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colId')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colMeteringPoint')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colPeriod')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colTrigger')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colDeltaKwh')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colTotal')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('corrections.colCreated')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100">
               {corrections.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="7" className="px-4 py-12 text-center text-slate-500">
                     {t('corrections.noCorrections')}
                   </td>
                 </tr>
               ) : (
                 corrections.map((c) => (
                   <tr key={c.correctionBatchId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <Link to={`/billing/corrections/${c.correctionBatchId}`} className="text-teal-600 font-medium hover:text-teal-700 font-mono text-sm">
                         {c.correctionBatchId.substring(0, 8)}...
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-700">{c.meteringPointId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{c.periodStart} — {c.periodEnd}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-700">{c.meteringPointId}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{c.periodStart} — {c.periodEnd}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${triggerStyles[c.triggerType] || triggerStyles.manual}`}>
                         {t('corrections.trigger_' + c.triggerType)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm tabular-nums text-slate-600">{c.totalDeltaKwh.toFixed(3)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm tabular-nums font-semibold text-slate-900">{c.total.toFixed(2)} DKK</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(c.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm tabular-nums text-slate-600">{c.totalDeltaKwh.toFixed(3)}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm tabular-nums font-semibold text-slate-900">{c.total.toFixed(2)} DKK</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{new Date(c.createdAt).toLocaleString()}</td>
                   </tr>
                 ))
               )}
@@ -223,7 +223,7 @@ export default function Corrections() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-sm text-slate-600">
               {t('common.showingRange', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, totalCount), total: totalCount })} {t('corrections.showingCorrections')}
             </div>
