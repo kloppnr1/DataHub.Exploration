@@ -450,6 +450,7 @@ export default {
   'inboundDetail.timestamps': 'Tidsstempler',
   'inboundDetail.receivedAt': 'Modtaget',
   'inboundDetail.processedAt': 'Behandlet',
+  'inboundDetail.messageContent': 'Beskedindhold',
   'inboundDetail.payloadInfo': 'Payload-oplysninger',
   'inboundDetail.payloadSize': 'Payload-størrelse',
   'inboundDetail.bytes': '{size} bytes',
@@ -469,7 +470,19 @@ export default {
   'outboundDetail.timestamps': 'Tidsstempler',
   'outboundDetail.sentAt': 'Sendt',
   'outboundDetail.acknowledgedAt': 'Kvitteret',
+  'outboundDetail.messageContent': 'Beskedindhold',
   'outboundDetail.errorDetails': 'Fejldetaljer',
+
+  // ── Beskedkontekst ──
+  'messageContext.processType': 'Procestype',
+  'messageContext.gsrn': 'Målepunkt',
+  'messageContext.effectiveDate': 'Ikrafttrædelsesdato',
+  'messageContext.customer': 'Kunde',
+  'messageContext.gridArea': 'Netområde',
+  'messageContext.priceArea': 'Prisområde',
+  'messageContext.dataPoints': 'Datapunkter',
+  'messageContext.period': 'Periode',
+  'messageContext.noContext': 'Ingen tilknyttede procesdata fundet.',
 
   // ── Dead Letter Detail ──
   'deadLetterDetail.breadcrumbMessages': 'Beskeder',

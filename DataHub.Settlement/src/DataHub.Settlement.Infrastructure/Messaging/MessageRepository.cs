@@ -91,6 +91,8 @@ public sealed class MessageRepository : IMessageRepository
         if (row is null)
             return null;
 
+        var context = await GetMessageContextAsync(conn, row.CorrelationId, row.MessageType, row.DatahubMessageId);
+
         return new InboundMessageDetail(
             row.Id,
             row.DatahubMessageId,
@@ -101,7 +103,8 @@ public sealed class MessageRepository : IMessageRepository
             row.ReceivedAt,
             row.ProcessedAt,
             row.ErrorDetails,
-            row.RawPayloadSize);
+            row.RawPayloadSize,
+            context);
     }
 
     public async Task<PagedResult<OutboundRequestSummary>> GetOutboundRequestsAsync(OutboundFilter filter, int page, int pageSize, CancellationToken ct)
@@ -167,6 +170,8 @@ public sealed class MessageRepository : IMessageRepository
         if (row is null)
             return null;
 
+        var context = await GetMessageContextAsync(conn, row.CorrelationId, null, null);
+
         return new OutboundRequestDetail(
             row.Id,
             row.ProcessType,
@@ -175,7 +180,8 @@ public sealed class MessageRepository : IMessageRepository
             row.CorrelationId,
             row.SentAt,
             row.ResponseAt,
-            row.ErrorDetails);
+            row.ErrorDetails,
+            context);
     }
 
     public async Task<PagedResult<DeadLetterSummary>> GetDeadLettersAsync(bool? resolvedOnly, int page, int pageSize, CancellationToken ct)
@@ -367,6 +373,54 @@ public sealed class MessageRepository : IMessageRepository
             r.ErrorCount)).ToList();
     }
 
+    private async Task<MessageContext?> GetMessageContextAsync(NpgsqlConnection conn, string? correlationId, string? messageType, string? datahubMessageId)
+    {
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            const string contextSql = """
+                SELECT pr.process_type, pr.status AS process_status, pr.gsrn, pr.effective_date,
+                       c.name AS customer_name, c.cpr_cvr,
+                       mp.grid_area_code, mp.price_area
+                FROM lifecycle.process_request pr
+                LEFT JOIN portfolio.signup s ON s.process_request_id = pr.id
+                LEFT JOIN portfolio.customer c ON c.id = s.customer_id
+                LEFT JOIN portfolio.metering_point mp ON mp.gsrn = pr.gsrn
+                WHERE pr.datahub_correlation_id = @CorrelationId
+                LIMIT 1
+                """;
+
+            var ctx = await conn.QuerySingleOrDefaultAsync<MessageContextRow>(contextSql, new { CorrelationId = correlationId });
+            if (ctx is not null)
+            {
+                return new MessageContext(
+                    ctx.ProcessType, ctx.ProcessStatus, ctx.Gsrn, ctx.EffectiveDate,
+                    ctx.CustomerName, ctx.CprCvr, ctx.GridAreaCode, ctx.PriceArea,
+                    null, null, null);
+            }
+        }
+
+        if (messageType == "RSM-012" && !string.IsNullOrWhiteSpace(datahubMessageId))
+        {
+            const string meteringSql = """
+                SELECT COUNT(*) AS data_points,
+                       MIN(timestamp)::text AS period_start,
+                       MAX(timestamp)::text AS period_end
+                FROM metering.metering_data
+                WHERE source_message_id = @DatahubMessageId
+                """;
+
+            var md = await conn.QuerySingleOrDefaultAsync<MeteringContextRow>(meteringSql, new { DatahubMessageId = datahubMessageId });
+            if (md is not null && md.DataPoints > 0)
+            {
+                return new MessageContext(
+                    null, null, null, null, null, null, null, null,
+                    md.DataPoints, md.PeriodStart, md.PeriodEnd);
+            }
+        }
+
+        return null;
+    }
+
     public async Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct)
     {
         const string sql = """
@@ -500,4 +554,23 @@ internal class DataDeliverySummaryRow
     public int MessageCount { get; set; }
     public int ProcessedCount { get; set; }
     public int ErrorCount { get; set; }
+}
+
+internal class MessageContextRow
+{
+    public string? ProcessType { get; set; }
+    public string? ProcessStatus { get; set; }
+    public string? Gsrn { get; set; }
+    public DateOnly? EffectiveDate { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CprCvr { get; set; }
+    public string? GridAreaCode { get; set; }
+    public string? PriceArea { get; set; }
+}
+
+internal class MeteringContextRow
+{
+    public int DataPoints { get; set; }
+    public string? PeriodStart { get; set; }
+    public string? PeriodEnd { get; set; }
 }

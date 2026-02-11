@@ -115,6 +115,65 @@ export default function OutboundRequestDetail() {
         </dl>
       </div>
 
+      {/* Message Content */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '180ms' }}>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('outboundDetail.messageContent')}</h2>
+        {request.context ? (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-4">
+            {request.context.processType && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.processType')}</dt>
+                <dd className="text-base text-slate-900 mt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700">
+                    {t('processType.' + request.context.processType) || request.context.processType}
+                  </span>
+                </dd>
+              </div>
+            )}
+            {request.context.processStatus && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.status')}</dt>
+                <dd className="mt-1">
+                  <StatusBadge status={request.context.processStatus} label={t('status.' + request.context.processStatus)} />
+                </dd>
+              </div>
+            )}
+            {request.context.gsrn && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.gsrn')}</dt>
+                <dd className="text-base font-mono text-slate-900 mt-1">{request.context.gsrn}</dd>
+              </div>
+            )}
+            {request.context.effectiveDate && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.effectiveDate')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{request.context.effectiveDate}</dd>
+              </div>
+            )}
+            {request.context.customerName && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.customer')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{request.context.customerName}{request.context.cprCvr ? ` (${request.context.cprCvr})` : ''}</dd>
+              </div>
+            )}
+            {request.context.gridAreaCode && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.gridArea')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{request.context.gridAreaCode}</dd>
+              </div>
+            )}
+            {request.context.priceArea && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.priceArea')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{request.context.priceArea}</dd>
+              </div>
+            )}
+          </dl>
+        ) : (
+          <p className="text-sm text-slate-400">{t('messageContext.noContext')}</p>
+        )}
+      </div>
+
       {/* Error details */}
       {request.errorDetails && (
         <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 animate-fade-in-up" style={{ animationDelay: '180ms' }}>

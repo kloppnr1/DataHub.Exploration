@@ -450,6 +450,7 @@ export default {
   'inboundDetail.timestamps': 'Timestamps',
   'inboundDetail.receivedAt': 'Received At',
   'inboundDetail.processedAt': 'Processed At',
+  'inboundDetail.messageContent': 'Message Content',
   'inboundDetail.payloadInfo': 'Payload Information',
   'inboundDetail.payloadSize': 'Payload Size',
   'inboundDetail.bytes': '{size} bytes',
@@ -469,7 +470,19 @@ export default {
   'outboundDetail.timestamps': 'Timestamps',
   'outboundDetail.sentAt': 'Sent At',
   'outboundDetail.acknowledgedAt': 'Acknowledged At',
+  'outboundDetail.messageContent': 'Message Content',
   'outboundDetail.errorDetails': 'Error Details',
+
+  // ── Message Context ──
+  'messageContext.processType': 'Process Type',
+  'messageContext.gsrn': 'Metering Point',
+  'messageContext.effectiveDate': 'Effective Date',
+  'messageContext.customer': 'Customer',
+  'messageContext.gridArea': 'Grid Area',
+  'messageContext.priceArea': 'Price Area',
+  'messageContext.dataPoints': 'Data Points',
+  'messageContext.period': 'Period',
+  'messageContext.noContext': 'No linked process data found.',
 
   // ── Dead Letter Detail ──
   'deadLetterDetail.breadcrumbMessages': 'Messages',

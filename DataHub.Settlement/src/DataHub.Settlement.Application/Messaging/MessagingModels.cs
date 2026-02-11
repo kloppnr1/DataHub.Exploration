@@ -25,6 +25,19 @@ public record InboundMessageSummary(
     DateTime ReceivedAt,
     DateTime? ProcessedAt);
 
+public record MessageContext(
+    string? ProcessType,
+    string? ProcessStatus,
+    string? Gsrn,
+    DateOnly? EffectiveDate,
+    string? CustomerName,
+    string? CprCvr,
+    string? GridAreaCode,
+    string? PriceArea,
+    int? MeteringDataPoints,
+    string? MeteringPeriodStart,
+    string? MeteringPeriodEnd);
+
 public record InboundMessageDetail(
     Guid Id,
     string DatahubMessageId,
@@ -35,7 +48,8 @@ public record InboundMessageDetail(
     DateTime ReceivedAt,
     DateTime? ProcessedAt,
     string? ErrorDetails,
-    int RawPayloadSize);
+    int RawPayloadSize,
+    MessageContext? Context);
 
 public record OutboundRequestSummary(
     Guid Id,
@@ -54,7 +68,8 @@ public record OutboundRequestDetail(
     string? CorrelationId,
     DateTime SentAt,
     DateTime? ResponseAt,
-    string? ErrorDetails);
+    string? ErrorDetails,
+    MessageContext? Context);
 
 public record DeadLetterSummary(
     Guid Id,

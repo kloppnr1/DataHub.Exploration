@@ -118,13 +118,75 @@ export default function InboundMessageDetail() {
         </dl>
       </div>
 
-      {/* Payload info */}
+      {/* Message Content */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '180ms' }}>
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('inboundDetail.payloadInfo')}</h2>
-        <div>
-          <dt className="text-sm font-medium text-slate-500">{t('inboundDetail.payloadSize')}</dt>
-          <dd className="text-base text-slate-900 mt-1">{t('inboundDetail.bytes', { size: message.rawPayloadSize.toLocaleString() })}</dd>
-        </div>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('inboundDetail.messageContent')}</h2>
+        {message.context ? (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-4">
+            {message.context.processType && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.processType')}</dt>
+                <dd className="text-base text-slate-900 mt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700">
+                    {t('processType.' + message.context.processType) || message.context.processType}
+                  </span>
+                </dd>
+              </div>
+            )}
+            {message.context.processStatus && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('inboundDetail.status')}</dt>
+                <dd className="mt-1">
+                  <StatusBadge status={message.context.processStatus} label={t('status.' + message.context.processStatus)} />
+                </dd>
+              </div>
+            )}
+            {message.context.gsrn && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.gsrn')}</dt>
+                <dd className="text-base font-mono text-slate-900 mt-1">{message.context.gsrn}</dd>
+              </div>
+            )}
+            {message.context.effectiveDate && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.effectiveDate')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{message.context.effectiveDate}</dd>
+              </div>
+            )}
+            {message.context.customerName && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.customer')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{message.context.customerName}{message.context.cprCvr ? ` (${message.context.cprCvr})` : ''}</dd>
+              </div>
+            )}
+            {message.context.gridAreaCode && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.gridArea')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{message.context.gridAreaCode}</dd>
+              </div>
+            )}
+            {message.context.priceArea && (
+              <div>
+                <dt className="text-sm font-medium text-slate-500">{t('messageContext.priceArea')}</dt>
+                <dd className="text-base text-slate-900 mt-1">{message.context.priceArea}</dd>
+              </div>
+            )}
+            {message.context.meteringDataPoints != null && (
+              <>
+                <div>
+                  <dt className="text-sm font-medium text-slate-500">{t('messageContext.dataPoints')}</dt>
+                  <dd className="text-base text-slate-900 mt-1">{message.context.meteringDataPoints.toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-slate-500">{t('messageContext.period')}</dt>
+                  <dd className="text-base text-slate-900 mt-1">{message.context.meteringPeriodStart} — {message.context.meteringPeriodEnd}</dd>
+                </div>
+              </>
+            )}
+          </dl>
+        ) : (
+          <p className="text-sm text-slate-400">{t('messageContext.noContext')}</p>
+        )}
       </div>
 
       {/* Error details */}
