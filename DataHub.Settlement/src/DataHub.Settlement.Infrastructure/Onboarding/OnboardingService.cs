@@ -11,8 +11,6 @@ namespace DataHub.Settlement.Infrastructure.Onboarding;
 
 public sealed class OnboardingService : IOnboardingService
 {
-    private const int SwitchNoticeBusinessDays = 15;
-
     private readonly ISignupRepository _signupRepo;
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly IProcessRepository _processRepo;
@@ -119,30 +117,39 @@ public sealed class OnboardingService : IOnboardingService
         if (!GsrnValidator.IsValid(gsrn))
             throw new ValidationException($"Invalid GSRN format: {gsrn}");
 
-        // 3. Check no active signup for this GSRN
+        // 3. Validate customer name is not empty (BRS-009 D03)
+        if (string.IsNullOrWhiteSpace(request.CustomerName))
+            throw new ValidationException("Customer name is required.");
+
+        // 4. Check metering point exists and is eligible (BRS-001 E10/D16, BRS-009 E10/D16)
+        var meteringPoint = await _portfolioRepo.GetMeteringPointByGsrnAsync(gsrn, ct);
+        if (meteringPoint is not null && meteringPoint.ConnectionStatus == "closed_down")
+            throw new ValidationException($"Metering point {gsrn} is closed down and not eligible for {request.Type}.");
+
+        // 5. Check no active signup for this GSRN
         var existing = await _signupRepo.GetActiveByGsrnAsync(gsrn, ct);
         if (existing is not null)
             throw new ValidationException($"An active signup already exists for GSRN {gsrn} ({existing.SignupNumber}).");
 
-        // 4. Validate product
+        // 6. Validate product
         var product = await _portfolioRepo.GetProductAsync(request.ProductId, ct)
             ?? throw new ValidationException($"Product {request.ProductId} not found.");
 
-        // 5. Validate type
+        // 7. Validate type
         if (request.Type is not ("switch" or "move_in"))
             throw new ValidationException($"Invalid type '{request.Type}'. Must be 'switch' or 'move_in'.");
 
-        // 6. Validate effective date
+        // 8. Validate effective date per BRS-001/BRS-009 timing rules
         ValidateEffectiveDate(request.Type, request.EffectiveDate);
 
-        // 7. Map type to process type
+        // 9. Map type to process type
         var processType = request.Type == "switch" ? "supplier_switch" : "move_in";
 
-        // 8. Create process request
+        // 10. Create process request
         var stateMachine = new ProcessStateMachine(_processRepo, _clock);
         var process = await stateMachine.CreateRequestAsync(gsrn, processType, request.EffectiveDate, ct);
 
-        // 9. Create signup (with customer info + address/payer, but customer not created yet)
+        // 11. Create signup (with customer info + address/payer, but customer not created yet)
         var dbContactType = MapContactTypeToDb(request.ContactType);
         var addressInfo = new SignupAddressInfo(
             request.BillingDarId,
@@ -362,15 +369,29 @@ public sealed class OnboardingService : IOnboardingService
 
         if (type == "move_in")
         {
-            if (effectiveDate < today)
-                throw new ValidationException("Effective date cannot be in the past.");
+            // BRS-009: earliest 60 days before, latest 7 days after effective date
+            var earliest = today.AddDays(-7);
+            var latest = today.AddDays(60);
+
+            if (effectiveDate < earliest)
+                throw new ValidationException(
+                    $"Move-in effective date cannot be more than 7 days in the past. Earliest date: {earliest:yyyy-MM-dd}");
+
+            if (effectiveDate > latest)
+                throw new ValidationException(
+                    $"Move-in effective date cannot be more than 60 days in the future. Latest date: {latest:yyyy-MM-dd}");
         }
         else // switch
         {
-            var earliest = BusinessDayCalculator.EarliestEffectiveDate(today, SwitchNoticeBusinessDays);
-            if (effectiveDate < earliest)
+            // BRS-001: submit at latest the day before effective date, max 1 year in advance
+            if (effectiveDate <= today)
                 throw new ValidationException(
-                    $"Supplier switch requires {SwitchNoticeBusinessDays} business days notice. Earliest date: {earliest:yyyy-MM-dd}");
+                    $"Supplier switch effective date must be after today. Earliest date: {today.AddDays(1):yyyy-MM-dd}");
+
+            var maxDate = today.AddYears(1);
+            if (effectiveDate > maxDate)
+                throw new ValidationException(
+                    $"Supplier switch cannot be more than 1 year in advance. Latest date: {maxDate:yyyy-MM-dd}");
         }
     }
 }

@@ -126,6 +126,7 @@ public class SettlementOrchestrationTests
         public Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct) => throw new NotImplementedException();
         public Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct) => throw new NotImplementedException();
+        public Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
         public Task StageCustomerDataAsync(string gsrn, string customerName, string? cprCvr, string customerType, string? phone, string? email, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
         public Task<StagedCustomerData?> GetStagedCustomerDataAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
     }

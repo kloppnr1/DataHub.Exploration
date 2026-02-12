@@ -82,6 +82,20 @@ public sealed class PortfolioRepository : IPortfolioRepository
         return row?.ToCustomer();
     }
 
+    public async Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT gsrn, type, settlement_method, grid_area_code, grid_operator_gln, price_area, connection_status
+            FROM portfolio.metering_point
+            WHERE gsrn = @Gsrn
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<MeteringPoint>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
     public async Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct)
     {
         const string sql = """
