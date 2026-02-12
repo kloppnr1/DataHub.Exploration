@@ -20,6 +20,11 @@ import Corrections from './pages/Corrections';
 import CorrectionDetail from './pages/CorrectionDetail';
 import CustomerBillingSummary from './pages/CustomerBillingSummary';
 import Processes from './pages/Processes';
+import InvoiceList from './pages/InvoiceList';
+import InvoiceDetail from './pages/InvoiceDetail';
+import OutstandingOverview from './pages/OutstandingOverview';
+import PaymentList from './pages/PaymentList';
+import PaymentDetail from './pages/PaymentDetail';
 
 export default function App() {
   return (
@@ -41,6 +46,11 @@ export default function App() {
             <Route path="/billing/runs/:id" element={<SettlementRunDetail />} />
             <Route path="/billing/corrections" element={<Corrections />} />
             <Route path="/billing/corrections/:batchId" element={<CorrectionDetail />} />
+            <Route path="/invoices" element={<InvoiceList />} />
+            <Route path="/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="/payments" element={<PaymentList />} />
+            <Route path="/payments/:id" element={<PaymentDetail />} />
+            <Route path="/outstanding" element={<OutstandingOverview />} />
             <Route path="/datahub/messages" element={<Messages />} />
             <Route path="/datahub/messages/inbound/:id" element={<InboundMessageDetail />} />
             <Route path="/datahub/messages/outbound/:id" element={<OutboundRequestDetail />} />

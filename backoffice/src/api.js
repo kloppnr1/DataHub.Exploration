@@ -101,4 +101,26 @@ export const api = {
   getConversation: (correlationId) =>
     request(`/messages/conversations/${encodeURIComponent(correlationId)}`),
   getDataDeliveries: () => request(`/messages/deliveries`),
+
+  // Invoices
+  getInvoices: ({ customerId, status, invoiceType, fromDate, toDate, page, pageSize } = {}) =>
+    request(`/billing/invoices${qs({ customerId, status, invoiceType, fromDate, toDate, page, pageSize })}`),
+  getInvoice: (id) => request(`/billing/invoices/${id}`),
+  getOverdueInvoices: () => request('/billing/invoices/overdue'),
+  sendInvoice: (id) => request(`/billing/invoices/${id}/send`, { method: 'POST' }),
+  cancelInvoice: (id) => request(`/billing/invoices/${id}/cancel`, { method: 'POST' }),
+  creditInvoice: (id, notes) => request(`/billing/invoices/${id}/credit`, { method: 'POST', body: JSON.stringify({ notes }) }),
+
+  // Payments
+  getPayments: ({ customerId, status, fromDate, toDate, page, pageSize } = {}) =>
+    request(`/billing/payments${qs({ customerId, status, fromDate, toDate, page, pageSize })}`),
+  getPayment: (id) => request(`/billing/payments/${id}`),
+  createPayment: (data) => request('/billing/payments', { method: 'POST', body: JSON.stringify(data) }),
+  allocatePayment: (id, data) => request(`/billing/payments/${id}/allocate`, { method: 'POST', body: JSON.stringify(data) }),
+  importPayments: (data) => request('/billing/payments/import', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Customer Balance
+  getCustomerBalance: (customerId) => request(`/billing/customers/${customerId}/balance`),
+  getCustomerLedger: (customerId) => request(`/billing/customers/${customerId}/ledger`),
+  getOutstandingCustomers: () => request('/billing/outstanding'),
 };
