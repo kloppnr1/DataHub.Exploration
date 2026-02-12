@@ -10,6 +10,8 @@ namespace DataHub.Settlement.Infrastructure.Metering;
 ///
 /// Runs on startup (to backfill any missing data) and then once per hour.
 /// Day-ahead prices for the next day are typically published around 13:00 CET.
+///
+/// Uses incremental fetching: only requests data for periods not already present in the database.
 /// </summary>
 public sealed class SpotPriceFetchingService : BackgroundService
 {
@@ -18,9 +20,6 @@ public sealed class SpotPriceFetchingService : BackgroundService
 
     // How many days ahead to fetch (day-ahead = tomorrow)
     private const int DaysAhead = 2;
-
-    // How many days back to ensure coverage (handles restarts, gaps)
-    private const int DaysBack = 7;
 
     // Initial backfill: 1 month before the hourly→quarter-hour cutover (Oct 1 2025)
     private static readonly DateOnly InitialBackfillFrom = new(2025, 9, 1);
@@ -49,7 +48,7 @@ public sealed class SpotPriceFetchingService : BackgroundService
         {
             try
             {
-                await FetchAllPriceAreasAsync(stoppingToken);
+                await RunOnceAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -60,40 +59,25 @@ public sealed class SpotPriceFetchingService : BackgroundService
         }
     }
 
-    private async Task FetchAllPriceAreasAsync(CancellationToken ct)
+    internal async Task RunOnceAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var to = today.AddDays(DaysAhead);
-        var from = today.AddDays(-DaysBack);
-
-        // On first run, check if we need to backfill historical data
-        if (!_initialLoadDone)
-        {
-            _initialLoadDone = true;
-            var needsBackfill = false;
-
-            foreach (var area in PriceAreas)
-            {
-                var earliest = await _repository.GetEarliestPriceDateAsync(area, ct);
-                if (earliest is null || earliest > InitialBackfillFrom)
-                {
-                    needsBackfill = true;
-                    break;
-                }
-            }
-
-            if (needsBackfill)
-            {
-                from = InitialBackfillFrom;
-                _logger.LogInformation(
-                    "Initial backfill: fetching spot prices from {From} to {To}", from, to);
-            }
-        }
 
         foreach (var priceArea in PriceAreas)
         {
             try
             {
+                var from = await DetermineFromDateAsync(priceArea, ct);
+
+                if (from >= to)
+                {
+                    _logger.LogInformation(
+                        "Spot prices for {PriceArea} already up to date through {To}",
+                        priceArea, to);
+                    continue;
+                }
+
                 _logger.LogInformation(
                     "Fetching spot prices for {PriceArea} from {From} to {To}",
                     priceArea, from, to);
@@ -117,5 +101,41 @@ public sealed class SpotPriceFetchingService : BackgroundService
                     "HTTP error fetching spot prices for {PriceArea}, will retry next cycle", priceArea);
             }
         }
+
+        _initialLoadDone = true;
+    }
+
+    /// <summary>
+    /// Determines the start date for fetching based on what's already in the database.
+    /// - No data at all → full backfill from <see cref="InitialBackfillFrom"/>.
+    /// - First run, earliest data starts after backfill date → backfill from start.
+    /// - Otherwise → incremental from the latest date in DB (re-fetches that day
+    ///   in case it's incomplete, e.g. not all day-ahead hours published yet).
+    /// </summary>
+    internal async Task<DateOnly> DetermineFromDateAsync(string priceArea, CancellationToken ct)
+    {
+        var latest = await _repository.GetLatestPriceDateAsync(priceArea, ct);
+
+        if (latest is null)
+        {
+            _logger.LogInformation(
+                "No existing data for {PriceArea}, backfilling from {From}",
+                priceArea, InitialBackfillFrom);
+            return InitialBackfillFrom;
+        }
+
+        if (!_initialLoadDone)
+        {
+            var earliest = await _repository.GetEarliestPriceDateAsync(priceArea, ct);
+            if (earliest is not null && earliest > InitialBackfillFrom)
+            {
+                _logger.LogInformation(
+                    "Initial backfill needed for {PriceArea}: earliest data is {Earliest}, backfilling from {From}",
+                    priceArea, earliest, InitialBackfillFrom);
+                return InitialBackfillFrom;
+            }
+        }
+
+        return latest.Value;
     }
 }
