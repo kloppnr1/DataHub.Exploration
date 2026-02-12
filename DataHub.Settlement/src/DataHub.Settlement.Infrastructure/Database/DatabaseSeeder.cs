@@ -11,6 +11,7 @@ public static class DatabaseSeeder
         await conn.OpenAsync();
 
         // ── Cleanup ──────────────────────────────────────────────────────
+        await conn.ExecuteAsync("DELETE FROM settlement.correction_settlement");
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_line");
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_run");
         await conn.ExecuteAsync("DELETE FROM settlement.billing_period");
