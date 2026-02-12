@@ -92,6 +92,7 @@ export const api = {
   // Processes
   getProcesses: ({ status } = {}) =>
     request(`/processes${qs({ status })}`),
+  getProcessDetail: (id) => request(`/processes/${id}`),
   getProcessEvents: (id) =>
     request(`/processes/${id}/events`),
 

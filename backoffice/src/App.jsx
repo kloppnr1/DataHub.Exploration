@@ -20,6 +20,7 @@ import Corrections from './pages/Corrections';
 import CorrectionDetail from './pages/CorrectionDetail';
 import CustomerBillingSummary from './pages/CustomerBillingSummary';
 import Processes from './pages/Processes';
+import ProcessDetail from './pages/ProcessDetail';
 import InvoiceList from './pages/InvoiceList';
 import InvoiceDetail from './pages/InvoiceDetail';
 import OutstandingOverview from './pages/OutstandingOverview';
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/datahub/messages/outbound/:id" element={<OutboundRequestDetail />} />
             <Route path="/datahub/messages/dead-letters/:id" element={<DeadLetterDetail />} />
             <Route path="/datahub/processes" element={<Processes />} />
+            <Route path="/datahub/processes/:id" element={<ProcessDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 import { ConversationTimeline } from './Messages';
@@ -182,6 +183,7 @@ export default function Processes() {
                   <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('processes.colStatus')}</th>
                   <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('processes.colEffectiveDate')}</th>
                   <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('processes.colCorrelation')}</th>
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -218,10 +220,19 @@ export default function Processes() {
                           <span className="text-slate-300">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-2.5">
+                        <Link
+                          to={`/datahub/processes/${p.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-medium text-teal-600 hover:text-teal-700"
+                        >
+                          View
+                        </Link>
+                      </td>
                     </tr>
                     {expandedId === p.id && (
                       <tr key={`${p.id}-events`}>
-                        <td colSpan={6} className="bg-slate-50/50 px-6 py-4 pl-12">
+                        <td colSpan={7} className="bg-slate-50/50 px-6 py-4 pl-12">
                           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('processes.processEvents')}</div>
                           {loadingEvents === p.id ? (
                             <div className="flex items-center gap-2 py-2">

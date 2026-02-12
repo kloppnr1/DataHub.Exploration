@@ -283,4 +283,79 @@ public sealed class ProcessRepository : IProcessRepository
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(sql, new { CorrelationId = correlationId }, cancellationToken: ct));
     }
+
+    public async Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct)
+    {
+        const string processSql = """
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id,
+                   customer_data_received, tariff_data_received, created_at, updated_at
+            FROM lifecycle.process_request
+            WHERE id = @Id
+            """;
+
+        const string receivedSql = """
+            SELECT message_type, status, MIN(received_at) AS received_at
+            FROM datahub.inbound_message
+            WHERE correlation_id = @CorrelationId
+            GROUP BY message_type, status
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var row = await conn.QuerySingleOrDefaultAsync<ProcessDetailRow>(
+            new CommandDefinition(processSql, new { Id = id }, cancellationToken: ct));
+
+        if (row is null) return null;
+
+        var expectedTypes = ProcessExpectedMessages.For(row.ProcessType);
+
+        // If no correlation ID yet, all expected messages are pending
+        var receivedMap = new Dictionary<string, ReceivedMessageRow>();
+        if (row.DatahubCorrelationId is not null)
+        {
+            var received = await conn.QueryAsync<ReceivedMessageRow>(
+                new CommandDefinition(receivedSql, new { CorrelationId = row.DatahubCorrelationId }, cancellationToken: ct));
+            foreach (var r in received)
+                receivedMap[r.MessageType] = r;
+        }
+
+        var checklist = expectedTypes.Select(mt =>
+        {
+            var found = receivedMap.GetValueOrDefault(mt);
+            return new ExpectedMessageItem(
+                mt,
+                Received: found is not null,
+                ReceivedAt: found?.ReceivedAt,
+                Status: found?.Status);
+        }).ToList();
+
+        return new ProcessDetail(
+            row.Id, row.ProcessType, row.Gsrn, row.Status,
+            row.EffectiveDate, row.DatahubCorrelationId,
+            row.CustomerDataReceived, row.TariffDataReceived,
+            row.CreatedAt, row.UpdatedAt,
+            checklist);
+    }
+
+    private sealed class ProcessDetailRow
+    {
+        public Guid Id { get; set; }
+        public string ProcessType { get; set; } = null!;
+        public string Gsrn { get; set; } = null!;
+        public string Status { get; set; } = null!;
+        public DateOnly? EffectiveDate { get; set; }
+        public string? DatahubCorrelationId { get; set; }
+        public bool CustomerDataReceived { get; set; }
+        public bool TariffDataReceived { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+
+    private sealed class ReceivedMessageRow
+    {
+        public string MessageType { get; set; } = null!;
+        public string? Status { get; set; }
+        public DateTime? ReceivedAt { get; set; }
+    }
 }

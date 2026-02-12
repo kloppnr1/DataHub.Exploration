@@ -17,3 +17,12 @@ public record ProcessEvent(
     string EventType,
     string? Payload,
     string? Source);
+
+public record ExpectedMessageItem(string MessageType, bool Received, DateTime? ReceivedAt, string? Status);
+
+public record ProcessDetail(
+    Guid Id, string ProcessType, string Gsrn, string Status,
+    DateOnly? EffectiveDate, string? DatahubCorrelationId,
+    bool CustomerDataReceived, bool TariffDataReceived,
+    DateTime CreatedAt, DateTime UpdatedAt,
+    IReadOnlyList<ExpectedMessageItem> ExpectedMessages);

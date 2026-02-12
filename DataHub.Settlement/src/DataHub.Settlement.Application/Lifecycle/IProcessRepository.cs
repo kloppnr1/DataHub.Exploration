@@ -21,4 +21,6 @@ public interface IProcessRepository
 
     Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct);
     Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct);
+
+    Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct);
 }

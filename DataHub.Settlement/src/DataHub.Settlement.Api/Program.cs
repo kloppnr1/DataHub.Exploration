@@ -899,6 +899,33 @@ app.MapGet("/api/processes", async (string? status, IProcessRepository repo, Can
     });
 });
 
+// GET /api/processes/{id} — process detail with expected message checklist
+app.MapGet("/api/processes/{id:guid}", async (Guid id, IProcessRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetDetailWithChecklistAsync(id, ct);
+    if (detail is null) return Results.NotFound();
+    return Results.Ok(new
+    {
+        detail.Id,
+        detail.ProcessType,
+        detail.Gsrn,
+        detail.Status,
+        detail.EffectiveDate,
+        detail.DatahubCorrelationId,
+        detail.CustomerDataReceived,
+        detail.TariffDataReceived,
+        detail.CreatedAt,
+        detail.UpdatedAt,
+        expectedMessages = detail.ExpectedMessages.Select(m => new
+        {
+            m.MessageType,
+            m.Received,
+            m.ReceivedAt,
+            m.Status,
+        }),
+    });
+});
+
 // GET /api/processes/{id}/events — process event timeline
 app.MapGet("/api/processes/{id:guid}/events", async (Guid id, IProcessRepository repo, CancellationToken ct) =>
 {
