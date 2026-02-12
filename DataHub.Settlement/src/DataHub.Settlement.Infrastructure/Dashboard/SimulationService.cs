@@ -2472,39 +2472,8 @@ public sealed class SimulationService
                 "Process acknowledged", currentDate));
         }
 
-        // Step 4: Estimate Aconto
-        if (ctx.IsAcknowledged && !ctx.IsAcontoEstimated && currentDate >= timeline.GetDate("Estimate Aconto"))
-        {
-            var portfolio = new PortfolioRepository(_connectionString);
-            var contract = await portfolio.GetActiveContractAsync(ctx.Gsrn, ct)
-                ?? throw new InvalidOperationException($"No active contract for GSRN {ctx.Gsrn}");
-            var product = await portfolio.GetProductAsync(contract.ProductId, ct)
-                ?? throw new InvalidOperationException($"Product {contract.ProductId} not found");
-
-            var expectedPrice = AcontoEstimator.CalculateExpectedPricePerKwh(
-                averageSpotPriceOrePerKwh: 75m, marginOrePerKwh: product.MarginOrePerKwh,
-                systemTariffRate: 0.054m, transmissionTariffRate: 0.049m,
-                electricityTaxRate: 0.008m, averageGridTariffRate: 0.18m);
-            var gridSubRate = 49.00m;
-            var supplierSubRate = product.SubscriptionKrPerMonth;
-            ctx.AcontoEstimate = AcontoEstimator.EstimateQuarterlyAmount(
-                annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
-
-            ctx.IsAcontoEstimated = true;
-            executed.Add(new SimulationStep(4, "Estimate Aconto",
-                $"Quarterly estimate: {ctx.AcontoEstimate:N2} DKK (4,000 kWh/year)", currentDate));
-        }
-
-        // Step 5: Send Invoice
-        if (ctx.IsAcontoEstimated && !ctx.IsInvoiceSent && currentDate >= timeline.GetDate("Send Invoice"))
-        {
-            ctx.IsInvoiceSent = true;
-            executed.Add(new SimulationStep(5, "Send Invoice",
-                $"Aconto invoice of {ctx.AcontoEstimate:N2} DKK sent to customer", currentDate));
-        }
-
-        // Step 6: Receive RSM-022
-        if (ctx.IsInvoiceSent && !ctx.IsRsm022Received && currentDate >= timeline.GetDate("Receive RSM-022"))
+        // Step 4: Receive RSM-022
+        if (ctx.IsAcknowledged && !ctx.IsRsm022Received && currentDate >= timeline.GetDate("Receive RSM-022"))
         {
             var portfolio = new PortfolioRepository(_connectionString);
             var uid = Guid.NewGuid().ToString("N")[..8];
@@ -2522,19 +2491,50 @@ public sealed class SimulationService
             }
             await portfolio.ActivateMeteringPointAsync(ctx.Gsrn, effectiveStart, ct);
             ctx.IsRsm022Received = true;
-            executed.Add(new SimulationStep(6, "Receive RSM-022",
+            executed.Add(new SimulationStep(4, "Receive RSM-022",
                 "Metering point activated", currentDate));
         }
 
-        // Step 7: Effectuation + Complete
+        // Step 5: Effectuation + Complete
         if (ctx.IsRsm022Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
             await stateMachine.MarkCompletedAsync(ctx.ProcessRequestId, ct);
             ctx.IsEffectuated = true;
-            executed.Add(new SimulationStep(7, "Effectuation",
+            executed.Add(new SimulationStep(5, "Effectuation",
                 "Supply begins, process completed", currentDate));
+        }
+
+        // Step 6: Estimate Aconto (after effectuation — switch is now irreversible)
+        if (ctx.IsEffectuated && !ctx.IsAcontoEstimated && currentDate >= timeline.GetDate("Estimate Aconto"))
+        {
+            var portfolio = new PortfolioRepository(_connectionString);
+            var contract = await portfolio.GetActiveContractAsync(ctx.Gsrn, ct)
+                ?? throw new InvalidOperationException($"No active contract for GSRN {ctx.Gsrn}");
+            var product = await portfolio.GetProductAsync(contract.ProductId, ct)
+                ?? throw new InvalidOperationException($"Product {contract.ProductId} not found");
+
+            var expectedPrice = AcontoEstimator.CalculateExpectedPricePerKwh(
+                averageSpotPriceOrePerKwh: 75m, marginOrePerKwh: product.MarginOrePerKwh,
+                systemTariffRate: 0.054m, transmissionTariffRate: 0.049m,
+                electricityTaxRate: 0.008m, averageGridTariffRate: 0.18m);
+            var gridSubRate = 49.00m;
+            var supplierSubRate = product.SubscriptionKrPerMonth;
+            ctx.AcontoEstimate = AcontoEstimator.EstimateQuarterlyAmount(
+                annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
+
+            ctx.IsAcontoEstimated = true;
+            executed.Add(new SimulationStep(6, "Estimate Aconto",
+                $"Quarterly estimate: {ctx.AcontoEstimate:N2} DKK (4,000 kWh/year)", currentDate));
+        }
+
+        // Step 7: Send Invoice
+        if (ctx.IsAcontoEstimated && !ctx.IsInvoiceSent && currentDate >= timeline.GetDate("Send Invoice"))
+        {
+            ctx.IsInvoiceSent = true;
+            executed.Add(new SimulationStep(7, "Send Invoice",
+                $"Aconto invoice of {ctx.AcontoEstimate:N2} DKK sent to customer", currentDate));
         }
 
         // Step 8: Receive RSM-012 (daily deliveries — starts after effectuation)

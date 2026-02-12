@@ -92,12 +92,19 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
 
     var effectiveDateStr = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
 
-    // RSM-001 response (acknowledgment) after 15s delay
+    var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed)
+        ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
+    var gsrnForCapture = gsrn ?? "571313100000012345";
+
+    // RSM-001 response (acknowledgment) after 15s delay, then schedule effectuation
     _ = Task.Run(async () =>
     {
         await Task.Delay(15_000);
         state.EnqueueMessage("MasterData", "RSM-001", correlationId,
             BuildRsm001ResponseJson(correlationId, true));
+
+        // Schedule RSM-022 after RSM-001 is on the queue so the poller processes them in order
+        state.ScheduleEffectuation(gsrnForCapture, correlationId, effectiveDate);
     });
 
     // RSM-028 (customer data, no CPR per BRS-001 spec) after 16s delay
@@ -105,7 +112,7 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     {
         await Task.Delay(16_000);
         state.EnqueueMessage("MasterData", "RSM-028", correlationId,
-            ScenarioLoader.BuildRsm028Json(gsrn ?? "571313100000012345", "Simulated Customer", "0000000000", includeCpr: false));
+            ScenarioLoader.BuildRsm028Json(gsrnForCapture, "Simulated Customer", "0000000000", includeCpr: false));
     });
 
     // RSM-031 (price attachments) after 17s delay
@@ -113,13 +120,8 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     {
         await Task.Delay(17_000);
         state.EnqueueMessage("MasterData", "RSM-031", correlationId,
-            ScenarioLoader.BuildRsm031Json(gsrn ?? "571313100000012345", effectiveDateStr));
+            ScenarioLoader.BuildRsm031Json(gsrnForCapture, effectiveDateStr));
     });
-
-    // RSM-022 (master data) — deferred until effective date, like real DataHub
-    var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed)
-        ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
-    state.ScheduleEffectuation(gsrn ?? "571313100000012345", correlationId, effectiveDate);
 
     return Results.Ok(new
     {
