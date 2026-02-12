@@ -27,7 +27,9 @@ using DataHub.Settlement.Infrastructure.Authentication;
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
-    ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
+    ?? Environment.GetEnvironmentVariable("SETTLEMENT_DB_CONNECTION_STRING")
+    ?? throw new InvalidOperationException(
+        "Database connection string not configured. Set ConnectionStrings__SettlementDb or SETTLEMENT_DB_CONNECTION_STRING environment variable.");
 
 // CORS for back-office dev (React on :5173)
 builder.Services.AddCors(options =>
@@ -89,6 +91,8 @@ builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentReposit
 builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
 builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
+builder.Services.AddSingleton<IPaymentAllocator>(sp =>
+    new PaymentAllocator(connectionString, sp.GetRequiredService<ILogger<PaymentAllocator>>()));
 builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
 
 var app = builder.Build();

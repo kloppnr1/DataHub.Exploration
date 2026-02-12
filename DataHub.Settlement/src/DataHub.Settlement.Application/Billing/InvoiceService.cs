@@ -20,22 +20,25 @@ public sealed class InvoiceService : IInvoiceService
     private readonly IInvoiceRepository _invoiceRepo;
     private readonly IAcontoPaymentRepository _acontoRepo;
     private readonly ILogger<InvoiceService> _logger;
+    private readonly decimal _vatRate;
 
     public InvoiceService(
         IInvoiceRepository invoiceRepo,
         IAcontoPaymentRepository acontoRepo,
-        ILogger<InvoiceService> logger)
+        ILogger<InvoiceService> logger,
+        decimal vatRate = 0.25m)
     {
         _invoiceRepo = invoiceRepo;
         _acontoRepo = acontoRepo;
         _logger = logger;
+        _vatRate = vatRate;
     }
 
     public async Task<Invoice> CreateAcontoInvoiceAsync(
         Guid customerId, Guid? payerId, Guid? contractId, string gsrn,
         DateOnly periodStart, DateOnly periodEnd, decimal amount, CancellationToken ct)
     {
-        var vatAmount = Math.Round(amount * 0.25m, 2);
+        var vatAmount = Math.Round(amount * _vatRate, 2);
         var totalInclVat = amount + vatAmount;
         var dueDate = periodStart.AddDays(14);
 
@@ -87,14 +90,9 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<string> SendInvoiceAsync(Guid invoiceId, CancellationToken ct)
     {
-        var invoice = await _invoiceRepo.GetAsync(invoiceId, ct)
-            ?? throw new InvalidOperationException($"Invoice {invoiceId} not found");
-
-        if (invoice.Status != "draft")
-            throw new InvalidOperationException($"Invoice {invoiceId} is {invoice.Status}, cannot send");
-
+        // AssignInvoiceNumberAsync atomically sets invoice_number + status='sent' in a single UPDATE.
+        // This prevents gaps in invoice numbering from partial failures.
         var invoiceNumber = await _invoiceRepo.AssignInvoiceNumberAsync(invoiceId, ct);
-        await _invoiceRepo.UpdateStatusAsync(invoiceId, "sent", ct);
 
         _logger.LogInformation("Sent invoice {InvoiceNumber} ({InvoiceId})", invoiceNumber, invoiceId);
         return invoiceNumber;

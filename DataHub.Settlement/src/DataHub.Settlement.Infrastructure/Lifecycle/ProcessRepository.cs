@@ -202,6 +202,46 @@ public sealed class ProcessRepository : IProcessRepository
             new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
     }
 
+    public async Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct)
+    {
+        // Atomically: transition to 'cancelled' + add auto_cancelled event + add reason event
+        // All in a single transaction to prevent partial state (stuck in cancellation_pending).
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        var rows = await conn.ExecuteAsync(
+            new CommandDefinition("""
+                UPDATE lifecycle.process_request
+                SET status = 'cancelled', updated_at = now()
+                WHERE id = @Id AND status = @ExpectedStatus
+                """,
+                new { Id = requestId, ExpectedStatus = expectedStatus },
+                transaction: tx, cancellationToken: ct));
+
+        if (rows == 0)
+            throw new InvalidOperationException(
+                $"Cannot auto-cancel process {requestId}: not in expected status '{expectedStatus}'.");
+
+        await conn.ExecuteAsync(
+            new CommandDefinition("""
+                INSERT INTO lifecycle.process_event (process_request_id, event_type, source)
+                VALUES (@Id, 'auto_cancelled', 'datahub')
+                """,
+                new { Id = requestId },
+                transaction: tx, cancellationToken: ct));
+
+        await conn.ExecuteAsync(
+            new CommandDefinition("""
+                INSERT INTO lifecycle.process_event (process_request_id, event_type, payload, source)
+                VALUES (@Id, 'cancellation_reason', jsonb_build_object('reason', @Reason), 'datahub')
+                """,
+                new { Id = requestId, Reason = reason },
+                transaction: tx, cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
+    }
+
     public async Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
     {
         const string sql = """

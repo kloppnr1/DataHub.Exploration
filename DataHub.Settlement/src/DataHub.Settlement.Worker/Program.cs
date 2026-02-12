@@ -58,12 +58,15 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>
     {
         metrics
+            .AddMeter(SettlementMetrics.MeterName)
             .AddRuntimeInstrumentation()
             .AddOtlpExporter();
     });
 
 var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
-    ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
+    ?? Environment.GetEnvironmentVariable("SETTLEMENT_DB_CONNECTION_STRING")
+    ?? throw new InvalidOperationException(
+        "Database connection string not configured. Set ConnectionStrings__SettlementDb or SETTLEMENT_DB_CONNECTION_STRING environment variable.");
 
 // DataHub client: requires DataHub__BaseUrl to be configured
 var dataHubBaseUrl = builder.Configuration["DataHub:BaseUrl"]
@@ -117,6 +120,8 @@ builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentReposit
 builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
 builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
+builder.Services.AddSingleton<IPaymentAllocator>(sp =>
+    new PaymentAllocator(connectionString, sp.GetRequiredService<ILogger<PaymentAllocator>>()));
 builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
 
 // Settlement services
@@ -139,6 +144,21 @@ builder.Services.AddSingleton<ISpotPriceProvider>(sp =>
     var logger = sp.GetRequiredService<ILogger<EnergiDataServiceClient>>();
     return new EnergiDataServiceClient(httpClient, logger);
 });
+
+// Custom metrics
+builder.Services.AddSingleton<SettlementMetrics>();
+
+// Effectuation service (transactional RSM-022 activation handler)
+builder.Services.AddSingleton<EffectuationService>(sp =>
+    new EffectuationService(
+        connectionString,
+        sp.GetRequiredService<IOnboardingService>(),
+        sp.GetRequiredService<IInvoiceService>(),
+        sp.GetRequiredService<IDataHubClient>(),
+        sp.GetRequiredService<IBrsRequestBuilder>(),
+        sp.GetRequiredService<IMessageRepository>(),
+        sp.GetRequiredService<IClock>(),
+        sp.GetRequiredService<ILogger<EffectuationService>>()));
 
 // Background services
 builder.Services.AddHostedService<QueuePollerService>();

@@ -49,9 +49,9 @@ docker compose up -d postgres                         # TimescaleDB only
 cd DataHub.Settlement
 dotnet run --project src/DataHub.Settlement.Api       # API at localhost:5001
 
-# Terminal 3: Seed demo data (optional, first time only)
+# Terminal 3: Seed test data (optional, first time only)
 cd DataHub.Settlement/tools/DataHub.Settlement.Seeder
-dotnet run                                            # Populates database with demo data
+dotnet run                                            # Populates database with test data
 
 # Terminal 4: Start the back-office UI
 cd backoffice
@@ -63,7 +63,7 @@ npm run dev                                           # V UI at localhost:5173
 
 **Access**: Open http://localhost:5173 in your browser.
 
-**Demo Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, 18 outbound requests, metering data history for 5 GSRNs (October 2025), and 3 pre-existing correction records for testing the back-office UI.
+**Test Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, 18 outbound requests, metering data history for 5 GSRNs (October 2025), and 3 pre-existing correction records for testing the back-office UI.
 
 ---
 
@@ -612,7 +612,7 @@ The complete guide to all documentation, with navigation paths for different aud
 - [RSM-012 Measure Data](docs/4-integration/rsm-012-datahub3-measure-data.md) - Metering data format
 
 **For current work:**
-- [Next Phase Plan](docs/5-planning/next-phase-plan.md) - Onboarding API design and MVP 4 roadmap
+- [Next Phase Plan](docs/5-planning/next-phase-plan.md) - Onboarding API design and production roadmap
 
 ### Quick Navigation by Role
 

@@ -178,19 +178,25 @@ public sealed class InvoiceRepository : IInvoiceRepository
 
     public async Task<string> AssignInvoiceNumberAsync(Guid id, CancellationToken ct)
     {
+        // Atomically assign invoice number AND update status to 'sent' in a single statement.
+        // This prevents consumed sequence numbers on draft invoices if status update fails separately.
         const string sql = """
             UPDATE billing.invoice
             SET invoice_number = 'INV-' || EXTRACT(YEAR FROM now())::TEXT || '-' || LPAD(nextval('billing.invoice_number_seq')::TEXT, 5, '0'),
+                status = 'sent',
                 issued_at = now(),
                 updated_at = now()
-            WHERE id = @Id
+            WHERE id = @Id AND status = 'draft'
             RETURNING invoice_number
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        return await conn.QuerySingleAsync<string>(
+        var invoiceNumber = await conn.QuerySingleOrDefaultAsync<string>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+
+        return invoiceNumber
+            ?? throw new InvalidOperationException($"Invoice {id} is not in draft status or does not exist");
     }
 
     public async Task UpdateStatusAsync(Guid id, string status, CancellationToken ct)

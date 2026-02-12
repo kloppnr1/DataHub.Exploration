@@ -36,6 +36,22 @@ public sealed class MessageLog : IMessageLog
         await conn.ExecuteAsync(new CommandDefinition(sql, new { MessageId = messageId }, cancellationToken: ct));
     }
 
+    public async Task<bool> TryClaimForProcessingAsync(string messageId, CancellationToken ct)
+    {
+        // Atomic claim: INSERT succeeds (returns 1 row affected) only if no other poller has claimed this message.
+        // ON CONFLICT DO NOTHING returns 0 rows affected if already claimed.
+        const string sql = """
+            INSERT INTO datahub.processed_message_id (message_id)
+            VALUES (@MessageId)
+            ON CONFLICT (message_id) DO NOTHING
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var rowsAffected = await conn.ExecuteAsync(new CommandDefinition(sql, new { MessageId = messageId }, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
     public async Task RecordInboundAsync(string messageId, string messageType, string? correlationId,
         string queueName, int payloadSize, string rawPayload, CancellationToken ct)
     {

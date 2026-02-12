@@ -360,6 +360,10 @@ public class ProcessTimelineTests
             _clock,
             new NullMessageLog(),
             new NullInvoiceService(),
+            new EffectuationService(
+                "Host=localhost", NullOnboardingService.Instance, new NullInvoiceService(),
+                _dataHubClient, new ThrowBrsBuilder(), new ThrowMessageRepo(),
+                _clock, NullLogger<EffectuationService>.Instance),
             NullLogger<QueuePollerService>.Instance);
 
     /// <summary>Stub parser that returns a preconfigured RSM-001 result.</summary>
@@ -381,6 +385,7 @@ public class ProcessTimelineTests
     {
         public Task<bool> IsProcessedAsync(string messageId, CancellationToken ct) => Task.FromResult(false);
         public Task MarkProcessedAsync(string messageId, CancellationToken ct) => Task.CompletedTask;
+        public Task<bool> TryClaimForProcessingAsync(string messageId, CancellationToken ct) => Task.FromResult(true);
         public Task RecordInboundAsync(string messageId, string messageType, string? correlationId, string queueName, int payloadSize, string rawPayload, CancellationToken ct) => Task.CompletedTask;
         public Task MarkInboundStatusAsync(string messageId, string status, string? errorDetails, CancellationToken ct) => Task.CompletedTask;
         public Task DeadLetterAsync(string messageId, string queueName, string errorReason, string rawPayload, CancellationToken ct) => Task.CompletedTask;

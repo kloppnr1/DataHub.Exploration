@@ -5,7 +5,12 @@ namespace DataHub.Settlement.Infrastructure.Settlement;
 
 public sealed class SettlementEngine : ISettlementEngine
 {
-    private const decimal VatRate = 0.25m;
+    private readonly decimal _vatRate;
+
+    public SettlementEngine(decimal vatRate = 0.25m)
+    {
+        _vatRate = vatRate;
+    }
 
     public SettlementResult Calculate(SettlementRequest request)
     {
@@ -38,10 +43,12 @@ public sealed class SettlementEngine : ISettlementEngine
                 totalNetKwh += billableKwh;
 
                 // Energy: kWh × (spot + margin + supplement)
-                if (spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
+                if (!spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
                 {
-                    energyTotal += billableKwh * (spotPrice + request.MarginPerKwh + request.SupplementPerKwh);
+                    throw new InvalidOperationException(
+                        $"Missing spot price for {row.Timestamp:yyyy-MM-dd HH:mm} on metering point {request.MeteringPointId}. Settlement cannot proceed with incomplete price data.");
                 }
+                energyTotal += billableKwh * (spotPrice + request.MarginPerKwh + request.SupplementPerKwh);
 
                 // Grid tariff: kWh × grid_rate[hour_of_day]
                 var hourNumber = row.Timestamp.Hour + 1;
@@ -53,10 +60,12 @@ public sealed class SettlementEngine : ISettlementEngine
             else if (netKwh < 0)
             {
                 // Excess production — credit at spot price only (no margin, tariffs, or tax)
-                if (spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
+                if (!spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
                 {
-                    productionCreditTotal += Math.Abs(netKwh) * spotPrice;
+                    throw new InvalidOperationException(
+                        $"Missing spot price for {row.Timestamp:yyyy-MM-dd HH:mm} on metering point {request.MeteringPointId}. Settlement cannot proceed with incomplete price data.");
                 }
+                productionCreditTotal += Math.Abs(netKwh) * spotPrice;
             }
             // netKwh == 0: no charge, no credit
         }
@@ -73,7 +82,7 @@ public sealed class SettlementEngine : ISettlementEngine
         // Subscriptions (pro rata for partial periods)
         var periodStart = request.PeriodStart;
         var periodEnd = request.PeriodEnd;
-        var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber;
+        var daysInPeriod = (periodEnd.ToDateTime(TimeOnly.MinValue) - periodStart.ToDateTime(TimeOnly.MinValue)).Days;
         var daysInMonth = DateTime.DaysInMonth(periodStart.Year, periodStart.Month);
         var proRataFactor = (decimal)daysInPeriod / daysInMonth;
 
@@ -98,7 +107,7 @@ public sealed class SettlementEngine : ISettlementEngine
         }
 
         var subtotal = lines.Sum(l => l.Amount);
-        var vatAmount = Math.Round(subtotal * VatRate, 2);
+        var vatAmount = Math.Round(subtotal * _vatRate, 2);
         var total = subtotal + vatAmount;
 
         return new SettlementResult(

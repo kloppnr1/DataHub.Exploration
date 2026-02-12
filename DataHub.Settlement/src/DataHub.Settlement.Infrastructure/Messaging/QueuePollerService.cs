@@ -29,6 +29,8 @@ public sealed class QueuePollerService : BackgroundService
     private readonly IClock _clock;
     private readonly IMessageLog _messageLog;
     private readonly IInvoiceService _invoiceService;
+    private readonly EffectuationService _effectuationService;
+    private readonly SettlementMetrics _metrics;
     private readonly ILogger<QueuePollerService> _logger;
     private readonly TimeSpan _pollInterval;
 
@@ -54,7 +56,9 @@ public sealed class QueuePollerService : BackgroundService
         IClock clock,
         IMessageLog messageLog,
         IInvoiceService invoiceService,
+        EffectuationService effectuationService,
         ILogger<QueuePollerService> logger,
+        SettlementMetrics? metrics = null,
         TimeSpan? pollInterval = null)
     {
         _client = client;
@@ -70,6 +74,8 @@ public sealed class QueuePollerService : BackgroundService
         _clock = clock;
         _messageLog = messageLog;
         _invoiceService = invoiceService;
+        _effectuationService = effectuationService;
+        _metrics = metrics ?? new SettlementMetrics();
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
     }
@@ -101,6 +107,15 @@ public sealed class QueuePollerService : BackgroundService
         if (message is null)
             return false;
 
+        // Structured log scope with correlation ID for end-to-end tracing
+        using var scope = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["MessageId"] = message.MessageId,
+            ["MessageType"] = message.MessageType,
+            ["CorrelationId"] = message.CorrelationId,
+            ["Queue"] = queue.ToString(),
+        });
+
         _logger.LogInformation("Processing message {MessageId} ({MessageType}) from {Queue}",
             message.MessageId, message.MessageType, queue);
 
@@ -109,38 +124,56 @@ public sealed class QueuePollerService : BackgroundService
             message.MessageId, message.MessageType, message.CorrelationId,
             queue.ToString(), message.RawPayload.Length, message.RawPayload, ct);
 
-        // Idempotency check
-        if (await _messageLog.IsProcessedAsync(message.MessageId, ct))
+        // Atomic idempotency: claim the message via INSERT ON CONFLICT DO NOTHING.
+        // Only the poller that successfully inserts gets to process. No check-then-act race.
+        if (!await _messageLog.TryClaimForProcessingAsync(message.MessageId, ct))
         {
-            _logger.LogInformation("Message {MessageId} already processed, skipping", message.MessageId);
+            _logger.LogInformation("Message {MessageId} already claimed by another poller, skipping", message.MessageId);
             await _client.DequeueAsync(message.MessageId, ct);
             return true;
         }
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             await ProcessMessageAsync(message, queue, ct);
 
-            // Mark processed BEFORE dequeue (at-least-once delivery)
-            await _messageLog.MarkProcessedAsync(message.MessageId, ct);
+            sw.Stop();
+            _metrics.RecordMessageProcessed(message.MessageType, queue.ToString());
+            _metrics.RecordMessageDuration(sw.Elapsed.TotalMilliseconds, message.MessageType);
+
+            // Message already claimed above — just update status
             await _messageLog.MarkInboundStatusAsync(message.MessageId, "processed", null, ct);
             await _client.DequeueAsync(message.MessageId, ct);
 
-            _logger.LogInformation("Message {MessageId} processed successfully", message.MessageId);
+            _logger.LogInformation("Message {MessageId} processed successfully in {DurationMs}ms",
+                message.MessageId, sw.Elapsed.TotalMilliseconds);
             return true;
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException or KeyNotFoundException)
         {
-            // Parse errors → dead-letter + dequeue (free the queue)
+            // Parse/format errors → permanent failure → dead-letter + dequeue
+            _metrics.RecordMessageDeadLettered(message.MessageType, queue.ToString());
             _logger.LogWarning(ex, "Message {MessageId} failed to parse, dead-lettering", message.MessageId);
             await _messageLog.DeadLetterAsync(message.MessageId, queue.ToString(), ex.Message, message.RawPayload, ct);
             await _messageLog.MarkInboundStatusAsync(message.MessageId, "dead_lettered", ex.Message, ct);
             await _client.DequeueAsync(message.MessageId, ct);
             return true;
         }
+        catch (InvalidOperationException ex)
+        {
+            // State machine transition conflicts — leave message on queue for retry.
+            _metrics.RecordMessageFailed(message.MessageType, queue.ToString());
+            _logger.LogWarning(ex,
+                "Message {MessageId} hit a state transition conflict, will retry on next poll",
+                message.MessageId);
+            return false;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Unexpected errors (DB failures, etc.) — dead-letter to prevent infinite retry
+            _metrics.RecordMessageDeadLettered(message.MessageType, queue.ToString());
             _logger.LogError(ex, "Message {MessageId} failed with unexpected error, dead-lettering", message.MessageId);
             await _messageLog.DeadLetterAsync(message.MessageId, queue.ToString(), ex.Message, message.RawPayload, ct);
             await _messageLog.MarkInboundStatusAsync(message.MessageId, "dead_lettered", ex.Message, ct);
@@ -242,90 +275,15 @@ public sealed class QueuePollerService : BackgroundService
                 {
                     var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
 
-                    // 1. Mark process completed (supply has started per DataHub)
-                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
-                    await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
-
-                    // 2. Sync signup status → creates or links Customer entity
-                    await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
-
-                    // 3. Reload signup to get the customer_id (just created or linked)
-                    // Note: Can't use GetActiveByGsrnAsync here because it filters OUT status='active'
-                    signup = await _signupRepo.GetByIdAsync(signup.Id, ct);
-
-                    if (signup?.CustomerId is not null)
-                    {
-                        // 4. Create Contract and SupplyPeriod
-                        await _portfolioRepo.CreateContractAsync(
-                            signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
-                            "quarterly", "aconto", effectiveDate, ct);
-
-                        await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
-
-                        // 5. Merge staged RSM-028 customer data if available
-                        var staged = await _portfolioRepo.GetStagedCustomerDataAsync(masterData.MeteringPointId, ct);
-                        if (staged is not null)
-                        {
-                            _logger.LogInformation(
-                                "RSM-022: Merging staged RSM-028 customer data for {Gsrn} — phone={Phone}, email={Email}",
-                                masterData.MeteringPointId, staged.Phone, staged.Email);
-                        }
-
-                        // 6. Send RSM-027 customer data update for supplier_switch/move_in
-                        if (process is not null && process.ProcessType is "supplier_switch" or "move_in" &&
-                            process.DatahubCorrelationId is not null)
-                        {
-                            var cprCvr = await _signupRepo.GetCustomerCprCvrAsync(signup.Id, ct);
-                            if (cprCvr is not null)
-                            {
-                                var customer = await _portfolioRepo.GetCustomerAsync(signup.CustomerId.Value, ct);
-                                var customerName = customer?.Name ?? signup.SignupNumber;
-                                var rsm027 = _brsBuilder.BuildRsm027(masterData.MeteringPointId, customerName, cprCvr, process.DatahubCorrelationId);
-                                await _client.SendRequestAsync("customer_data_update", rsm027, ct);
-                                await _messageRepo.RecordOutboundRequestAsync("RSM-027", masterData.MeteringPointId, process.DatahubCorrelationId, "sent", rsm027, ct);
-
-                                _logger.LogInformation("RSM-022: Sent RSM-027 customer data update for {Gsrn}", masterData.MeteringPointId);
-                            }
-                        }
-
-                        // 7. Create aconto invoice for the first period
-                        try
-                        {
-                            var contract = await _portfolioRepo.GetActiveContractAsync(masterData.MeteringPointId, ct);
-                            var periodEnd = effectiveDate.AddMonths(1);
-                            var acontoAmount = 500m; // Default first-month aconto estimate
-
-                            await _invoiceService.CreateAcontoInvoiceAsync(
-                                signup.CustomerId.Value,
-                                contract?.PayerId,
-                                contract?.Id,
-                                masterData.MeteringPointId,
-                                effectiveDate,
-                                periodEnd,
-                                acontoAmount,
-                                ct);
-
-                            _logger.LogInformation(
-                                "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}",
-                                masterData.MeteringPointId, effectiveDate, periodEnd);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex,
-                                "RSM-022: Failed to create aconto invoice for GSRN {Gsrn} — invoice creation is non-blocking",
-                                masterData.MeteringPointId);
-                        }
-
-                        _logger.LogInformation(
-                            "RSM-022: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
-                            signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "RSM-022: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
-                            signup?.SignupNumber ?? "unknown", masterData.MeteringPointId);
-                    }
+                    // Delegate to EffectuationService which wraps all DB operations in transactions
+                    await _effectuationService.ActivateAsync(
+                        signup.ProcessRequestId.Value,
+                        signup.Id,
+                        masterData.MeteringPointId,
+                        effectiveDate,
+                        process?.ProcessType,
+                        process?.DatahubCorrelationId,
+                        ct);
                 }
             }
             else if (signup is null)

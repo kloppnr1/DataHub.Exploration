@@ -12,4 +12,10 @@ public interface IProcessRepository
     Task<IReadOnlyList<ProcessEvent>> GetEventsAsync(Guid processRequestId, CancellationToken ct);
     Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct);
     Task<bool> HasActiveByGsrnAsync(string gsrn, CancellationToken ct);
+
+    /// <summary>
+    /// Atomically transitions a process from expectedStatus to 'cancelled' with reason event,
+    /// in a single transaction. Used for DataHub D11 auto-cancellation to prevent partial state.
+    /// </summary>
+    Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct);
 }

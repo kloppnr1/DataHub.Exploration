@@ -50,6 +50,7 @@ public class QueuePollerTests
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
             new NullInvoiceService(),
+            CreateNullEffectuationService(TestDatabase.ConnectionString),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
@@ -83,6 +84,7 @@ public class QueuePollerTests
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
             new NullInvoiceService(),
+            CreateNullEffectuationService(TestDatabase.ConnectionString),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
@@ -115,6 +117,7 @@ public class QueuePollerTests
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
             new NullInvoiceService(),
+            CreateNullEffectuationService(TestDatabase.ConnectionString),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));
@@ -156,12 +159,23 @@ public class QueuePollerTests
             new NullMessageRepository(), clock,
             NullLogger<OnboardingService>.Instance);
 
+        var effectuationService = new EffectuationService(
+            TestDatabase.ConnectionString,
+            onboardingService,
+            new NullInvoiceService(),
+            client,
+            new Infrastructure.DataHub.BrsRequestBuilder(),
+            new NullMessageRepository(),
+            clock,
+            NullLogger<EffectuationService>.Instance);
+
         var poller = new QueuePollerService(
             client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
             onboardingService, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             clock, _messageLog,
             new NullInvoiceService(),
+            effectuationService,
             NullLogger<QueuePollerService>.Instance);
 
         // 2. Ensure grid area exists (required for RSM-022)
@@ -254,6 +268,16 @@ public class QueuePollerTests
         var peek = await client.PeekAsync(QueueName.MasterData, ct);
         peek.Should().BeNull("message should be dequeued after processing");
     }
+
+    private static EffectuationService CreateNullEffectuationService(string connectionString) =>
+        new(connectionString,
+            NullOnboardingService.Instance,
+            new NullInvoiceService(),
+            new FakeDataHubClient(),
+            new Infrastructure.DataHub.BrsRequestBuilder(),
+            new NullMessageRepository(),
+            new TestClock(),
+            NullLogger<EffectuationService>.Instance);
 
     /// <summary>
     /// Stub address lookup that returns the GSRN used in RSM-022 fixture

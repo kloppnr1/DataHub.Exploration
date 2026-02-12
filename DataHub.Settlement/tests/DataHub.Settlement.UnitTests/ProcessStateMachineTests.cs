@@ -274,5 +274,18 @@ public class ProcessStateMachineTests
                 r.Status is not ("completed" or "cancelled" or "rejected" or "final_settled"));
             return Task.FromResult(hasActive);
         }
+
+        public Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct)
+        {
+            if (!_requests.TryGetValue(requestId, out var req))
+                throw new InvalidOperationException($"Process request {requestId} not found");
+            if (req.Status != expectedStatus)
+                throw new InvalidOperationException($"Cannot auto-cancel: expected '{expectedStatus}', got '{req.Status}'");
+
+            _requests[requestId] = req with { Status = "cancelled" };
+            _events.Add(new ProcessEvent(Guid.NewGuid(), requestId, DateTime.UtcNow, "auto_cancelled", null, "datahub"));
+            _events.Add(new ProcessEvent(Guid.NewGuid(), requestId, DateTime.UtcNow, "cancellation_reason", reason, "datahub"));
+            return Task.CompletedTask;
+        }
     }
 }

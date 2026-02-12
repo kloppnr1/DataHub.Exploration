@@ -254,6 +254,9 @@ public class SignupValidationTests
 
         public Task<bool> HasActiveByGsrnAsync(string gsrn, CancellationToken ct)
             => Task.FromResult(false);
+
+        public Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct)
+            => Task.CompletedTask;
     }
 
     private sealed class InMemorySignupRepo : ISignupRepository
