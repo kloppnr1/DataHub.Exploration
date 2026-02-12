@@ -358,7 +358,7 @@ public class SignupValidationTests
 
     private sealed class StubMessageRepo : IMessageRepository
     {
-        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct) => Task.CompletedTask;
+        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct) => Task.CompletedTask;
         public Task<Application.Common.PagedResult<InboundMessageSummary>> GetInboundMessagesAsync(MessageFilter filter, int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
         public Task<InboundMessageDetail?> GetInboundMessageAsync(Guid messageId, CancellationToken ct) => throw new NotImplementedException();
         public Task<Application.Common.PagedResult<OutboundRequestSummary>> GetOutboundRequestsAsync(OutboundFilter filter, int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();

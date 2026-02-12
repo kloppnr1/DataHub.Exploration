@@ -80,6 +80,7 @@ public sealed class MessageRepository : IMessageRepository
         const string sql = """
             SELECT im.id, im.datahub_message_id, im.message_type, im.correlation_id, im.queue_name, im.status, im.received_at, im.processed_at,
                    COALESCE(im.raw_payload_size, 0) AS raw_payload_size,
+                   im.raw_payload,
                    dl.error_reason AS error_details
             FROM datahub.inbound_message im
             LEFT JOIN datahub.dead_letter dl ON im.id::text = dl.original_message_id
@@ -104,6 +105,7 @@ public sealed class MessageRepository : IMessageRepository
             row.ProcessedAt,
             row.ErrorDetails,
             row.RawPayloadSize,
+            row.RawPayload,
             context);
     }
 
@@ -160,7 +162,7 @@ public sealed class MessageRepository : IMessageRepository
     public async Task<OutboundRequestDetail?> GetOutboundRequestAsync(Guid requestId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details
+            SELECT id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details, raw_payload
             FROM datahub.outbound_request
             WHERE id = @Id
             """;
@@ -181,6 +183,7 @@ public sealed class MessageRepository : IMessageRepository
             row.SentAt,
             row.ResponseAt,
             row.ErrorDetails,
+            row.RawPayload,
             context);
     }
 
@@ -421,11 +424,11 @@ public sealed class MessageRepository : IMessageRepository
         return null;
     }
 
-    public async Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct)
+    public async Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct)
     {
         const string sql = """
-            INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at)
-            VALUES (@Id, @ProcessType, @Gsrn, @Status, @CorrelationId, @SentAt)
+            INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, raw_payload)
+            VALUES (@Id, @ProcessType, @Gsrn, @Status, @CorrelationId, @SentAt, @RawPayload)
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -438,6 +441,7 @@ public sealed class MessageRepository : IMessageRepository
             Status = status,
             CorrelationId = correlationId,
             SentAt = DateTime.UtcNow,
+            RawPayload = rawPayload,
         }, cancellationToken: ct));
     }
 
@@ -468,6 +472,7 @@ internal class InboundMessageDetailRow
     public DateTime ReceivedAt { get; set; }
     public DateTime? ProcessedAt { get; set; }
     public int RawPayloadSize { get; set; }
+    public string? RawPayload { get; set; }
     public string? ErrorDetails { get; set; }
 }
 
@@ -493,6 +498,7 @@ internal class OutboundRequestDetailRow
     public DateTime SentAt { get; set; }
     public DateTime? ResponseAt { get; set; }
     public string? ErrorDetails { get; set; }
+    public string? RawPayload { get; set; }
 }
 
 internal class DeadLetterSummaryRow

@@ -49,6 +49,7 @@ public record InboundMessageDetail(
     DateTime? ProcessedAt,
     string? ErrorDetails,
     int RawPayloadSize,
+    string? RawPayload,
     MessageContext? Context);
 
 public record OutboundRequestSummary(
@@ -69,6 +70,7 @@ public record OutboundRequestDetail(
     DateTime SentAt,
     DateTime? ResponseAt,
     string? ErrorDetails,
+    string? RawPayload,
     MessageContext? Context);
 
 public record DeadLetterSummary(

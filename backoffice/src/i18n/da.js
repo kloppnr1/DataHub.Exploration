@@ -439,6 +439,13 @@ export default {
   'messages.colFailedAt': 'Fejlet',
   'messages.noDeadLetters': 'Ingen fejlbeskeder fundet.',
   'messages.showingItems': 'elementer',
+  'messages.tabOutbound': 'Udgående anmodninger',
+  'messages.allProcessTypes': 'Alle procestyper',
+  'messages.colProcessType': 'Procestype',
+  'messages.colSentAt': 'Sendt',
+  'messages.noOutboundRequests': 'Ingen udgående anmodninger fundet.',
+  'messages.showingDeadLetters': 'fejlbeskeder',
+  'messages.rawPayload': 'Rå payload',
 
   // ── Inbound Message Detail ──
   'inboundDetail.breadcrumbMessages': 'Beskeder',

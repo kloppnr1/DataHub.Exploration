@@ -37,17 +37,17 @@ public sealed class MessageLog : IMessageLog
     }
 
     public async Task RecordInboundAsync(string messageId, string messageType, string? correlationId,
-        string queueName, int payloadSize, CancellationToken ct)
+        string queueName, int payloadSize, string rawPayload, CancellationToken ct)
     {
         const string sql = """
-            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, raw_payload_size)
-            VALUES (@MessageId, @MessageType, @CorrelationId, @QueueName, @PayloadSize)
+            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, raw_payload_size, raw_payload)
+            VALUES (@MessageId, @MessageType, @CorrelationId, @QueueName, @PayloadSize, @RawPayload)
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(sql,
-            new { MessageId = messageId, MessageType = messageType, CorrelationId = correlationId, QueueName = queueName, PayloadSize = payloadSize },
+            new { MessageId = messageId, MessageType = messageType, CorrelationId = correlationId, QueueName = queueName, PayloadSize = payloadSize, RawPayload = rawPayload },
             cancellationToken: ct));
     }
 

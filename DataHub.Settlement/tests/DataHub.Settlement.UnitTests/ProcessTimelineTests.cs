@@ -379,7 +379,7 @@ public class ProcessTimelineTests
     {
         public Task<bool> IsProcessedAsync(string messageId, CancellationToken ct) => Task.FromResult(false);
         public Task MarkProcessedAsync(string messageId, CancellationToken ct) => Task.CompletedTask;
-        public Task RecordInboundAsync(string messageId, string messageType, string? correlationId, string queueName, int payloadSize, CancellationToken ct) => Task.CompletedTask;
+        public Task RecordInboundAsync(string messageId, string messageType, string? correlationId, string queueName, int payloadSize, string rawPayload, CancellationToken ct) => Task.CompletedTask;
         public Task MarkInboundStatusAsync(string messageId, string status, string? errorDetails, CancellationToken ct) => Task.CompletedTask;
         public Task DeadLetterAsync(string messageId, string queueName, string errorReason, string rawPayload, CancellationToken ct) => Task.CompletedTask;
     }
@@ -461,7 +461,7 @@ public class ProcessTimelineTests
         public Task<Application.Common.PagedResult<Application.Messaging.ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
         public Task<Application.Messaging.ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Application.Messaging.DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct) => throw new NotImplementedException();
-        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct) => throw new NotImplementedException();
+        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct) => throw new NotImplementedException();
     }
 
     /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches signup (directly).</summary>

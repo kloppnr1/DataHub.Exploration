@@ -39,20 +39,20 @@ public class ConversationQueryTests
 
         // 2. Record outbound for original BRS-001
         await _messageRepo.RecordOutboundRequestAsync(
-            "supplier_switch", "571313100000099999", "corr-conv-test-001", "acknowledged_ok", ct);
+            "supplier_switch", "571313100000099999", "corr-conv-test-001", "acknowledged_ok", null, ct);
 
         // 3. Record outbound for RSM-024 cancel (same correlation ID)
         await _messageRepo.RecordOutboundRequestAsync(
-            "cancel_switch", "571313100000099999", "corr-conv-test-001", "sent", ct);
+            "cancel_switch", "571313100000099999", "corr-conv-test-001", "sent", null, ct);
 
         // 4. Record inbound RSM-001 ack for original
         await _messageLog.RecordInboundAsync(
-            "msg-rsm001-orig", "RSM-001", "corr-conv-test-001", "MasterData", 100, ct);
+            "msg-rsm001-orig", "RSM-001", "corr-conv-test-001", "MasterData", 100, "{}", ct);
         await _messageLog.MarkProcessedAsync("msg-rsm001-orig", ct);
 
         // 5. Record inbound RSM-001 cancel ack (same correlation ID)
         await _messageLog.RecordInboundAsync(
-            "msg-rsm001-cancel", "RSM-001", "corr-conv-test-001", "MasterData", 100, ct);
+            "msg-rsm001-cancel", "RSM-001", "corr-conv-test-001", "MasterData", 100, "{}", ct);
         await _messageLog.MarkProcessedAsync("msg-rsm001-cancel", ct);
 
         // 6. Query conversation — should include all messages
@@ -81,15 +81,15 @@ public class ConversationQueryTests
 
         // Record outbound for both (same correlation ID)
         await _messageRepo.RecordOutboundRequestAsync(
-            "supplier_switch", "571313100000088888", "corr-conv-summary-001", "acknowledged_ok", ct);
+            "supplier_switch", "571313100000088888", "corr-conv-summary-001", "acknowledged_ok", null, ct);
         await _messageRepo.RecordOutboundRequestAsync(
-            "cancel_switch", "571313100000088888", "corr-conv-summary-001", "sent", ct);
+            "cancel_switch", "571313100000088888", "corr-conv-summary-001", "sent", null, ct);
 
         // Record inbound for both (same correlation ID)
         await _messageLog.RecordInboundAsync(
-            "msg-summary-orig", "RSM-001", "corr-conv-summary-001", "MasterData", 100, ct);
+            "msg-summary-orig", "RSM-001", "corr-conv-summary-001", "MasterData", 100, "{}", ct);
         await _messageLog.RecordInboundAsync(
-            "msg-summary-cancel", "RSM-001", "corr-conv-summary-001", "MasterData", 100, ct);
+            "msg-summary-cancel", "RSM-001", "corr-conv-summary-001", "MasterData", 100, "{}", ct);
 
         // Query conversations list
         var result = await _messageRepo.GetConversationsAsync(1, 50, ct);

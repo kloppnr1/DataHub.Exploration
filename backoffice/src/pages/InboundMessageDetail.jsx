@@ -24,6 +24,7 @@ export default function InboundMessageDetail() {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [payloadOpen, setPayloadOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -191,11 +192,33 @@ export default function InboundMessageDetail() {
 
       {/* Error details */}
       {message.errorDetails && (
-        <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
           <h2 className="text-lg font-semibold text-rose-900 mb-4">{t('inboundDetail.errorDetails')}</h2>
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg overflow-x-auto">
             <pre className="text-sm text-rose-700 whitespace-pre-wrap font-mono">{message.errorDetails}</pre>
           </div>
+        </div>
+      )}
+
+      {/* Raw Payload */}
+      {message.rawPayload && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <button
+            onClick={() => setPayloadOpen(o => !o)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left"
+          >
+            <h2 className="text-lg font-semibold text-slate-900">{t('messages.rawPayload')}</h2>
+            <span className="text-slate-400 text-sm">{payloadOpen ? '−' : '+'}</span>
+          </button>
+          {payloadOpen && (
+            <div className="px-6 pb-6">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
+                <pre className="text-sm text-slate-700 whitespace-pre-wrap font-mono">
+                  {(() => { try { return JSON.stringify(JSON.parse(message.rawPayload), null, 2); } catch { return message.rawPayload; } })()}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

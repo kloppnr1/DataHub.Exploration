@@ -177,6 +177,7 @@ public class QueuePollerTests
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: new DateOnly(2025, 1, 1),
+            Mobile: "+4512345678",
             Gsrn: gsrn
         );
 

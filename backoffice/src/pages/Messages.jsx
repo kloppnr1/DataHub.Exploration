@@ -14,6 +14,9 @@ const processStatusStyles = {
   rejected: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
   cancellation_pending: { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700' },
   cancelled: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+  sent: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
+  acknowledged_ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+  acknowledged_error: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
 };
 
 function ProcessStatusBadge({ status }) {
@@ -146,6 +149,11 @@ export default function Messages() {
   const [inboundPage, setInboundPage] = useState(1);
   const [inboundFilters, setInboundFilters] = useState({ messageType: '', status: '', queueName: '' });
 
+  // Outbound requests
+  const [outboundData, setOutboundData] = useState(null);
+  const [outboundPage, setOutboundPage] = useState(1);
+  const [outboundFilters, setOutboundFilters] = useState({ processType: '', status: '' });
+
   // Deliveries
   const [deliveries, setDeliveries] = useState(null);
 
@@ -173,6 +181,18 @@ export default function Messages() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Fetch outbound requests
+  const fetchOutbound = useCallback((p, filters) => {
+    setError(null);
+    const params = { page: p, pageSize: PAGE_SIZE };
+    if (filters.processType) params.processType = filters.processType;
+    if (filters.status) params.status = filters.status;
+    api.getOutboundRequests(params)
+      .then(setOutboundData)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
   // Fetch deliveries
   const fetchDeliveries = useCallback(() => {
     setError(null);
@@ -194,9 +214,10 @@ export default function Messages() {
   useEffect(() => {
     setLoading(true);
     if (tab === 'inbound') fetchInbound(inboundPage, inboundFilters);
+    else if (tab === 'outbound') fetchOutbound(outboundPage, outboundFilters);
     else if (tab === 'deliveries') fetchDeliveries();
     else if (tab === 'dead-letters') fetchDeadLetters(dlPage);
-  }, [tab, inboundPage, inboundFilters, dlPage, fetchInbound, fetchDeliveries, fetchDeadLetters]);
+  }, [tab, inboundPage, inboundFilters, outboundPage, outboundFilters, dlPage, fetchInbound, fetchOutbound, fetchDeliveries, fetchDeadLetters]);
 
   if (loading && !stats) {
     return (
@@ -212,6 +233,10 @@ export default function Messages() {
   const inboundItems = inboundData?.items ?? [];
   const inboundTotal = inboundData?.totalCount ?? 0;
   const inboundPages = Math.ceil(inboundTotal / PAGE_SIZE);
+
+  const outboundItems = outboundData?.items ?? [];
+  const outboundTotal = outboundData?.totalCount ?? 0;
+  const outboundPages = Math.ceil(outboundTotal / PAGE_SIZE);
 
   const dlItems = dlData?.items ?? [];
   const dlTotal = dlData?.totalCount ?? 0;
@@ -254,6 +279,7 @@ export default function Messages() {
       <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit max-w-full overflow-x-auto shadow-sm border border-slate-100">
         {[
           { key: 'inbound', label: t('messages.tabInbound') },
+          { key: 'outbound', label: t('messages.tabOutbound') },
           { key: 'deliveries', label: t('messages.tabDeliveries') },
           { key: 'dead-letters', label: t('messages.tabDeadLetters') },
         ].map(({ key, label }) => (
@@ -382,6 +408,101 @@ export default function Messages() {
                   <button
                     onClick={() => setInboundPage(p => Math.min(inboundPages, p + 1))}
                     disabled={inboundPage === inboundPages}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('common.next')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Outbound Requests Tab ── */}
+        {tab === 'outbound' && (
+          <>
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap gap-3">
+              <select
+                value={outboundFilters.processType}
+                onChange={(e) => { setOutboundPage(1); setOutboundFilters(f => ({ ...f, processType: e.target.value })); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 text-slate-700 bg-white"
+              >
+                <option value="">{t('messages.allProcessTypes')}</option>
+                <option value="RSM-001">RSM-001</option>
+                <option value="RSM-005">RSM-005</option>
+                <option value="RSM-024">RSM-024</option>
+                <option value="RSM-027">RSM-027</option>
+              </select>
+              <select
+                value={outboundFilters.status}
+                onChange={(e) => { setOutboundPage(1); setOutboundFilters(f => ({ ...f, status: e.target.value })); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 text-slate-700 bg-white"
+              >
+                <option value="">{t('messages.allStatuses')}</option>
+                <option value="sent">{t('status.sent')}</option>
+                <option value="acknowledged_ok">{t('status.acknowledged')}</option>
+                <option value="acknowledged_error">{t('status.acknowledged_error')}</option>
+              </select>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colProcessType')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colGsrn')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCorrelation')}</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colSentAt')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading && outboundItems.length === 0 ? (
+                    <tr><td colSpan="5" className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
+                  ) : outboundItems.length === 0 ? (
+                    <tr><td colSpan="5" className="px-4 py-12 text-center text-slate-500">{t('messages.noOutboundRequests')}</td></tr>
+                  ) : (
+                    outboundItems.map((req) => (
+                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <Link to={`/datahub/messages/outbound/${req.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                            {req.processType}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-700">{req.gsrn}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <ProcessStatusBadge status={req.status} />
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {req.correlationId ? (
+                            <span className="font-mono text-xs text-slate-400">{req.correlationId.slice(0, 8)}</span>
+                          ) : (
+                            <span className="text-slate-300">&mdash;</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{new Date(req.sentAt).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {outboundPages > 1 && (
+              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="text-sm text-slate-600">
+                  {t('common.showingRange', { from: (outboundPage - 1) * PAGE_SIZE + 1, to: Math.min(outboundPage * PAGE_SIZE, outboundTotal), total: outboundTotal })} {t('messages.showingItems')}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setOutboundPage(p => Math.max(1, p - 1))}
+                    disabled={outboundPage === 1}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('common.previous')}
+                  </button>
+                  <button
+                    onClick={() => setOutboundPage(p => Math.min(outboundPages, p + 1))}
+                    disabled={outboundPage === outboundPages}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('common.next')}

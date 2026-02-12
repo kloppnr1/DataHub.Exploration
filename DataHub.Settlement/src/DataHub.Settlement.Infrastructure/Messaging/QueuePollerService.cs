@@ -103,7 +103,7 @@ public sealed class QueuePollerService : BackgroundService
         // Record inbound
         await _messageLog.RecordInboundAsync(
             message.MessageId, message.MessageType, message.CorrelationId,
-            queue.ToString(), message.RawPayload.Length, ct);
+            queue.ToString(), message.RawPayload.Length, message.RawPayload, ct);
 
         // Idempotency check
         if (await _messageLog.IsProcessedAsync(message.MessageId, ct))
@@ -278,7 +278,7 @@ public sealed class QueuePollerService : BackgroundService
                                 var customerName = customer?.Name ?? signup.SignupNumber;
                                 var rsm027 = _brsBuilder.BuildRsm027(masterData.MeteringPointId, customerName, cprCvr, process.DatahubCorrelationId);
                                 await _client.SendRequestAsync("customer_data_update", rsm027, ct);
-                                await _messageRepo.RecordOutboundRequestAsync("RSM-027", masterData.MeteringPointId, process.DatahubCorrelationId, "sent", ct);
+                                await _messageRepo.RecordOutboundRequestAsync("RSM-027", masterData.MeteringPointId, process.DatahubCorrelationId, "sent", rsm027, ct);
 
                                 _logger.LogInformation("RSM-022: Sent RSM-027 customer data update for {Gsrn}", masterData.MeteringPointId);
                             }

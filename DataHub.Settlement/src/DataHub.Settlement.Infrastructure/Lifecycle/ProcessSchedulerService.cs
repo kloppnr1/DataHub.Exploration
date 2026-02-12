@@ -129,7 +129,7 @@ public sealed class ProcessSchedulerService : BackgroundService
                     _ => process.ProcessType,
                 };
                 var outboundStatus = response.Accepted ? "acknowledged_ok" : "acknowledged_error";
-                await _messageRepo.RecordOutboundRequestAsync(rsmType, process.Gsrn, response.CorrelationId, outboundStatus, ct);
+                await _messageRepo.RecordOutboundRequestAsync(rsmType, process.Gsrn, response.CorrelationId, outboundStatus, cimPayload, ct);
 
                 // Transition: pending → sent_to_datahub
                 var stateMachine = new ProcessStateMachine(_processRepo, _clock);

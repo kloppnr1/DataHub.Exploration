@@ -62,6 +62,7 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Mobile: "+4512345678",
             Gsrn: "571313180000000001"
         );
 
@@ -94,13 +95,14 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
         var request = new SignupRequest(
             DarId: "test-dar-456",
             CustomerName: "Jane Smith",
-            CprCvr: "9876543210",
-            ContactType: "company",
+            CprCvr: "98765432",
+            ContactType: "business",
             Email: "jane@example.com",
             Phone: "+4587654321",
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Mobile: "+4587654321",
             Gsrn: "571313180000000002"
         );
 
@@ -117,8 +119,8 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
 
         var customer = customers[0];
         customer.Name.Should().Be("Jane Smith");
-        customer.CprCvr.Should().Be("9876543210");
-        customer.ContactType.Should().Be("business", "signup contact_type 'company' maps to customer contact_type 'business'");
+        customer.CprCvr.Should().Be("98765432");
+        customer.ContactType.Should().Be("business", "signup contact_type 'business' maps to DB 'company', then customer contact_type 'business'");
 
         // Verify signup is now linked to customer
         var updatedSignup = await _signupRepo.GetByIdAsync(signup.Id, CancellationToken.None);
@@ -137,12 +139,13 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
             DarId: "test-dar-789",
             CustomerName: "Bob Johnson",
             CprCvr: "1122334455",
-            ContactType: "person",
+            ContactType: "private",
             Email: "bob@example.com",
             Phone: "+4511223344",
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Mobile: "+4511223344",
             Gsrn: "571313180000000003"
         );
 
@@ -172,12 +175,12 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
 
         var requests = new[]
         {
-            new SignupRequest("dar-1", "Customer 1", "1111111111", "person", "c1@test.com", "+4511111111",
-                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), "571313180000000011"),
-            new SignupRequest("dar-2", "Customer 2", "2222222222", "person", "c2@test.com", "+4522222222",
-                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), "571313180000000012"),
-            new SignupRequest("dar-3", "Customer 3", "3333333333", "person", "c3@test.com", "+4533333333",
-                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), "571313180000000013"),
+            new SignupRequest("dar-1", "Customer 1", "1111111111", "private", "c1@test.com", "+4511111111",
+                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), Mobile: "+4511111111", Gsrn: "571313180000000011"),
+            new SignupRequest("dar-2", "Customer 2", "2222222222", "private", "c2@test.com", "+4522222222",
+                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), Mobile: "+4522222222", Gsrn: "571313180000000012"),
+            new SignupRequest("dar-3", "Customer 3", "3333333333", "private", "c3@test.com", "+4533333333",
+                product.Id, "switch", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20), Mobile: "+4533333333", Gsrn: "571313180000000013"),
         };
 
         var signups = new List<Signup>();
@@ -226,12 +229,13 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
             DarId: "test-dar-home",
             CustomerName: "Jane Doe",
             CprCvr: "1234567890",
-            ContactType: "person",
+            ContactType: "private",
             Email: "jane@example.com",
             Phone: "+4512345678",
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Mobile: "+4512345678",
             Gsrn: "571313180000000021"
         );
 
@@ -251,12 +255,13 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
             DarId: "test-dar-summer",
             CustomerName: "Jane Doe", // Same person
             CprCvr: "1234567890",     // SAME CPR/CVR
-            ContactType: "person",
+            ContactType: "private",
             Email: "jane@example.com",
             Phone: "+4512345678",
             ProductId: product.Id,
             Type: "switch",
             EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Mobile: "+4512345678",
             Gsrn: "571313180000000022" // DIFFERENT GSRN (second metering point)
         );
 

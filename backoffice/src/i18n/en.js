@@ -439,6 +439,13 @@ export default {
   'messages.colFailedAt': 'Failed At',
   'messages.noDeadLetters': 'No dead letters found.',
   'messages.showingItems': 'items',
+  'messages.tabOutbound': 'Outbound Requests',
+  'messages.allProcessTypes': 'All process types',
+  'messages.colProcessType': 'Process Type',
+  'messages.colSentAt': 'Sent At',
+  'messages.noOutboundRequests': 'No outbound requests found.',
+  'messages.showingDeadLetters': 'dead letters',
+  'messages.rawPayload': 'Raw Payload',
 
   // ── Inbound Message Detail ──
   'inboundDetail.breadcrumbMessages': 'Messages',

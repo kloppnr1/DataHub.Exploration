@@ -144,7 +144,7 @@ public class ProcessSchedulerTests
 
     private sealed class StubMessageRepository : IMessageRepository
     {
-        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, CancellationToken ct)
+        public Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct)
             => Task.CompletedTask;
 
         public Task<Application.Common.PagedResult<InboundMessageSummary>> GetInboundMessagesAsync(MessageFilter filter, int page, int pageSize, CancellationToken ct)
