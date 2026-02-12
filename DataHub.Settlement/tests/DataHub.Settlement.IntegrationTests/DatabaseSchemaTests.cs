@@ -53,6 +53,10 @@ public class DatabaseSchemaTests : IAsyncLifetime
     [InlineData("metering", "annual_consumption_tracker")]
     [InlineData("settlement", "correction_settlement")]
     [InlineData("settlement", "erroneous_switch_reversal")]
+    [InlineData("billing", "invoice")]
+    [InlineData("billing", "invoice_line")]
+    [InlineData("billing", "payment")]
+    [InlineData("billing", "payment_allocation")]
     public async Task Table_Exists(string schema, string table)
     {
         await using var cmd = new NpgsqlCommand(
@@ -75,7 +79,7 @@ public class DatabaseSchemaTests : IAsyncLifetime
             _connection);
 
         var count = (long)(await cmd.ExecuteScalarAsync())!;
-        count.Should().Be(30, "MVP 3 + B1 onboarding + payer (V025) + price attachments (V031) + customer staging (V033) requires exactly 30 tables");
+        count.Should().Be(34, "30 base tables + 4 invoice/payment tables (V004) requires exactly 34 tables");
     }
 
     [Fact]

@@ -46,9 +46,10 @@ public sealed class AcontoChangeOfSupplierIntegrationTests
         stepNames.Should().StartWith(new[]
         {
             "Seed Data", "Submit BRS-001", "DataHub Acknowledges",
-            "Estimate Aconto", "Send Invoice", "Receive RSM-022", "Effectuation"
+            "Receive RSM-022", "Effectuation", "Estimate Aconto"
         });
-        // RSM-012 deliveries happen between effectuation and payment
+        // RSM-012 deliveries and invoice happen after effectuation
+        stepNames.Should().Contain("Send Invoice");
         stepNames.Should().Contain("Receive RSM-012");
         stepNames.Should().Contain("Record Payment");
         stepNames.Should().Contain("Aconto Settlement");
