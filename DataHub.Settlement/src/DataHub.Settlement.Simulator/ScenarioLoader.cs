@@ -460,13 +460,13 @@ public static class ScenarioLoader
                 gridAreaCode,
                 chargeOwnerId,
                 validFrom = validFrom.ToString("yyyy-MM-dd"),
-                tariffType = "grid_tariff",
+                tariffType = "grid",
                 rates,
             },
             Subscription = new
             {
                 gridAreaCode,
-                subscriptionType = "grid_subscription",
+                subscriptionType = "grid",
                 amountPerMonth = 49.00m,
                 validFrom = validFrom.ToString("yyyy-MM-dd"),
             },

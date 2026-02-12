@@ -88,7 +88,7 @@ public static class DatabaseSeeder
             }
         }
 
-        // ── Phase 2: Build signup definitions ────────────────────────────
+        // ── Phase 2: Customers ───────────────────────────────────────────
         var firstNames = new[] { "Anders", "Mette", "Lars", "Sofie", "Jens", "Camilla", "Mikkel", "Louise", "Henrik", "Anne",
             "Peter", "Maria", "Rasmus", "Ida", "Christian", "Emma", "Thomas", "Julie", "Martin", "Katrine",
             "Nikolaj", "Sara", "Kasper", "Cecilie", "Jonas", "Nanna", "Simon", "Laura", "Frederik", "Astrid" };
@@ -99,7 +99,6 @@ public static class DatabaseSeeder
         var companyPrefixes = new[] { "Nordic", "Dansk", "Green", "Sol", "Vind", "El", "Smart", "Digital", "Eco", "Nord" };
         var companySuffixes = new[] { "Energy", "Tech", "Solutions", "Service", "Group", "Power", "Systems", "Trading", "Design", "Consult" };
 
-        // Danish address data for billing addresses
         var streets = new[] { "Vesterbrogade", "Nørrebrogade", "Østerbrogade", "Amagerbrogade", "Gammel Kongevej",
             "Strandvejen", "Kongens Nytorv", "Gothersgade", "Bredgade", "Store Kongensgade",
             "Frederiksberg Allé", "Jagtvej", "Tagensvej", "Vigerslev Allé", "Roskildevej",
@@ -123,59 +122,33 @@ public static class DatabaseSeeder
         string GridPriceArea(string code) => code == "543" ? "DK2" : "DK1";
         string MakeGsrn(int n) => $"57131318040{n:D7}";
 
-        var signupDefs = new List<(string Name, string CprCvr, string ContactType, string SignupContactType, string Gsrn, string Status, string Type, string GridArea, int Index)>();
+        var customerIds = new List<Guid>();
+        int custIdx = 0;
         int gsrnCounter = 1;
 
-        // 200 active signups
+        // 200 customers (mix of private and business)
         for (int i = 0; i < 200; i++)
         {
             bool isBusiness = i % 6 == 0;
-            string name, cprCvr, contactType, signupContactType;
+            string name, cprCvr, contactType;
             if (isBusiness)
             {
                 name = $"{companyPrefixes[rng.Next(companyPrefixes.Length)]} {companySuffixes[rng.Next(companySuffixes.Length)]} {companyNames[rng.Next(companyNames.Length)]}";
                 cprCvr = $"{10000000 + i:D8}";
                 contactType = "business";
-                signupContactType = "company";
             }
             else
             {
                 name = $"{firstNames[rng.Next(firstNames.Length)]} {lastNames[rng.Next(lastNames.Length)]}";
                 cprCvr = $"{1000000000L + i:D10}";
                 contactType = "private";
-                signupContactType = "person";
             }
-            signupDefs.Add((name, cprCvr, contactType, signupContactType, MakeGsrn(gsrnCounter++), "active", i % 5 == 0 ? "move_in" : "switch", PickGridArea(i), i));
-        }
-
-        // 10 processing
-        for (int i = 0; i < 10; i++)
-            signupDefs.Add(($"{firstNames[rng.Next(firstNames.Length)]} {lastNames[rng.Next(lastNames.Length)]}", $"{2000000000L + i:D10}", "private", "person", MakeGsrn(gsrnCounter++), "processing", "switch", PickGridArea(200 + i), 200 + i));
-
-        // 8 registered
-        for (int i = 0; i < 8; i++)
-            signupDefs.Add(($"{firstNames[rng.Next(firstNames.Length)]} {lastNames[rng.Next(lastNames.Length)]}", $"{3000000000L + i:D10}", "private", "person", MakeGsrn(gsrnCounter++), "registered", "switch", PickGridArea(210 + i), 210 + i));
-
-        // 7 rejected
-        for (int i = 0; i < 7; i++)
-            signupDefs.Add(($"{firstNames[rng.Next(firstNames.Length)]} {lastNames[rng.Next(lastNames.Length)]}", $"{4000000000L + i:D10}", "private", "person", MakeGsrn(gsrnCounter++), "rejected", "switch", PickGridArea(218 + i), 218 + i));
-
-        // 5 cancelled
-        for (int i = 0; i < 5; i++)
-            signupDefs.Add(($"{firstNames[rng.Next(firstNames.Length)]} {lastNames[rng.Next(lastNames.Length)]}", $"{5000000000L + i:D10}", "private", "person", MakeGsrn(gsrnCounter++), "cancelled", "switch", PickGridArea(225 + i), 225 + i));
-
-        // ── Phase 2b: Create customers ───────────────────────────────────
-        var customerMap = new Dictionary<string, Guid>();
-        int custIdx = 0;
-        foreach (var s in signupDefs.Where(s => s.Status == "active"))
-        {
-            if (customerMap.ContainsKey(s.CprCvr)) continue;
             var customerId = Guid.NewGuid();
-            customerMap[s.CprCvr] = customerId;
+            customerIds.Add(customerId);
             var city = cities[custIdx % cities.Length];
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active', @Street, @HouseNum, @Floor, @Door, @PostalCode, @City)",
-                new { Id = customerId, Name = s.Name, CprCvr = s.CprCvr, ContactType = s.ContactType,
+                new { Id = customerId, Name = name, CprCvr = cprCvr, ContactType = contactType,
                     Street = streets[custIdx % streets.Length],
                     HouseNum = $"{1 + custIdx % 120}",
                     Floor = floors[custIdx % floors.Length],
@@ -184,6 +157,7 @@ public static class DatabaseSeeder
             custIdx++;
         }
 
+        // 260 additional customers
         for (int i = 0; i < 260; i++)
         {
             bool isBusiness = i % 4 == 0;
@@ -200,9 +174,8 @@ public static class DatabaseSeeder
                 cprCvr = $"{6000000000L + i:D10}";
                 contactType = "private";
             }
-            if (customerMap.ContainsKey(cprCvr)) continue;
             var customerId = Guid.NewGuid();
-            customerMap[cprCvr] = customerId;
+            customerIds.Add(customerId);
             var city = cities[custIdx % cities.Length];
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active', @Street, @HouseNum, @Floor, @Door, @PostalCode, @City)",
@@ -215,71 +188,14 @@ public static class DatabaseSeeder
             custIdx++;
         }
 
-        // ── Phase 3: Signups ─────────────────────────────────────────────
-        var signupIds = new Dictionary<int, Guid>();
-        int signupNumber = 1;
-
-        foreach (var s in signupDefs)
-        {
-            var signupId = Guid.NewGuid();
-            signupIds[s.Index] = signupId;
-            var effectiveDate = s.Status == "active" ? new DateTime(2025, 1, 1) : DateTime.UtcNow.Date.AddDays(30);
-            var customerId = s.Status == "active" && customerMap.TryGetValue(s.CprCvr, out var cid) ? cid : (Guid?)null;
-
-            var signupCity = cities[signupNumber % cities.Length];
-            await conn.ExecuteAsync(
-                @"INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id,
-                    type, effective_date, status, created_at, customer_name, customer_cpr_cvr, customer_contact_type,
-                    billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
-                  VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId,
-                    @Type, @EffectiveDate, @Status, @Created, @CustomerName, @CustomerCprCvr, @CustomerContactType,
-                    @BillStreet, @BillHouseNum, @BillFloor, @BillDoor, @BillPostalCode, @BillCity)",
-                new
-                {
-                    Id = signupId, SignupNum = $"SGN-2025-{signupNumber:D5}",
-                    DarId = $"0a3f5000-{signupNumber:D4}-62c3-e044-0003ba298018",
-                    Gsrn = s.Gsrn, CustomerId = customerId,
-                    ProductId = productIds[s.Index % productIds.Count],
-                    Type = s.Type, EffectiveDate = effectiveDate, Status = s.Status,
-                    Created = DateTime.UtcNow.AddDays(-rng.Next(10, 60)),
-                    CustomerName = s.Name, CustomerCprCvr = s.CprCvr, CustomerContactType = s.SignupContactType,
-                    BillStreet = streets[signupNumber % streets.Length],
-                    BillHouseNum = $"{1 + signupNumber % 120}",
-                    BillFloor = floors[signupNumber % floors.Length],
-                    BillDoor = doors[signupNumber % doors.Length],
-                    BillPostalCode = signupCity.Item1, BillCity = signupCity.Item2
-                });
-            signupNumber++;
-        }
-
-        // ── Phase 4: Portfolio ───────────────────────────────────────────
+        // ── Phase 3: Portfolio (metering points, contracts, supply periods) ──
         var activeMeteringPoints = new List<string>();
 
-        foreach (var s in signupDefs.Where(s => s.Status == "active"))
-        {
-            var ga = s.GridArea;
-            await conn.ExecuteAsync(
-                "INSERT INTO portfolio.metering_point (gsrn, type, settlement_method, connection_status, grid_area_code, grid_operator_gln, price_area) VALUES (@Gsrn, 'E17', 'flex', 'connected', @GridArea, @Gln, @PriceArea)",
-                new { Gsrn = s.Gsrn, GridArea = ga, Gln = GridGln(ga), PriceArea = GridPriceArea(ga) });
-
-            var customerId = customerMap[s.CprCvr];
-            await conn.ExecuteAsync(
-                "INSERT INTO portfolio.contract (id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date) VALUES (@Id, @CustomerId, @Gsrn, @ProductId, 'monthly', 'aconto', @Start)",
-                new { Id = Guid.NewGuid(), CustomerId = customerId, Gsrn = s.Gsrn, ProductId = productIds[s.Index % productIds.Count], Start = new DateTime(2025, 1, 1) });
-
-            await conn.ExecuteAsync(
-                "INSERT INTO portfolio.supply_period (id, gsrn, start_date) VALUES (@Id, @Gsrn, @Start)",
-                new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, Start = new DateTime(2025, 1, 1) });
-
-            activeMeteringPoints.Add(s.Gsrn);
-        }
-
-        var existingCustomerList = customerMap.Where(kvp => !signupDefs.Any(s => s.Status == "active" && s.CprCvr == kvp.Key)).Take(300).ToList();
-        foreach (var (cprCvr, customerId) in existingCustomerList)
+        // One metering point + contract + supply period per customer
+        for (int i = 0; i < customerIds.Count; i++)
         {
             var gsrn = MakeGsrn(gsrnCounter++);
-            var gaIdx = gsrnCounter % 100;
-            var ga = gaIdx < 48 ? "543" : gaIdx < 80 ? "344" : "740";
+            var ga = PickGridArea(i);
 
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.metering_point (gsrn, type, settlement_method, connection_status, grid_area_code, grid_operator_gln, price_area) VALUES (@Gsrn, 'E17', 'flex', 'connected', @GridArea, @Gln, @PriceArea)",
@@ -287,7 +203,7 @@ public static class DatabaseSeeder
 
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.contract (id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date) VALUES (@Id, @CustomerId, @Gsrn, @ProductId, 'monthly', 'aconto', @Start)",
-                new { Id = Guid.NewGuid(), CustomerId = customerId, Gsrn = gsrn, ProductId = productIds[rng.Next(productIds.Count)], Start = new DateTime(2025, 1, 1) });
+                new { Id = Guid.NewGuid(), CustomerId = customerIds[i], Gsrn = gsrn, ProductId = productIds[i % productIds.Count], Start = new DateTime(2025, 1, 1) });
 
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.supply_period (id, gsrn, start_date) VALUES (@Id, @Gsrn, @Start)",
@@ -296,35 +212,33 @@ public static class DatabaseSeeder
             activeMeteringPoints.Add(gsrn);
         }
 
-        // 10 multi-MP customers
-        foreach (var s in signupDefs.Where(s => s.Status == "active").Take(10))
+        // 10 multi-MP customers (second metering point for the first 10 customers)
+        for (int i = 0; i < 10; i++)
         {
             var gsrn2 = MakeGsrn(gsrnCounter++);
-            var ga = s.GridArea;
+            var ga = PickGridArea(i);
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.metering_point (gsrn, type, settlement_method, connection_status, grid_area_code, grid_operator_gln, price_area) VALUES (@Gsrn, 'E17', 'flex', 'connected', @GridArea, @Gln, @PriceArea)",
                 new { Gsrn = gsrn2, GridArea = ga, Gln = GridGln(ga), PriceArea = GridPriceArea(ga) });
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.contract (id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date) VALUES (@Id, @CustomerId, @Gsrn, @ProductId, 'monthly', 'aconto', @Start)",
-                new { Id = Guid.NewGuid(), CustomerId = customerMap[s.CprCvr], Gsrn = gsrn2, ProductId = productIds[s.Index % productIds.Count], Start = new DateTime(2025, 1, 1) });
+                new { Id = Guid.NewGuid(), CustomerId = customerIds[i], Gsrn = gsrn2, ProductId = productIds[i % productIds.Count], Start = new DateTime(2025, 1, 1) });
             await conn.ExecuteAsync(
                 "INSERT INTO portfolio.supply_period (id, gsrn, start_date) VALUES (@Id, @Gsrn, @Start)",
                 new { Id = Guid.NewGuid(), Gsrn = gsrn2, Start = new DateTime(2025, 1, 1) });
             activeMeteringPoints.Add(gsrn2);
         }
 
-        // ── Phase 4b: Payers ───────────────────────────────────────────
-        // ~10% of active customers have a third-party payer (e.g. employer, parent, housing association)
+        // ── Phase 3b: Payers ────────────────────────────────────────────
         var payerNames = new[] { "Boligforeningen Sjælland", "Dansk Industri ApS", "Nordisk Ejendomme A/S",
             "Hansen & Søn Holding", "Grøn Bolig K/S", "Energi Danmark A/S", "Vestjysk Boligselskab",
             "København Kommune", "Aarhus Boligforening", "Norden Facility I/S" };
-        var payerMap = new Dictionary<int, Guid>();
-        var activeSignups = signupDefs.Where(s => s.Status == "active").ToList();
+        var payerIds = new List<Guid>();
 
         for (int i = 0; i < 10; i++)
         {
             var payerId = Guid.NewGuid();
-            payerMap[i] = payerId;
+            payerIds.Add(payerId);
             var payerCity = cities[i % cities.Length];
             await conn.ExecuteAsync(
                 @"INSERT INTO portfolio.payer (id, name, cpr_cvr, contact_type, email, phone,
@@ -341,17 +255,16 @@ public static class DatabaseSeeder
                     PostalCode = payerCity.Item1, City = payerCity.Item2 });
         }
 
-        // Link ~20 contracts to payers (every 10th active signup)
-        for (int i = 0; i < activeSignups.Count; i += 10)
+        // Link ~20 contracts to payers (every 10th metering point)
+        for (int i = 0; i < activeMeteringPoints.Count && i < 200; i += 10)
         {
-            var s = activeSignups[i];
-            var payerIdx = (i / 10) % payerMap.Count;
+            var payerIdx = (i / 10) % payerIds.Count;
             await conn.ExecuteAsync(
                 "UPDATE portfolio.contract SET payer_id = @PayerId WHERE gsrn = @Gsrn",
-                new { PayerId = payerMap[payerIdx], Gsrn = s.Gsrn });
+                new { PayerId = payerIds[payerIdx], Gsrn = activeMeteringPoints[i] });
         }
 
-        // 5 disconnected
+        // 5 disconnected metering points
         for (int i = 0; i < 5; i++)
         {
             var gsrn = MakeGsrn(gsrnCounter++);
@@ -361,16 +274,17 @@ public static class DatabaseSeeder
                 new { Gsrn = gsrn, GridArea = ga, Gln = GridGln(ga), PriceArea = GridPriceArea(ga), DeactivatedAt = DateTime.UtcNow.AddDays(-rng.Next(30, 180)) });
         }
 
-        // ── Phase 5: Seed electricity tax (national rate) ─────────────────
+        // ── Phase 4: Tariffs ─────────────────────────────────────────────
+
+        // Electricity tax (national rate)
         await conn.ExecuteAsync(
             "INSERT INTO tariff.electricity_tax (rate_per_kwh, valid_from, description) VALUES (0.008, '2025-01-01', 'Reduced rate 2025') ON CONFLICT (valid_from) DO UPDATE SET rate_per_kwh = 0.008");
 
-        // ── Phase 5b: Seed grid tariffs for seeded grid areas ────────────
+        // Grid tariffs + subscriptions per grid area
         foreach (var ga in gridAreas)
         {
-            // Grid tariff with 24 hourly rates
             var tariffId = await conn.QuerySingleAsync<Guid>(
-                "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'grid_tariff', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
+                "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'grid', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
                 new { ga.Code, ga.Gln });
 
             var rates = new List<object>();
@@ -391,11 +305,9 @@ public static class DatabaseSeeder
                 "INSERT INTO tariff.tariff_rate (grid_tariff_id, hour_number, price_per_kwh) VALUES (@GridTariffId, @HourNumber, @PricePerKwh) ON CONFLICT (grid_tariff_id, hour_number) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
                 rates);
 
-            // Grid subscription
             await conn.ExecuteAsync(
-                "INSERT INTO tariff.subscription (grid_area_code, subscription_type, amount_kr_per_month, valid_from) VALUES (@Code, 'grid_subscription', 49.00, '2025-01-01') ON CONFLICT DO NOTHING",
+                "INSERT INTO tariff.subscription (grid_area_code, subscription_type, amount_kr_per_month, valid_from) VALUES (@Code, 'grid', 49.00, '2025-01-01') ON CONFLICT DO NOTHING",
                 new { ga.Code });
         }
-
     }
 }
