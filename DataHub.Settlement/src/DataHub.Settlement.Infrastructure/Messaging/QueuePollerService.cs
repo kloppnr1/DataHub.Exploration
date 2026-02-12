@@ -182,6 +182,11 @@ public sealed class QueuePollerService : BackgroundService
         }
     }
 
+    public Task ReprocessMessageAsync(DataHubMessage message, QueueName queue, CancellationToken ct)
+    {
+        return ProcessMessageAsync(message, queue, ct);
+    }
+
     private Task ProcessMessageAsync(DataHubMessage message, QueueName queue, CancellationToken ct)
     {
         return queue switch
@@ -273,6 +278,11 @@ public sealed class QueuePollerService : BackgroundService
                 }
                 else
                 {
+                    if (process is not null && !process.CustomerDataReceived)
+                        _logger.LogWarning("RSM-022: Customer data (RSM-028) not yet received for process {ProcessId}", process.Id);
+                    if (process is not null && !process.TariffDataReceived)
+                        _logger.LogWarning("RSM-022: Tariff data (RSM-031) not yet received for process {ProcessId}", process.Id);
+
                     var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
 
                     // Delegate to EffectuationService which wraps all DB operations in transactions
@@ -426,6 +436,9 @@ public sealed class QueuePollerService : BackgroundService
                 customerData.CustomerType, customerData.Phone, customerData.Email,
                 message.CorrelationId, ct);
 
+            if (message.CorrelationId is not null)
+                await _processRepo.MarkCustomerDataReceivedAsync(message.CorrelationId, ct);
+
             _logger.LogInformation(
                 "RSM-028: Staged customer data for {Gsrn} — {CustomerName} ({CustomerType})",
                 customerData.MeteringPointId, customerData.CustomerName, customerData.CustomerType);
@@ -436,6 +449,9 @@ public sealed class QueuePollerService : BackgroundService
 
             await _tariffRepo.StoreTariffAttachmentsAsync(
                 priceData.MeteringPointId, priceData.Tariffs, message.CorrelationId, ct);
+
+            if (message.CorrelationId is not null)
+                await _processRepo.MarkTariffDataReceivedAsync(message.CorrelationId, ct);
 
             _logger.LogInformation(
                 "RSM-031: Stored {TariffCount} tariff attachments for {Gsrn}",

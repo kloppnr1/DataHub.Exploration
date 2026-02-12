@@ -15,4 +15,5 @@ public interface IMessageRepository
     Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct);
     Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct);
     Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct);
+    Task ResolveDeadLetterAsync(Guid id, string resolvedBy, CancellationToken ct);
 }

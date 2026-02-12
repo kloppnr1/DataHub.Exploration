@@ -24,7 +24,7 @@ public sealed class ProcessRepository : IProcessRepository
         const string sql = """
             INSERT INTO lifecycle.process_request (process_type, gsrn, effective_date)
             VALUES (@ProcessType, @Gsrn, @EffectiveDate)
-            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -38,7 +38,7 @@ public sealed class ProcessRepository : IProcessRepository
         const string insertProcess = """
             INSERT INTO lifecycle.process_request (process_type, gsrn, effective_date)
             VALUES (@ProcessType, @Gsrn, @EffectiveDate)
-            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
             """;
 
         const string insertEvent = """
@@ -72,7 +72,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<ProcessRequest?> GetAsync(Guid id, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
             FROM lifecycle.process_request
             WHERE id = @Id
             """;
@@ -86,7 +86,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<ProcessRequest?> GetByCorrelationIdAsync(string correlationId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
             FROM lifecycle.process_request
             WHERE datahub_correlation_id = @CorrelationId
             """;
@@ -245,7 +245,7 @@ public sealed class ProcessRepository : IProcessRepository
     public async Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
             FROM lifecycle.process_request
             WHERE status = @Status
             ORDER BY effective_date
@@ -256,5 +256,31 @@ public sealed class ProcessRepository : IProcessRepository
         var rows = await conn.QueryAsync<ProcessRequest>(
             new CommandDefinition(sql, new { Status = status }, cancellationToken: ct));
         return rows.ToList();
+    }
+
+    public async Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE lifecycle.process_request
+            SET customer_data_received = true, updated_at = now()
+            WHERE datahub_correlation_id = @CorrelationId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new { CorrelationId = correlationId }, cancellationToken: ct));
+    }
+
+    public async Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE lifecycle.process_request
+            SET tariff_data_received = true, updated_at = now()
+            WHERE datahub_correlation_id = @CorrelationId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new { CorrelationId = correlationId }, cancellationToken: ct));
     }
 }

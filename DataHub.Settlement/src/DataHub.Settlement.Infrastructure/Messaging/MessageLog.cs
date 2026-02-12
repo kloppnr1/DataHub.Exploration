@@ -94,4 +94,13 @@ public sealed class MessageLog : IMessageLog
             new { MessageId = messageId, QueueName = queueName, ErrorReason = errorReason, RawPayload = rawPayload },
             cancellationToken: ct));
     }
+
+    public async Task ClearClaimAsync(string messageId, CancellationToken ct)
+    {
+        const string sql = "DELETE FROM datahub.processed_message_id WHERE message_id = @MessageId";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new { MessageId = messageId }, cancellationToken: ct));
+    }
 }

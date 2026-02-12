@@ -22,7 +22,9 @@ using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
 using DataHub.Settlement.Infrastructure.Tariff;
 using DataHub.Settlement.Application.Authentication;
+using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Infrastructure.Authentication;
+using DataHub.Settlement.Infrastructure.Parsing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,6 +96,22 @@ builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
 builder.Services.AddSingleton<IPaymentAllocator>(sp =>
     new PaymentAllocator(connectionString, sp.GetRequiredService<ILogger<PaymentAllocator>>()));
 builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
+
+// Services needed for dead-letter retry (reprocessing messages through QueuePollerService)
+builder.Services.AddSingleton<ICimParser, CimJsonParser>();
+builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
+builder.Services.AddSingleton<SettlementMetrics>();
+builder.Services.AddSingleton<EffectuationService>(sp =>
+    new EffectuationService(
+        connectionString,
+        sp.GetRequiredService<IOnboardingService>(),
+        sp.GetRequiredService<IInvoiceService>(),
+        sp.GetRequiredService<IDataHubClient>(),
+        sp.GetRequiredService<IBrsRequestBuilder>(),
+        sp.GetRequiredService<IMessageRepository>(),
+        sp.GetRequiredService<IClock>(),
+        sp.GetRequiredService<ILogger<EffectuationService>>()));
+builder.Services.AddSingleton<QueuePollerService>();
 
 var app = builder.Build();
 
@@ -531,6 +549,77 @@ app.MapGet("/api/messages/dead-letters/{id:guid}", async (Guid id, IMessageRepos
     return detail is not null ? Results.Ok(detail) : Results.NotFound();
 });
 
+// POST /api/messages/dead-letters/{id}/retry — reprocess a dead-lettered message
+app.MapPost("/api/messages/dead-letters/{id:guid}/retry", async (
+    Guid id,
+    IMessageRepository messageRepo,
+    IMessageLog messageLog,
+    QueuePollerService poller,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    var deadLetter = await messageRepo.GetDeadLetterAsync(id, ct);
+    if (deadLetter is null)
+        return Results.NotFound(new { error = "Dead letter not found." });
+    if (deadLetter.Resolved)
+        return Results.BadRequest(new { error = "Dead letter is already resolved." });
+
+    // Extract raw payload from JSONB wrapper {"raw": "..."}
+    string rawPayload;
+    try
+    {
+        var jsonDoc = System.Text.Json.JsonDocument.Parse(deadLetter.RawPayload);
+        rawPayload = jsonDoc.RootElement.GetProperty("raw").GetString()!;
+    }
+    catch
+    {
+        return Results.BadRequest(new { error = "Could not extract raw payload from dead letter." });
+    }
+
+    // Look up original inbound message for message_type, correlation_id, queue_name
+    if (deadLetter.OriginalMessageId is null)
+        return Results.BadRequest(new { error = "Dead letter has no original message ID." });
+
+    // Query inbound_message by datahub_message_id
+    using var conn = new Npgsql.NpgsqlConnection(
+        app.Configuration.GetConnectionString("SettlementDb")
+        ?? Environment.GetEnvironmentVariable("SETTLEMENT_DB_CONNECTION_STRING")!);
+    await conn.OpenAsync(ct);
+    var inbound = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<InboundMessageInfoRow>(conn,
+        "SELECT datahub_message_id, message_type, correlation_id, queue_name FROM datahub.inbound_message WHERE datahub_message_id = @MsgId",
+        new { MsgId = deadLetter.OriginalMessageId });
+
+    if (inbound is null)
+        return Results.BadRequest(new { error = "Original inbound message not found." });
+
+    // Parse queue name
+    if (!Enum.TryParse<QueueName>(inbound.QueueName, ignoreCase: true, out var queue))
+        return Results.BadRequest(new { error = $"Unknown queue name: {inbound.QueueName}" });
+
+    // Clear idempotency claim so the message can be reprocessed
+    await messageLog.ClearClaimAsync(inbound.DatahubMessageId, ct);
+
+    // Reconstruct DataHubMessage and reprocess
+    var message = new DataHubMessage(inbound.DatahubMessageId, inbound.MessageType, inbound.CorrelationId, rawPayload);
+
+    try
+    {
+        await poller.ReprocessMessageAsync(message, queue, ct);
+
+        // Success: resolve the dead letter and update inbound status
+        await messageRepo.ResolveDeadLetterAsync(id, "retry", ct);
+        await messageLog.MarkInboundStatusAsync(inbound.DatahubMessageId, "processed", null, ct);
+
+        logger.LogInformation("Dead letter {DeadLetterId} retried successfully", id);
+        return Results.Ok(new { message = "Dead letter reprocessed successfully." });
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Dead letter {DeadLetterId} retry failed", id);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+});
+
 // GET /api/messages/stats — message statistics
 app.MapGet("/api/messages/stats", async (IMessageRepository repo, CancellationToken ct) =>
 {
@@ -845,3 +934,11 @@ app.Run();
 
 record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);
 record CreditNoteRequest(string? Notes);
+
+class InboundMessageInfoRow
+{
+    public string DatahubMessageId { get; set; } = null!;
+    public string MessageType { get; set; } = null!;
+    public string? CorrelationId { get; set; }
+    public string QueueName { get; set; } = null!;
+}

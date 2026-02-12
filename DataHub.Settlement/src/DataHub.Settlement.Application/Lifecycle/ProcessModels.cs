@@ -6,7 +6,9 @@ public record ProcessRequest(
     string Gsrn,
     string Status,
     DateOnly? EffectiveDate,
-    string? DatahubCorrelationId);
+    string? DatahubCorrelationId,
+    bool CustomerDataReceived = false,
+    bool TariffDataReceived = false);
 
 public record ProcessEvent(
     Guid Id,

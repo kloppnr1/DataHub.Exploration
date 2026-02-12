@@ -18,4 +18,7 @@ public interface IProcessRepository
     /// in a single transaction. Used for DataHub D11 auto-cancellation to prevent partial state.
     /// </summary>
     Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct);
+
+    Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct);
+    Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct);
 }

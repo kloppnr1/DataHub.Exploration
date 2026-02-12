@@ -287,5 +287,8 @@ public class ProcessStateMachineTests
             _events.Add(new ProcessEvent(Guid.NewGuid(), requestId, DateTime.UtcNow, "cancellation_reason", reason, "datahub"));
             return Task.CompletedTask;
         }
+
+        public Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
+        public Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
     }
 }

@@ -167,5 +167,7 @@ public class ProcessSchedulerTests
             => throw new NotImplementedException();
         public Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct)
             => throw new NotImplementedException();
+        public Task ResolveDeadLetterAsync(Guid id, string resolvedBy, CancellationToken ct)
+            => throw new NotImplementedException();
     }
 }

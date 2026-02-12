@@ -12,4 +12,5 @@ public interface IMessageLog
     Task RecordInboundAsync(string messageId, string messageType, string? correlationId, string queueName, int payloadSize, string rawPayload, CancellationToken ct);
     Task MarkInboundStatusAsync(string messageId, string status, string? errorDetails, CancellationToken ct);
     Task DeadLetterAsync(string messageId, string queueName, string errorReason, string rawPayload, CancellationToken ct);
+    Task ClearClaimAsync(string messageId, CancellationToken ct);
 }

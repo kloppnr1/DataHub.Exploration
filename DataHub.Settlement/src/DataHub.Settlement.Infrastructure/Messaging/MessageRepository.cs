@@ -424,6 +424,19 @@ public sealed class MessageRepository : IMessageRepository
         return null;
     }
 
+    public async Task ResolveDeadLetterAsync(Guid id, string resolvedBy, CancellationToken ct)
+    {
+        const string sql = """
+            UPDATE datahub.dead_letter
+            SET resolved = true, resolved_at = now(), resolved_by = @ResolvedBy
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new { Id = id, ResolvedBy = resolvedBy }, cancellationToken: ct));
+    }
+
     public async Task RecordOutboundRequestAsync(string processType, string gsrn, string correlationId, string status, string? rawPayload, CancellationToken ct)
     {
         const string sql = """

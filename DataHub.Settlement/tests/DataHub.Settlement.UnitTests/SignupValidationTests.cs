@@ -257,6 +257,9 @@ public class SignupValidationTests
 
         public Task AutoCancelAsync(Guid requestId, string expectedStatus, string reason, CancellationToken ct)
             => Task.CompletedTask;
+
+        public Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
+        public Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
     }
 
     private sealed class InMemorySignupRepo : ISignupRepository
@@ -372,5 +375,6 @@ public class SignupValidationTests
         public Task<Application.Common.PagedResult<ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct) => throw new NotImplementedException();
         public Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct) => throw new NotImplementedException();
+        public Task ResolveDeadLetterAsync(Guid id, string resolvedBy, CancellationToken ct) => throw new NotImplementedException();
     }
 }
