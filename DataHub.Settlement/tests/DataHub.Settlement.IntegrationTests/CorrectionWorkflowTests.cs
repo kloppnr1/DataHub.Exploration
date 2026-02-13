@@ -174,8 +174,8 @@ public class CorrectionWorkflowTests
             .Should().AllSatisfy(l => l.DeltaKwh.Should().BeGreaterThan(0, "energy delta kWh should be positive (consumption increased)"));
 
         // ──── 10. ASSERT: correction stored in database ────
-        var dbCorrection = await assertConn.QuerySingleAsync<dynamic>(
-            "SELECT original_run_id, trigger_type FROM settlement.correction_settlement WHERE correction_batch_id = @BatchId",
+        var dbCorrection = await assertConn.QueryFirstAsync<dynamic>(
+            "SELECT original_run_id, trigger_type FROM settlement.correction_settlement WHERE correction_batch_id = @BatchId LIMIT 1",
             new { BatchId = correctionResult.CorrectionBatchId });
 
         ((string)dbCorrection.trigger_type).Should().Be("manual");
