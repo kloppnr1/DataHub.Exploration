@@ -128,13 +128,7 @@ builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>()
 builder.Services.AddSingleton<ISettlementEngine, SettlementEngine>();
 builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringCompletenessChecker(connectionString));
 builder.Services.AddSingleton<ISettlementDataLoader, SettlementDataLoader>();
-builder.Services.AddSingleton<ISettlementResultStore>(sp =>
-{
-    var invoiceService = sp.GetRequiredService<IInvoiceService>();
-    var portfolioRepo = sp.GetRequiredService<IPortfolioRepository>();
-    var logger = sp.GetRequiredService<ILogger<SettlementResultStore>>();
-    return new SettlementResultStore(connectionString, invoiceService, portfolioRepo, logger);
-});
+builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
 
 // Spot price fetching from Energi Data Service (energidataservice.dk)
 builder.Services.AddHttpClient<EnergiDataServiceClient>();
@@ -166,6 +160,12 @@ builder.Services.AddHostedService<ProcessSchedulerService>();
 builder.Services.AddHostedService<SettlementOrchestrationService>();
 builder.Services.AddHostedService<SpotPriceFetchingService>();
 builder.Services.AddHostedService<OverdueCheckService>();
+builder.Services.AddHostedService(sp =>
+    new InvoicingService(
+        connectionString,
+        sp.GetRequiredService<IInvoiceService>(),
+        sp.GetRequiredService<IClock>(),
+        sp.GetRequiredService<ILogger<InvoicingService>>()));
 
 var host = builder.Build();
 
