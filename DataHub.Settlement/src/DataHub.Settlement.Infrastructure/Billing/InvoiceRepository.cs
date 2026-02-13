@@ -100,7 +100,7 @@ public sealed class InvoiceRepository : IInvoiceRepository
                 "SELECT * FROM billing.invoice_line WHERE invoice_id = @Id ORDER BY sort_order",
                 new { Id = id }, cancellationToken: ct));
 
-        var names = await conn.QuerySingleOrDefaultAsync<(string? CustomerName, string? PayerName)>(
+        var names = await conn.QuerySingleOrDefaultAsync<InvoiceNames>(
             new CommandDefinition("""
                 SELECT c.name AS CustomerName, p.name AS PayerName
                 FROM portfolio.customer c
@@ -109,7 +109,7 @@ public sealed class InvoiceRepository : IInvoiceRepository
                 """,
                 new { invoice.CustomerId, invoice.PayerId }, cancellationToken: ct));
 
-        return new InvoiceDetail(invoice, lines.ToList(), names.CustomerName, names.PayerName);
+        return new InvoiceDetail(invoice, lines.ToList(), names?.CustomerName, names?.PayerName);
     }
 
     public async Task<PagedResult<InvoiceSummary>> GetPagedAsync(
@@ -332,6 +332,12 @@ public sealed class InvoiceRepository : IInvoiceRepository
         var rows = await conn.QueryAsync<OutstandingCustomer>(
             new CommandDefinition(sql, cancellationToken: ct));
         return rows.ToList();
+    }
+
+    internal class InvoiceNames
+    {
+        public string? CustomerName { get; set; }
+        public string? PayerName { get; set; }
     }
 
     internal class InvoiceSummaryRow
