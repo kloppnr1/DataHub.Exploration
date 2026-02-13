@@ -338,6 +338,24 @@ public sealed class ProcessRepository : IProcessRepository
             checklist);
     }
 
+    public async Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT pr.id, pr.process_type, pr.gsrn, pr.status, pr.effective_date,
+                   pr.datahub_correlation_id, pr.customer_data_received, pr.tariff_data_received
+            FROM lifecycle.process_request pr
+            JOIN portfolio.contract c ON c.gsrn = pr.gsrn
+            WHERE c.customer_id = @CustomerId
+            ORDER BY pr.created_at DESC
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<ProcessRequest>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return rows.ToList();
+    }
+
     private sealed class ProcessDetailRow
     {
         public Guid Id { get; set; }

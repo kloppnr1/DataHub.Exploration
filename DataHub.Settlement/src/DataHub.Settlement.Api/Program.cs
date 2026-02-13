@@ -348,6 +348,8 @@ app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo
     var meteringPoints = await repo.GetMeteringPointsForCustomerAsync(id, ct);
     var payers = await repo.GetPayersForCustomerAsync(id, ct);
 
+    var products = await repo.GetActiveProductsAsync(ct);
+
     return Results.Ok(new
     {
         customer.Id,
@@ -359,7 +361,23 @@ app.MapGet("/api/customers/{id:guid}", async (Guid id, IPortfolioRepository repo
         Contracts = contracts,
         MeteringPoints = meteringPoints,
         Payers = payers,
+        Products = products.Select(p => new { p.Id, p.Name }),
     });
+});
+
+// GET /api/customers/{id}/processes — DataHub processes for this customer
+app.MapGet("/api/customers/{id:guid}/processes", async (Guid id, IProcessRepository repo, CancellationToken ct) =>
+{
+    var processes = await repo.GetByCustomerIdAsync(id, ct);
+    return Results.Ok(processes.Select(p => new
+    {
+        p.Id,
+        p.ProcessType,
+        p.Gsrn,
+        p.Status,
+        p.EffectiveDate,
+        p.DatahubCorrelationId,
+    }));
 });
 
 // PUT /api/customers/{id}/billing-address — update customer billing address

@@ -261,6 +261,7 @@ public class SignupValidationTests
         public Task MarkCustomerDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
         public Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
         public Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct) => Task.FromResult<ProcessDetail?>(null);
+        public Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct) => Task.FromResult<IReadOnlyList<ProcessRequest>>(Array.Empty<ProcessRequest>());
     }
 
     private sealed class InMemorySignupRepo : ISignupRepository
