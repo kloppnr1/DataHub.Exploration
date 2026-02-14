@@ -134,7 +134,7 @@ app.UseStaticFiles();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 // Seed test data
-app.MapPost("/api/seed", async () =>
+app.MapGet("/api/seed", async () =>
 {
     try
     {
