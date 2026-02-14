@@ -35,6 +35,7 @@ public class SettlementOrchestrationTests
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
 
         _completenessChecker.Result = new MeteringCompleteness(744, 500, false);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 1));
 
         var sut = CreateSut();
         await sut.RunTickAsync(CancellationToken.None);
