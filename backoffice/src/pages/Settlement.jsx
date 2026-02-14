@@ -12,11 +12,6 @@ const runStatusStyles = {
   failed: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
 };
 
-const correctionStatusStyles = {
-  completed: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
-  failed: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
-};
-
 const triggerStyles = {
   manual: 'bg-blue-50 text-blue-700',
   auto: 'bg-purple-50 text-purple-700',
