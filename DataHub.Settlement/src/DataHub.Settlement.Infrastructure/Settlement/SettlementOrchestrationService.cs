@@ -75,7 +75,16 @@ public sealed class SettlementOrchestrationService : BackgroundService
         if (!process.EffectiveDate.HasValue) return;
 
         var periodStart = process.EffectiveDate.Value;
-        var periodEnd = periodStart.AddMonths(1);
+
+        // Get contract first — we need billing_frequency to calculate the period end
+        var contract = await _portfolioRepo.GetActiveContractAsync(process.Gsrn, ct);
+        if (contract is null)
+        {
+            _logger.LogWarning("GSRN {Gsrn}: no active contract found, skipping settlement", process.Gsrn);
+            return;
+        }
+
+        var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(periodStart, contract.BillingFrequency);
         var startDt = periodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var endDt = periodEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
@@ -85,14 +94,6 @@ public sealed class SettlementOrchestrationService : BackgroundService
         {
             _logger.LogDebug("GSRN {Gsrn}: metering incomplete ({Received}/{Expected})",
                 process.Gsrn, completeness.ReceivedHours, completeness.ExpectedHours);
-            return;
-        }
-
-        // Get contract to determine product pricing
-        var contract = await _portfolioRepo.GetActiveContractAsync(process.Gsrn, ct);
-        if (contract is null)
-        {
-            _logger.LogWarning("GSRN {Gsrn}: no active contract found, skipping settlement", process.Gsrn);
             return;
         }
 

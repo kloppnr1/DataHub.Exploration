@@ -56,7 +56,7 @@ public class MoveInSettlementTests
         // The effective date is 7 days ago (max retroactive for BRS-009 move-in)
         var today = new DateOnly(2025, 2, 15);
         var effectiveDate = today.AddDays(-7); // 2025-02-08
-        var settlementPeriodEnd = effectiveDate.AddMonths(1); // 2025-03-08 (orchestration uses effective_date + 1 month)
+        var settlementPeriodEnd = new DateOnly(2025, 2, 28); // monthly billing ends at calendar month end
         var clock = new TestClock { Today = today };
 
         // ──── 0. CLEANUP ────
@@ -187,7 +187,7 @@ public class MoveInSettlementTests
             new { Gsrn });
 
         DateOnly.FromDateTime((DateTime)billingPeriod.period_start).Should().Be(effectiveDate);
-        DateOnly.FromDateTime((DateTime)billingPeriod.period_end).Should().Be(effectiveDate.AddMonths(1));
+        DateOnly.FromDateTime((DateTime)billingPeriod.period_end).Should().Be(settlementPeriodEnd);
     }
 
     private async Task SeedTariffsAsync(CancellationToken ct)
