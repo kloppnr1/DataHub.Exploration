@@ -22,7 +22,9 @@ public class SettlementDataLoaderTests
             new SpotPriceRow("DK1", new DateTime(2025, 1, 1, 1, 0, 0, DateTimeKind.Utc), 90m),
         ]);
         var tariffRepo = new InMemoryTariffRepository(
-            rates: [new TariffRateRow(1, 0.06m)],
+            gridRates: [new TariffRateRow(1, 0.06m)],
+            systemRates: [new TariffRateRow(0, 0.054m)],
+            transmissionRates: [new TariffRateRow(0, 0.049m)],
             electricityTax: 0.008m,
             gridSubscription: 49.00m);
 
@@ -49,7 +51,12 @@ public class SettlementDataLoaderTests
     {
         var meteringRepo = new InMemoryMeteringDataRepository([]);
         var spotPriceRepo = new InMemorySpotPriceRepository([]);
-        var tariffRepo = new InMemoryTariffRepository(rates: [], electricityTax: 0m, gridSubscription: 0m);
+        var tariffRepo = new InMemoryTariffRepository(
+            gridRates: [],
+            systemRates: [new TariffRateRow(0, 0.054m)],
+            transmissionRates: [new TariffRateRow(0, 0.049m)],
+            electricityTax: 0.008m,
+            gridSubscription: 0m);
 
         var sut = new SettlementDataLoader(meteringRepo, spotPriceRepo, tariffRepo);
 
@@ -84,9 +91,20 @@ public class SettlementDataLoaderTests
         public Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
     }
 
-    private sealed class InMemoryTariffRepository(IReadOnlyList<TariffRateRow> rates, decimal electricityTax, decimal gridSubscription) : ITariffRepository
+    private sealed class InMemoryTariffRepository(
+        IReadOnlyList<TariffRateRow> gridRates,
+        IReadOnlyList<TariffRateRow> systemRates,
+        IReadOnlyList<TariffRateRow> transmissionRates,
+        decimal electricityTax,
+        decimal gridSubscription) : ITariffRepository
     {
-        public Task<IReadOnlyList<TariffRateRow>> GetRatesAsync(string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct) => Task.FromResult(rates);
+        public Task<IReadOnlyList<TariffRateRow>> GetRatesAsync(string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct) =>
+            Task.FromResult(tariffType switch
+            {
+                "system" => systemRates,
+                "transmission" => transmissionRates,
+                _ => gridRates,
+            });
         public Task<decimal?> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => Task.FromResult<decimal?>(gridSubscription);
         public Task<decimal?> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => Task.FromResult<decimal?>(electricityTax);
         public Task SeedGridTariffAsync(string gridAreaCode, string tariffType, DateOnly validFrom, IReadOnlyList<TariffRateRow> rates, CancellationToken ct) => Task.CompletedTask;
