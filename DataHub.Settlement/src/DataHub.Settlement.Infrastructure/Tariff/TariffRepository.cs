@@ -24,6 +24,8 @@ public sealed class TariffRepository : ITariffRepository
     public async Task<IReadOnlyList<TariffRateRow>> GetRatesAsync(
         string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct)
     {
+        // Pick only the most recent valid tariff for this grid area + type,
+        // preventing duplicate hour numbers from overlapping tariff periods.
         const string sql = """
             SELECT tr.hour_number, tr.price_per_kwh
             FROM tariff.tariff_rate tr
@@ -32,6 +34,15 @@ public sealed class TariffRepository : ITariffRepository
               AND gt.tariff_type = @TariffType
               AND gt.valid_from <= @Date
               AND (gt.valid_to IS NULL OR gt.valid_to > @Date)
+              AND gt.id = (
+                  SELECT id FROM tariff.grid_tariff
+                  WHERE grid_area_code = @GridAreaCode
+                    AND tariff_type = @TariffType
+                    AND valid_from <= @Date
+                    AND (valid_to IS NULL OR valid_to > @Date)
+                  ORDER BY valid_from DESC
+                  LIMIT 1
+              )
             ORDER BY tr.hour_number
             """;
 
@@ -87,6 +98,16 @@ public sealed class TariffRepository : ITariffRepository
         string gridAreaCode, string tariffType, DateOnly validFrom,
         IReadOnlyList<TariffRateRow> rates, CancellationToken ct)
     {
+        // Close any existing open-ended tariff for this grid area + type that would overlap
+        const string closePrevious = """
+            UPDATE tariff.grid_tariff
+            SET valid_to = @ValidFrom
+            WHERE grid_area_code = @GridAreaCode
+              AND tariff_type = @TariffType
+              AND valid_from < @ValidFrom
+              AND (valid_to IS NULL OR valid_to > @ValidFrom)
+            """;
+
         const string insertTariff = """
             INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from)
             VALUES (@GridAreaCode, 'seed', @TariffType, @ValidFrom)
@@ -102,6 +123,10 @@ public sealed class TariffRepository : ITariffRepository
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
+
+        await conn.ExecuteAsync(new CommandDefinition(closePrevious,
+            new { GridAreaCode = gridAreaCode, TariffType = tariffType, ValidFrom = validFrom },
+            cancellationToken: ct));
 
         var tariffId = await conn.QuerySingleAsync<Guid>(
             new CommandDefinition(insertTariff,
