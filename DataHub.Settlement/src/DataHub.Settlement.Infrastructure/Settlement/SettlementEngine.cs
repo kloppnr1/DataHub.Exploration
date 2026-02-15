@@ -17,7 +17,9 @@ public sealed class SettlementEngine : ISettlementEngine
         // Build spot price lookup: if prices are quarter-hourly but consumption is hourly,
         // average the 4 quarter-hour prices per hour. Otherwise, use prices directly.
         var spotPriceLookup = BuildSpotPriceLookup(request.SpotPrices, request.Consumption);
-        var gridRateByHour = request.GridTariffRates.ToDictionary(r => r.HourNumber, r => r.PricePerKwh);
+        var gridRateByHour = request.GridTariffRates
+            .GroupBy(r => r.HourNumber)
+            .ToDictionary(g => g.Key, g => g.Last().PricePerKwh);
         var productionByHour = request.Production?.ToDictionary(p => p.Timestamp, p => p.QuantityKwh);
         var hasSolar = productionByHour is not null;
 
