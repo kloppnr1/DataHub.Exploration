@@ -97,6 +97,13 @@ public sealed class SettlementOrchestrationService : BackgroundService
             return;
         }
 
+        var mp = await _portfolioRepo.GetMeteringPointByGsrnAsync(process.Gsrn, ct);
+        if (mp is null)
+        {
+            _logger.LogWarning("GSRN {Gsrn}: metering point not found, skipping settlement", process.Gsrn);
+            return;
+        }
+
         var product = await _portfolioRepo.GetProductAsync(contract.ProductId, ct);
         if (product is null)
         {
@@ -106,7 +113,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
 
         // Load data and calculate
         var input = await _dataLoader.LoadAsync(
-            process.Gsrn, "344", "DK1",
+            process.Gsrn, mp.GridAreaCode, mp.PriceArea,
             periodStart, periodEnd,
             product.MarginOrePerKwh / 100m,
             (product.SupplementOrePerKwh ?? 0m) / 100m,
@@ -121,7 +128,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
             input.SupplierSubscriptionPerMonth, input.Elvarme);
 
         var result = _engine.Calculate(request);
-        await _resultStore.StoreAsync(process.Gsrn, "344", result, contract.BillingFrequency, ct);
+        await _resultStore.StoreAsync(process.Gsrn, mp.GridAreaCode, result, contract.BillingFrequency, ct);
 
         _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
             process.Gsrn, periodStart, periodEnd, result.Total);
