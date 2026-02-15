@@ -98,9 +98,11 @@ public class SettlementOrchestrationTests
     {
         public Contract? Contract { get; set; }
         public Product? Product { get; set; }
+        public MeteringPoint? MeteringPoint { get; set; } = new("571313100000012345", "E17", "D01", "344", "5790001089030", "DK1", "D03");
 
         public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => Task.FromResult(Contract);
         public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => Task.FromResult(Product);
+        public Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult(MeteringPoint);
 
         // Unused methods
         public Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, Address? billingAddress, CancellationToken ct) => throw new NotImplementedException();
@@ -127,7 +129,6 @@ public class SettlementOrchestrationTests
         public Task<Payer?> GetPayerAsync(Guid id, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Payer>> GetPayersForCustomerAsync(Guid customerId, CancellationToken ct) => throw new NotImplementedException();
         public Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct) => throw new NotImplementedException();
-        public Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
         public Task StageCustomerDataAsync(string gsrn, string customerName, string? cprCvr, string customerType, string? phone, string? email, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
         public Task<StagedCustomerData?> GetStagedCustomerDataAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
     }
