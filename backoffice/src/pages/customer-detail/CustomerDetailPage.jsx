@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import { useTranslation } from '../../i18n/LanguageContext';
 import Breadcrumb from '../../components/Breadcrumb';
@@ -25,10 +25,11 @@ const TABS = [
 export default function CustomerDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
 
   useEffect(() => {
     api.getCustomer(id)
@@ -96,7 +97,7 @@ export default function CustomerDetailPage() {
       {tab === 'contracts' && <ContractsMeteringTab customer={customer} />}
       {tab === 'invoices' && <InvoicesTab customerId={id} />}
       {tab === 'payments' && <PaymentsTab customerId={id} />}
-      {tab === 'charges' && <ChargesTab customerId={id} />}
+      {tab === 'charges' && <ChargesTab customerId={id} customer={customer} />}
       {tab === 'processes' && <ProcessesTab customerId={id} />}
       {tab === 'ledger' && <LedgerTab customerId={id} />}
     </div>

@@ -573,6 +573,12 @@ public sealed class QueuePollerService : BackgroundService
                 tariffData.GridAreaCode, tariffData.SubscriptionType, tariffData.SubscriptionAmountPerMonth,
                 tariffData.ValidFrom, ct);
 
+            if (tariffData.ElectricityTaxRate is not null)
+            {
+                await _tariffRepo.SeedElectricityTaxAsync(
+                    tariffData.ElectricityTaxRate.Value, tariffData.ValidFrom, ct);
+            }
+
             _logger.LogInformation(
                 "GRID-TARIFF: Seeded {RateCount} hourly rates + subscription for grid area {GridArea}",
                 tariffData.Rates.Count, tariffData.GridAreaCode);

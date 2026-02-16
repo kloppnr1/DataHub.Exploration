@@ -42,6 +42,14 @@ export default {
   'common.totalCount': '{count} i alt',
   'common.totalItems': '{count} {label}',
 
+  // ── Billing frequency & payment model (shared display values) ──
+  'billing.daily': 'Daglig',
+  'billing.weekly': 'Ugentlig',
+  'billing.monthly': 'Månedlig',
+  'billing.quarterly': 'Kvartalsvis',
+  'billing.post_payment': 'Efterbetaling',
+  'billing.aconto': 'Aconto',
+
   // ── Status badges ──
   'status.registered': 'registreret',
   'status.processing': 'behandles',
@@ -197,9 +205,13 @@ export default {
   'signupNew.creating': 'Opretter...',
   'signupNew.invoicingInterval': 'Faktureringsinterval',
   'signupNew.invoicingIntervalHelper': 'Hvor ofte kunden faktureres. Ugentlige perioder følger mandag–søndag.',
+  'signupNew.intervalDaily': 'Daglig',
   'signupNew.intervalWeekly': 'Ugentlig',
   'signupNew.intervalMonthly': 'Månedlig',
   'signupNew.intervalQuarterly': 'Kvartalsvis',
+  'signupNew.paymentModel': 'Betalingsmodel',
+  'signupNew.postPayment': 'Efterbetaling',
+  'signupNew.aconto': 'Aconto',
   'signupNew.createCorrectedSignup': 'Opret korrigeret tilmelding',
   'signupNew.createSignup': 'Opret tilmelding',
 
@@ -332,8 +344,8 @@ export default {
   'customerDetail.tariffColValidTo': 'Gyldig til',
   'customerDetail.tariffColReceived': 'Modtaget',
   'customerDetail.hourlyRates': 'Timepriser (DKK/kWh)',
-  'customerDetail.acontoPayments': 'Acontobetalinger',
-  'customerDetail.acontoColDate': 'Dato',
+  'customerDetail.acontoPayments': 'Acontofakturaer',
+  'customerDetail.acontoColDate': 'Periode',
   'customerDetail.acontoColAmount': 'Beløb',
   'customerDetail.acontoColCurrency': 'Valuta',
   'customerDetail.processColGsrn': 'Målepunkt',

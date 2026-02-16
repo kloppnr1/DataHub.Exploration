@@ -7,6 +7,7 @@ using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Domain;
 using DataHub.Settlement.Infrastructure.Database;
+using DataHub.Settlement.Infrastructure.Settlement;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -71,6 +72,7 @@ public sealed class EffectuationService
         string? signupNumber = null;
         Guid? productId = null;
         string? paymentModel = null;
+        string? billingFrequency = null;
         bool shouldSendRsm027 = false;
         string? customerName = null;
         string? cprCvr = null;
@@ -131,6 +133,7 @@ public sealed class EffectuationService
             productId = signup.ProductId;
             customerId = signup.CustomerId;
             paymentModel = signup.PaymentModel;
+            billingFrequency = signup.BillingFrequency;
 
             // Create/link customer if not yet linked
             if (customerId is null && !string.IsNullOrEmpty(signup.CustomerCprCvr))
@@ -323,10 +326,9 @@ public sealed class EffectuationService
             try
             {
                 var contract = await GetActiveContractAsync(conn, meteringPointId, ct);
-                var periodEnd = effectiveDate.AddMonths(1);
+                var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, billingFrequency!);
 
-                // Use AcontoEstimator with default values for first-month estimate
-                var acontoAmount = AcontoEstimator.EstimateQuarterlyAmount(
+                var quarterlyAmount = AcontoEstimator.EstimateQuarterlyAmount(
                     annualConsumptionKwh: 4000m,
                     expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
                         averageSpotPriceOrePerKwh: 80m,
@@ -335,8 +337,8 @@ public sealed class EffectuationService
                         transmissionTariffRate: 0.049m,
                         electricityTaxRate: 0.008m,
                         averageGridTariffRate: 0.20m));
-                // Convert quarterly to monthly (first month only)
-                acontoAmount = Math.Round(acontoAmount / 3m, 2);
+                var periodDays = periodEnd.DayNumber - effectiveDate.DayNumber;
+                var acontoAmount = Math.Round(quarterlyAmount * periodDays / 90m, 2);
 
                 await _invoiceService.CreateAcontoInvoiceAsync(
                     customerId!.Value, contract?.PayerId, contract?.Id,

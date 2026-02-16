@@ -1,9 +1,195 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api';
 import { useTranslation } from '../../i18n/LanguageContext';
 import WattzonLoader from '../../components/WattzonLoader';
 
-export default function ChargesTab({ customerId }) {
+const chargeTypeBadge = {
+  energy: 'bg-orange-50 text-orange-700',
+  grid_tariff: 'bg-blue-50 text-blue-700',
+  system_tariff: 'bg-indigo-50 text-indigo-700',
+  transmission_tariff: 'bg-violet-50 text-violet-700',
+  electricity_tax: 'bg-amber-50 text-amber-700',
+  grid_subscription: 'bg-teal-50 text-teal-700',
+  supplier_subscription: 'bg-emerald-50 text-emerald-700',
+  production_credit: 'bg-lime-50 text-lime-700',
+};
+
+function getDefaultPeriod(billingFrequency) {
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+  const fmt = (dt) => dt.toISOString().slice(0, 10);
+  switch (billingFrequency) {
+    case 'daily': {
+      const start = new Date(y, m, d);
+      return { start: fmt(start), end: fmt(new Date(y, m, d + 1)) };
+    }
+    case 'weekly': {
+      const dow = today.getDay() || 7; // Sun=7
+      const mon = new Date(y, m, d - dow + 1);
+      const next = new Date(mon); next.setDate(mon.getDate() + 7);
+      return { start: fmt(mon), end: fmt(next) };
+    }
+    case 'quarterly': {
+      const qStart = new Date(y, Math.floor(m / 3) * 3, 1);
+      const qEnd = new Date(y, Math.floor(m / 3) * 3 + 3, 1);
+      return { start: fmt(qStart), end: fmt(qEnd) };
+    }
+    default: { // monthly
+      return { start: fmt(new Date(y, m, 1)), end: fmt(new Date(y, m + 1, 1)) };
+    }
+  }
+}
+
+function SettlementPreviewPanel({ contracts, t }) {
+  const [selectedGsrn, setSelectedGsrn] = useState(contracts.length > 0 ? contracts[0].gsrn : '');
+  const selectedContract = contracts.find(c => c.gsrn === selectedGsrn);
+  const defaultPeriod = getDefaultPeriod(selectedContract?.billingFrequency || 'monthly');
+  const [periodStart, setPeriodStart] = useState(defaultPeriod.start);
+  const [periodEnd, setPeriodEnd] = useState(defaultPeriod.end);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleGsrnChange = (gsrn) => {
+    setSelectedGsrn(gsrn);
+    const contract = contracts.find(c => c.gsrn === gsrn);
+    const period = getDefaultPeriod(contract?.billingFrequency || 'monthly');
+    setPeriodStart(period.start);
+    setPeriodEnd(period.end);
+    setResult(null);
+    setError(null);
+  };
+
+  const runPreview = useCallback(async () => {
+    if (!selectedGsrn) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const data = await api.getSettlementPreview(selectedGsrn, periodStart, periodEnd);
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedGsrn, periodStart, periodEnd]);
+
+  if (contracts.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 rounded-full bg-amber-400" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('settlementPreview.title')}</h3>
+        </div>
+        <span className="text-[10px] text-slate-400 italic">{t('settlementPreview.dryRunNotice')}</span>
+      </div>
+      <div className="px-5 py-4">
+        <div className="flex items-end gap-3 mb-3 flex-wrap">
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('customerDetail.colGsrn')}</label>
+            <select value={selectedGsrn} onChange={e => handleGsrnChange(e.target.value)}
+              className="border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-400 font-mono">
+              {contracts.map(c => (
+                <option key={c.gsrn} value={c.gsrn}>{c.gsrn}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('settlementPreview.periodStart')}</label>
+            <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)}
+              className="border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('settlementPreview.periodEnd')}</label>
+            <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)}
+              className="border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          </div>
+          <button onClick={runPreview} disabled={loading || !selectedGsrn}
+            className="px-3 py-1.5 text-xs font-medium rounded bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-colors">
+            {loading ? t('settlementPreview.calculating') : t('settlementPreview.calculate')}
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            {t('settlementPreview.error')}: {error}
+          </div>
+        )}
+
+        {result && (
+          <div className="animate-fade-in-up">
+            {/* Completeness indicator */}
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t('settlementPreview.completeness')}:</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                result.completeness.isComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${result.completeness.isComplete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {result.completeness.receivedHours} / {result.completeness.expectedHours} {t('settlementPreview.hoursReceived').split('{')[0].trim() || 'hours'}
+              </span>
+              <span className={`text-[11px] font-medium ${result.completeness.isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {result.completeness.isComplete ? t('settlementPreview.complete') : t('settlementPreview.incomplete')}
+              </span>
+            </div>
+
+            {result.totalKwh === 0 ? (
+              <div className="py-4 text-center text-sm text-slate-400">{t('settlementPreview.noData')}</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.chargeType')}</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.kwh')}</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.amount')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {result.lines.map((line) => (
+                    <tr key={line.chargeType} className="hover:bg-slate-50/50">
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${chargeTypeBadge[line.chargeType] || 'bg-slate-100 text-slate-600'}`}>
+                          {t(`chargeType.${line.chargeType}`)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-slate-600">
+                        {line.kwh != null ? Number(line.kwh).toFixed(2) : '\u2014'}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-slate-700 font-medium">
+                        {Number(line.amount).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-slate-200">
+                  <tr>
+                    <td className="px-3 py-1.5 text-xs font-medium text-slate-500">{t('settlementPreview.subtotal')}</td>
+                    <td />
+                    <td className="px-3 py-1.5 text-right font-mono text-xs text-slate-700">{Number(result.subtotal).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-1.5 text-xs font-medium text-slate-500">{t('settlementPreview.vat')}</td>
+                    <td />
+                    <td className="px-3 py-1.5 text-right font-mono text-xs text-slate-700">{Number(result.vatAmount).toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="px-3 py-2 text-sm font-bold text-slate-800">{t('settlementPreview.total')}</td>
+                    <td />
+                    <td className="px-3 py-2 text-right font-mono text-sm font-bold text-slate-800">{Number(result.total).toFixed(2)} DKK</td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ChargesTab({ customerId, customer }) {
   const { t } = useTranslation();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +223,8 @@ export default function ChargesTab({ customerId }) {
 
   if (error) return <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600">{error}</div>;
   if (!summary) return <div className="p-8 text-center text-sm text-slate-400">{t('customerDetail.noCharges')}</div>;
+
+  const contracts = customer?.contracts || [];
 
   return (
     <div className="space-y-5 animate-fade-in-up">
@@ -118,7 +306,10 @@ export default function ChargesTab({ customerId }) {
         )}
       </div>
 
-      {/* Aconto payments */}
+      {/* Settlement Preview */}
+      <SettlementPreviewPanel contracts={contracts} t={t} />
+
+      {/* Aconto invoices */}
       {summary.acontoPayments && summary.acontoPayments.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
@@ -140,7 +331,7 @@ export default function ChargesTab({ customerId }) {
               <tbody className="divide-y divide-slate-100">
                 {summary.acontoPayments.map((ap) => (
                   <tr key={ap.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-2.5 text-sm text-slate-700">{ap.paymentDate}</td>
+                    <td className="px-4 py-2.5 text-sm text-slate-700">{ap.periodStart && ap.periodEnd ? `${ap.periodStart} — ${ap.periodEnd}` : ap.paymentDate}</td>
                     <td className="px-4 py-2.5 text-right text-sm tabular-nums font-semibold text-slate-900">{ap.amount?.toFixed(2)}</td>
                     <td className="px-4 py-2.5 text-sm text-slate-500">{ap.currency}</td>
                   </tr>

@@ -42,6 +42,14 @@ export default {
   'common.totalCount': '{count} total',
   'common.totalItems': '{count} {label}',
 
+  // ── Billing frequency & payment model (shared display values) ──
+  'billing.daily': 'Daily',
+  'billing.weekly': 'Weekly',
+  'billing.monthly': 'Monthly',
+  'billing.quarterly': 'Quarterly',
+  'billing.post_payment': 'Post-payment',
+  'billing.aconto': 'Aconto',
+
   // ── Status badges ──
   'status.registered': 'registered',
   'status.processing': 'processing',
@@ -197,9 +205,13 @@ export default {
   'signupNew.creating': 'Creating...',
   'signupNew.invoicingInterval': 'Invoicing interval',
   'signupNew.invoicingIntervalHelper': 'How often the customer is invoiced. Weekly periods align Monday–Sunday.',
+  'signupNew.intervalDaily': 'Daily',
   'signupNew.intervalWeekly': 'Weekly',
   'signupNew.intervalMonthly': 'Monthly',
   'signupNew.intervalQuarterly': 'Quarterly',
+  'signupNew.paymentModel': 'Payment model',
+  'signupNew.postPayment': 'Post-payment',
+  'signupNew.aconto': 'Aconto',
   'signupNew.createCorrectedSignup': 'Create Corrected Signup',
   'signupNew.createSignup': 'Create Signup',
 
@@ -332,8 +344,8 @@ export default {
   'customerDetail.tariffColValidTo': 'Valid To',
   'customerDetail.tariffColReceived': 'Received',
   'customerDetail.hourlyRates': 'Hourly Rates (DKK/kWh)',
-  'customerDetail.acontoPayments': 'Aconto Payments',
-  'customerDetail.acontoColDate': 'Date',
+  'customerDetail.acontoPayments': 'Aconto Invoices',
+  'customerDetail.acontoColDate': 'Period',
   'customerDetail.acontoColAmount': 'Amount',
   'customerDetail.acontoColCurrency': 'Currency',
   'customerDetail.processColGsrn': 'Metering Point',

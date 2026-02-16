@@ -85,6 +85,7 @@ public record CustomerBillingPeriod(
 
 public record AcontoPaymentInfo(
     Guid Id,
-    DateOnly PaymentDate,
+    DateOnly PeriodStart,
+    DateOnly PeriodEnd,
     decimal Amount,
     string Currency);

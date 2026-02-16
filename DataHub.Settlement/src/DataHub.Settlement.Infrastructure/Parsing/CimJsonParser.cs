@@ -313,7 +313,13 @@ public sealed class CimJsonParser : ICimParser
         var subscriptionType = sub.GetProperty("subscriptionType").GetString()!;
         var amountPerMonth = sub.GetProperty("amountPerMonth").GetDecimal();
 
-        return new GridTariffResult(gridAreaCode, chargeOwnerId, validFrom, tariffType, rates, subscriptionType, amountPerMonth);
+        decimal? electricityTaxRate = null;
+        if (doc.RootElement.TryGetProperty("ElectricityTax", out var etax))
+        {
+            electricityTaxRate = etax.GetProperty("ratePerKwh").GetDecimal();
+        }
+
+        return new GridTariffResult(gridAreaCode, chargeOwnerId, validFrom, tariffType, rates, subscriptionType, amountPerMonth, electricityTaxRate);
     }
 
     private static TimeSpan GetStep(string resolution)

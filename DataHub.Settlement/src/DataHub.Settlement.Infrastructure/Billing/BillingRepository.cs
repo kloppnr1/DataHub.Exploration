@@ -290,11 +290,11 @@ public sealed class BillingRepository : IBillingRepository
             """;
 
         const string acontoSql = """
-            SELECT ap.id, ap.paid_at AS payment_date, ap.amount, ap.currency
+            SELECT ap.id, ap.period_start, ap.period_end, ap.amount, ap.currency
             FROM billing.aconto_payment ap
             JOIN portfolio.contract ct ON ap.gsrn = ct.gsrn
             WHERE ct.customer_id = @CustomerId
-            ORDER BY ap.paid_at DESC
+            ORDER BY ap.period_start DESC
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -313,7 +313,8 @@ public sealed class BillingRepository : IBillingRepository
         var acontoRows = await conn.QueryAsync<AcontoPaymentRow>(acontoSql, new { CustomerId = customerId });
         var acontoList = acontoRows.Select(a => new AcontoPaymentInfo(
             a.Id,
-            DateOnly.FromDateTime(a.PaymentDate),
+            DateOnly.FromDateTime(a.PeriodStart),
+            DateOnly.FromDateTime(a.PeriodEnd),
             a.Amount,
             a.Currency)).ToList();
 
@@ -417,7 +418,8 @@ internal class CustomerBillingPeriodRow
 internal class AcontoPaymentRow
 {
     public Guid Id { get; set; }
-    public DateTime PaymentDate { get; set; }
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = null!;
 }

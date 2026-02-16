@@ -470,6 +470,11 @@ public static class ScenarioLoader
                 amountPerMonth = 49.00m,
                 validFrom = validFrom.ToString("yyyy-MM-dd"),
             },
+            ElectricityTax = new
+            {
+                ratePerKwh = 0.008m,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+            },
         };
         return JsonSerializer.Serialize(doc);
     }

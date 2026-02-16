@@ -32,7 +32,9 @@ export default function Breadcrumb({ fallback = [], current }) {
     }
   }
 
-  fallback.forEach((seg) => segments.push(seg));
+  if (segments.length === 0) {
+    fallback.forEach((seg) => segments.push(seg));
+  }
 
   return (
     <div className="mb-4 animate-fade-in-up">

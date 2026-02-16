@@ -9,4 +9,5 @@ public record GridTariffResult(
     string TariffType,
     IReadOnlyList<TariffRateRow> Rates,
     string SubscriptionType,
-    decimal SubscriptionAmountPerMonth);
+    decimal SubscriptionAmountPerMonth,
+    decimal? ElectricityTaxRate = null);
