@@ -277,7 +277,6 @@ public class EffectuationSettlementTests : IClassFixture<TestDatabase>
         var cs = TestDatabase.ConnectionString;
         return new InvoiceService(
             new InvoiceRepository(cs),
-            new AcontoPaymentRepository(cs),
             NullLogger<InvoiceService>.Instance);
     }
 
