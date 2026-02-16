@@ -474,7 +474,28 @@ public sealed class SimulationService
             annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
 
         // Customer pays the full quarterly aconto amount upfront at Q1 start
-        // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
+        var acontoStart = new DateOnly(2025, 1, 1);
+        var acontoEnd = new DateOnly(2025, 4, 1);
+        var vatAmount = Math.Round(quarterlyEstimate * 0.25m, 2);
+        {
+            var contract = await setup.Portfolio.GetActiveContractAsync(Gsrn, ct)
+                ?? throw new InvalidOperationException($"No active contract for GSRN {Gsrn}");
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(ct);
+            var invoiceId = await conn.QuerySingleAsync<Guid>(
+                @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                  VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, @Amount, @Vat, @Total, 'sent')
+                  RETURNING id",
+                new { CustomerId = setup.Customer.Id, ContractId = contract.Id,
+                      Start = acontoStart, End = acontoEnd,
+                      Amount = quarterlyEstimate, Vat = vatAmount, Total = quarterlyEstimate + vatAmount });
+            await conn.ExecuteAsync(
+                @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                  VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', @Desc, @Amount, @Vat, @Total)",
+                new { InvoiceId = invoiceId, Gsrn,
+                      Desc = $"Aconto prepayment {acontoStart:yyyy-MM-dd} to {acontoEnd:yyyy-MM-dd}",
+                      Amount = quarterlyEstimate, Vat = vatAmount, Total = quarterlyEstimate + vatAmount });
+        }
 
         await onStepCompleted(new SimulationStep(5, "Estimate Q1 Aconto",
             $"Quarterly estimate: {quarterlyEstimate:N2} DKK (paid upfront for Q1)"));
@@ -1376,7 +1397,24 @@ public sealed class SimulationService
         var qStartDate = DateOnly.FromDateTime(quarterStart);
         var qEndDate = qStartDate.AddMonths(3);
 
-        // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
+        {
+            var vatAmt = Math.Round(quarterlyEstimate * 0.25m, 2);
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(ct);
+            var invoiceId = await conn.QuerySingleAsync<Guid>(
+                @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                  VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, @Amount, @Vat, @Total, 'sent')
+                  RETURNING id",
+                new { CustomerId = contract.CustomerId, ContractId = contract.Id,
+                      Start = qStartDate, End = qEndDate,
+                      Amount = quarterlyEstimate, Vat = vatAmt, Total = quarterlyEstimate + vatAmt });
+            await conn.ExecuteAsync(
+                @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                  VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', @Desc, @Amount, @Vat, @Total)",
+                new { InvoiceId = invoiceId, Gsrn = gsrn,
+                      Desc = $"Aconto prepayment {qStartDate:yyyy-MM-dd} to {qEndDate:yyyy-MM-dd}",
+                      Amount = quarterlyEstimate, Vat = vatAmt, Total = quarterlyEstimate + vatAmt });
+        }
 
         await onStepCompleted(new SimulationStep(2, "Record Payment",
             $"Aconto payment of {quarterlyEstimate:N2} DKK recorded for {qStartDate}–{qEndDate}"));
@@ -2579,9 +2617,29 @@ public sealed class SimulationService
         // Step 9: Record Payment (after effectuation — direct debit collection)
         if (ctx.IsEffectuated && !ctx.IsAcontoPaid && currentDate >= timeline.GetDate("Record Payment"))
         {
-            // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
             var qStartDate = ed;
             var qEndDate = ed.AddMonths(3);
+            {
+                var portfolio = new PortfolioRepository(_connectionString);
+                var contract = await portfolio.GetActiveContractAsync(ctx.Gsrn, ct)
+                    ?? throw new InvalidOperationException($"No active contract for GSRN {ctx.Gsrn}");
+                var vatAmt = Math.Round(ctx.AcontoEstimate * 0.25m, 2);
+                await using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync(ct);
+                var invoiceId = await conn.QuerySingleAsync<Guid>(
+                    @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                      VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, @Amount, @Vat, @Total, 'sent')
+                      RETURNING id",
+                    new { CustomerId = contract.CustomerId, ContractId = contract.Id,
+                          Start = qStartDate, End = qEndDate,
+                          Amount = ctx.AcontoEstimate, Vat = vatAmt, Total = ctx.AcontoEstimate + vatAmt });
+                await conn.ExecuteAsync(
+                    @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                      VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', @Desc, @Amount, @Vat, @Total)",
+                    new { InvoiceId = invoiceId, Gsrn = ctx.Gsrn,
+                          Desc = $"Aconto prepayment {qStartDate:yyyy-MM-dd} to {qEndDate:yyyy-MM-dd}",
+                          Amount = ctx.AcontoEstimate, Vat = vatAmt, Total = ctx.AcontoEstimate + vatAmt });
+            }
 
             ctx.IsAcontoPaid = true;
             executed.Add(new SimulationStep(9, "Record Payment",

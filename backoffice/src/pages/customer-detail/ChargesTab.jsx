@@ -306,14 +306,14 @@ export default function ChargesTab({ customerId, customer }) {
       <SettlementPreviewPanel contracts={contracts} t={t} />
 
       {/* Aconto invoices */}
-      {summary.acontoPayments && summary.acontoPayments.length > 0 && (
+      {summary.acontoPrepayments && summary.acontoPrepayments.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 rounded-full bg-teal-500" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customerDetail.acontoPayments')}</h3>
             </div>
-            <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{summary.acontoPayments.length}</span>
+            <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{summary.acontoPrepayments.length}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -325,9 +325,9 @@ export default function ChargesTab({ customerId, customer }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {summary.acontoPayments.map((ap) => (
-                  <tr key={ap.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-2.5 text-sm text-slate-700">{ap.periodStart && ap.periodEnd ? `${ap.periodStart} — ${ap.periodEnd}` : ap.paymentDate}</td>
+                {summary.acontoPrepayments.map((ap) => (
+                  <tr key={ap.invoiceId} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2.5 text-sm text-slate-700">{ap.periodStart && ap.periodEnd ? `${ap.periodStart} — ${ap.periodEnd}` : ap.periodStart}</td>
                     <td className="px-4 py-2.5 text-right text-sm tabular-nums font-semibold text-slate-900">{ap.amount?.toFixed(2)}</td>
                     <td className="px-4 py-2.5 text-sm text-slate-500">{ap.currency}</td>
                   </tr>
