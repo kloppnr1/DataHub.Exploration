@@ -98,11 +98,14 @@ public class AcontoSettlementSyncTests
 
         // Run settlement orchestration
         var resultStore = new SettlementResultStore(TestDatabase.ConnectionString);
-        var orchestration = new SettlementOrchestrationService(
+        var trigger = new SettlementTriggerService(
             _processRepo, _portfolio,
             new MeteringCompletenessChecker(TestDatabase.ConnectionString),
             new SettlementDataLoader(_meteringRepo, _spotPriceRepo, _tariffRepo),
             new SettlementEngine(), resultStore, clock,
+            NullLogger<SettlementTriggerService>.Instance);
+        var orchestration = new SettlementOrchestrationService(
+            _processRepo, trigger,
             NullLogger<SettlementOrchestrationService>.Instance);
         await orchestration.RunTickAsync(ct);
 
@@ -168,11 +171,14 @@ public class AcontoSettlementSyncTests
 
         // Run settlement orchestration (creates settlement_run for Q1)
         var resultStore = new SettlementResultStore(TestDatabase.ConnectionString);
-        var orchestration = new SettlementOrchestrationService(
+        var trigger = new SettlementTriggerService(
             _processRepo, _portfolio,
             new MeteringCompletenessChecker(TestDatabase.ConnectionString),
             new SettlementDataLoader(_meteringRepo, _spotPriceRepo, _tariffRepo),
             new SettlementEngine(), resultStore, clock,
+            NullLogger<SettlementTriggerService>.Instance);
+        var orchestration = new SettlementOrchestrationService(
+            _processRepo, trigger,
             NullLogger<SettlementOrchestrationService>.Instance);
         await orchestration.RunTickAsync(ct);
 

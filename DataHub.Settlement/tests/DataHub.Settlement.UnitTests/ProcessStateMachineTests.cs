@@ -292,5 +292,14 @@ public class ProcessStateMachineTests
         public Task MarkTariffDataReceivedAsync(string correlationId, CancellationToken ct) => Task.CompletedTask;
         public Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct) => Task.FromResult<ProcessDetail?>(null);
         public Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct) => Task.FromResult<IReadOnlyList<ProcessRequest>>(Array.Empty<ProcessRequest>());
+
+        public Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct)
+        {
+            var request = _requests.Values
+                .Where(r => r.Gsrn == gsrn && r.Status == "completed")
+                .OrderByDescending(r => r.Id) // proxy for created_at DESC
+                .FirstOrDefault();
+            return Task.FromResult(request);
+        }
     }
 }

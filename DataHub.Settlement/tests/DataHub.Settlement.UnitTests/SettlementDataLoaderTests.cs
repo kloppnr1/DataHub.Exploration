@@ -114,5 +114,7 @@ public class SettlementDataLoaderTests
         public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => Task.CompletedTask;
         public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => Task.CompletedTask;
         public Task<IReadOnlyList<MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult<IReadOnlyList<MeteringPointTariffAttachment>>(Array.Empty<MeteringPointTariffAttachment>());
+        public Task<TariffSubscriptionInfo?> GetSubscriptionInfoAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => Task.FromResult<TariffSubscriptionInfo?>(null);
+        public Task<TariffElectricityTaxInfo?> GetElectricityTaxInfoAsync(DateOnly date, CancellationToken ct) => Task.FromResult<TariffElectricityTaxInfo?>(null);
     }
 }

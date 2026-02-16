@@ -288,10 +288,13 @@ public class PeriodBoundarySettlementTests
         var engine = new SettlementEngine();
         var resultStore = new SettlementResultStore(TestDatabase.ConnectionString);
 
-        var orchestration = new SettlementOrchestrationService(
+        var trigger = new SettlementTriggerService(
             _processRepo, _portfolio,
             completenessChecker, dataLoader, engine, resultStore,
             clock,
+            NullLogger<SettlementTriggerService>.Instance);
+        var orchestration = new SettlementOrchestrationService(
+            _processRepo, trigger,
             NullLogger<SettlementOrchestrationService>.Instance);
 
         await orchestration.RunTickAsync(ct);

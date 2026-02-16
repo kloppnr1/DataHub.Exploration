@@ -23,6 +23,10 @@ public interface ITariffRepository
     Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct);
 
     Task<IReadOnlyList<MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct);
+
+    Task<TariffSubscriptionInfo?> GetSubscriptionInfoAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct);
+
+    Task<TariffElectricityTaxInfo?> GetElectricityTaxInfoAsync(DateOnly date, CancellationToken ct);
 }
 
 public record MeteringPointTariffAttachment(

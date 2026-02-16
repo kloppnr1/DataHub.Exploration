@@ -189,6 +189,49 @@ public sealed class TariffRepository : ITariffRepository
         return rows.ToList();
     }
 
+    public async Task<TariffSubscriptionInfo?> GetSubscriptionInfoAsync(
+        string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT amount_kr_per_month, valid_from
+            FROM tariff.subscription
+            WHERE grid_area_code = @GridAreaCode
+              AND subscription_type = @SubscriptionType
+              AND valid_from <= @Date
+              AND (valid_to IS NULL OR valid_to > @Date)
+            ORDER BY valid_from DESC
+            LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var row = await conn.QuerySingleOrDefaultAsync<SubscriptionInfoRow?>(
+            new CommandDefinition(sql, new { GridAreaCode = gridAreaCode, SubscriptionType = subscriptionType, Date = date }, cancellationToken: ct));
+
+        return row is null ? null : new TariffSubscriptionInfo(row.AmountKrPerMonth, row.ValidFrom);
+    }
+
+    public async Task<TariffElectricityTaxInfo?> GetElectricityTaxInfoAsync(DateOnly date, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT rate_per_kwh, valid_from
+            FROM tariff.electricity_tax
+            WHERE valid_from <= @Date
+              AND (valid_to IS NULL OR valid_to > @Date)
+            ORDER BY valid_from DESC
+            LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var row = await conn.QuerySingleOrDefaultAsync<ElectricityTaxInfoRow?>(
+            new CommandDefinition(sql, new { Date = date }, cancellationToken: ct));
+
+        return row is null ? null : new TariffElectricityTaxInfo(row.RatePerKwh, row.ValidFrom);
+    }
+
     public async Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<TariffAttachment> tariffs, string? correlationId, CancellationToken ct)
     {
         const string sql = """
@@ -210,5 +253,17 @@ public sealed class TariffRepository : ITariffRepository
         });
 
         await conn.ExecuteAsync(new CommandDefinition(sql, rows, cancellationToken: ct));
+    }
+
+    private sealed class SubscriptionInfoRow
+    {
+        public decimal AmountKrPerMonth { get; set; }
+        public DateOnly ValidFrom { get; set; }
+    }
+
+    private sealed class ElectricityTaxInfoRow
+    {
+        public decimal RatePerKwh { get; set; }
+        public DateOnly ValidFrom { get; set; }
     }
 }

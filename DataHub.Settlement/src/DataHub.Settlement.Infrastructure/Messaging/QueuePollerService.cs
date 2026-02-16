@@ -31,6 +31,7 @@ public sealed class QueuePollerService : BackgroundService
     private readonly IMessageLog _messageLog;
     private readonly IInvoiceService _invoiceService;
     private readonly EffectuationService _effectuationService;
+    private readonly Settlement.SettlementTriggerService? _settlementTrigger;
     private readonly SettlementMetrics _metrics;
     private readonly ILogger<QueuePollerService> _logger;
     private readonly TimeSpan _pollInterval;
@@ -60,7 +61,8 @@ public sealed class QueuePollerService : BackgroundService
         EffectuationService effectuationService,
         ILogger<QueuePollerService> logger,
         SettlementMetrics? metrics = null,
-        TimeSpan? pollInterval = null)
+        TimeSpan? pollInterval = null,
+        Settlement.SettlementTriggerService? settlementTrigger = null)
     {
         _client = client;
         _parser = parser;
@@ -79,6 +81,7 @@ public sealed class QueuePollerService : BackgroundService
         _metrics = metrics ?? new SettlementMetrics();
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromSeconds(1);
+        _settlementTrigger = settlementTrigger;
     }
 
     private static readonly TimeSpan PerQueueTimeout = TimeSpan.FromSeconds(30);
@@ -215,6 +218,7 @@ public sealed class QueuePollerService : BackgroundService
     private async Task ProcessTimeseriesAsync(DataHubMessage message, CancellationToken ct)
     {
         var seriesList = _parser.ParseRsm012(message.RawPayload);
+        var processedGsrns = new HashSet<string>();
 
         foreach (var series in seriesList)
         {
@@ -241,12 +245,29 @@ public sealed class QueuePollerService : BackgroundService
                 continue;
 
             var changedCount = await _meteringRepo.StoreTimeSeriesWithHistoryAsync(series.MeteringPointId, validPoints, ct);
+            processedGsrns.Add(series.MeteringPointId);
 
             if (changedCount > 0)
             {
                 _logger.LogInformation(
                     "Detected {ChangedCount} corrected readings for {Gsrn} — correction settlement may be needed",
                     changedCount, series.MeteringPointId);
+            }
+        }
+
+        // Trigger settlement for each affected GSRN after storing metering data
+        if (_settlementTrigger is not null)
+        {
+            foreach (var gsrn in processedGsrns)
+            {
+                try
+                {
+                    await _settlementTrigger.TrySettleAsync(gsrn, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "RSM-012 triggered settlement failed for GSRN {Gsrn}", gsrn);
+                }
             }
         }
     }

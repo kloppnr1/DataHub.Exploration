@@ -25,4 +25,6 @@ public interface IProcessRepository
     Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct);
 
     Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct);
+
+    Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct);
 }

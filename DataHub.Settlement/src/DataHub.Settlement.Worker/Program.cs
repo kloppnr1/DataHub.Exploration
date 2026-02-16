@@ -154,6 +154,9 @@ builder.Services.AddSingleton<EffectuationService>(sp =>
         sp.GetRequiredService<IClock>(),
         sp.GetRequiredService<ILogger<EffectuationService>>()));
 
+// Settlement trigger (shared between QueuePoller and SettlementOrchestration)
+builder.Services.AddSingleton<SettlementTriggerService>();
+
 // Background services
 builder.Services.AddHostedService<QueuePollerService>();
 builder.Services.AddHostedService<ProcessSchedulerService>();

@@ -356,6 +356,21 @@ public sealed class ProcessRepository : IProcessRepository
         return rows.ToList();
     }
 
+    public async Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id, customer_data_received, tariff_data_received
+            FROM lifecycle.process_request
+            WHERE gsrn = @Gsrn AND status = 'completed'
+            ORDER BY created_at DESC LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<ProcessRequest>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
     private sealed class ProcessDetailRow
     {
         public Guid Id { get; set; }

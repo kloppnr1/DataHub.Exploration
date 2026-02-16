@@ -256,12 +256,15 @@ public class BillingCombinationTests
     }
 
     private SettlementOrchestrationService CreateOrchestration(TestClock clock)
-        => new(
+    {
+        var trigger = new SettlementTriggerService(
             _processRepo, _portfolio,
             new MeteringCompletenessChecker(TestDatabase.ConnectionString),
             new SettlementDataLoader(_meteringRepo, _spotPriceRepo, _tariffRepo),
             new SettlementEngine(), new SettlementResultStore(TestDatabase.ConnectionString),
-            clock, NullLogger<SettlementOrchestrationService>.Instance);
+            clock, NullLogger<SettlementTriggerService>.Instance);
+        return new(_processRepo, trigger, NullLogger<SettlementOrchestrationService>.Instance);
+    }
 
     private InvoicingService CreateInvoicing(TestClock clock)
         => new(

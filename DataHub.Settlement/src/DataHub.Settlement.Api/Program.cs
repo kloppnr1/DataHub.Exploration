@@ -497,37 +497,37 @@ app.MapGet("/api/metering-points/{gsrn}/tariffs", async (string gsrn, ITariffRep
     // Subscriptions and electricity tax (looked up by grid area)
     if (mp != null)
     {
-        var gridSub = await tariffRepo.GetSubscriptionAsync(mp.GridAreaCode, "grid", today, ct);
-        if (gridSub.HasValue)
+        var gridSub = await tariffRepo.GetSubscriptionInfoAsync(mp.GridAreaCode, "grid", today, ct);
+        if (gridSub is not null)
             result.Add(new
             {
                 Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "grid_subscription",
-                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                ValidFrom = gridSub.ValidFrom, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
                 Rates = Enumerable.Empty<object>(),
-                AmountPerMonth = gridSub,
+                AmountPerMonth = (decimal?)gridSub.AmountPerMonth,
                 RatePerKwh = (decimal?)null,
             });
 
-        var supplierSub = await tariffRepo.GetSubscriptionAsync(mp.GridAreaCode, "supplier", today, ct);
-        if (supplierSub.HasValue)
+        var supplierSub = await tariffRepo.GetSubscriptionInfoAsync(mp.GridAreaCode, "supplier", today, ct);
+        if (supplierSub is not null)
             result.Add(new
             {
                 Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "supplier_subscription",
-                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                ValidFrom = supplierSub.ValidFrom, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
                 Rates = Enumerable.Empty<object>(),
-                AmountPerMonth = supplierSub,
+                AmountPerMonth = (decimal?)supplierSub.AmountPerMonth,
                 RatePerKwh = (decimal?)null,
             });
 
-        var elTax = await tariffRepo.GetElectricityTaxAsync(today, ct);
-        if (elTax.HasValue)
+        var elTax = await tariffRepo.GetElectricityTaxInfoAsync(today, ct);
+        if (elTax is not null)
             result.Add(new
             {
                 Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "electricity_tax",
-                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                ValidFrom = elTax.ValidFrom, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
                 Rates = Enumerable.Empty<object>(),
                 AmountPerMonth = (decimal?)null,
-                RatePerKwh = elTax,
+                RatePerKwh = (decimal?)elTax.RatePerKwh,
             });
     }
 

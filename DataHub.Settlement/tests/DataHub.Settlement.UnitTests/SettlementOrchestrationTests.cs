@@ -19,11 +19,17 @@ public class SettlementOrchestrationTests
     private readonly SettlementEngine _engine = new();
     private readonly StubResultStore _resultStore = new();
 
-    private SettlementOrchestrationService CreateSut(TestClock? clock = null) => new(
+    private SettlementTriggerService CreateTrigger(TestClock? clock = null) => new(
         _processRepo, _portfolioRepo, _completenessChecker,
         _dataLoader, _engine, _resultStore,
         clock ?? new TestClock { Today = new DateOnly(2025, 2, 15) },
-        NullLogger<SettlementOrchestrationService>.Instance);
+        NullLogger<SettlementTriggerService>.Instance);
+
+    private SettlementOrchestrationService CreateSut(TestClock? clock = null)
+    {
+        var trigger = CreateTrigger(clock);
+        return new(_processRepo, trigger, NullLogger<SettlementOrchestrationService>.Instance);
+    }
 
     [Fact]
     public async Task Skips_when_metering_incomplete()
@@ -245,6 +251,38 @@ public class SettlementOrchestrationTests
         await sut.RunTickAsync(CancellationToken.None);
 
         _resultStore.StoreCount.Should().Be(1, "single daily period should be settled");
+    }
+
+    [Fact]
+    public async Task TrySettleAsync_triggers_settlement_for_gsrn()
+    {
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 1), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(744, 744, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 1));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var trigger = CreateTrigger(clock);
+        await trigger.TrySettleAsync("571313100000012345", CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(1);
+        _resultStore.LastGsrn.Should().Be("571313100000012345");
+    }
+
+    [Fact]
+    public async Task TrySettleAsync_skips_when_no_completed_process()
+    {
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+
+        var trigger = CreateTrigger(clock);
+        await trigger.TrySettleAsync("571313100000099999", CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(0);
     }
 
     // ── Test doubles ──

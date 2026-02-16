@@ -446,6 +446,8 @@ public class ProcessTimelineTests
         public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => throw new NotImplementedException();
         public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Application.Tariff.MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Tariff.TariffSubscriptionInfo?> GetSubscriptionInfoAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Application.Tariff.TariffElectricityTaxInfo?> GetElectricityTaxInfoAsync(DateOnly date, CancellationToken ct) => throw new NotImplementedException();
     }
 
     private sealed class ThrowBrsBuilder : Application.DataHub.IBrsRequestBuilder
