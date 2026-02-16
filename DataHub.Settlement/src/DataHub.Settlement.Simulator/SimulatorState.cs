@@ -79,7 +79,7 @@ public sealed class SimulatorState
             // Deliver grid tariff data for new grid areas (like real DataHub)
             if (_knownGridAreas.Add(pe.GridArea))
             {
-                EnqueueMessage("Charges", "GRID-TARIFF", null,
+                EnqueueMessage("Charges", "RSM-034", null,
                     ScenarioLoader.BuildGridTariffJson(pe.GridArea, "5790001089030", pe.EffectiveDate));
             }
 

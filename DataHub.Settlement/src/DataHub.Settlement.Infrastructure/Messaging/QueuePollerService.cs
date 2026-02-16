@@ -558,9 +558,9 @@ public sealed class QueuePollerService : BackgroundService
 
     private async Task ProcessChargesAsync(DataHubMessage message, CancellationToken ct)
     {
-        if (message.MessageType is "GRID-TARIFF")
+        if (message.MessageType is "RSM-034" or "rsm-034" or "RSM034")
         {
-            var tariffData = _parser.ParseGridTariff(message.RawPayload);
+            var tariffData = _parser.ParseRsm034PriceSeries(message.RawPayload);
 
             await _portfolioRepo.EnsureGridAreaAsync(
                 tariffData.GridAreaCode, tariffData.ChargeOwnerId,
@@ -580,7 +580,7 @@ public sealed class QueuePollerService : BackgroundService
             }
 
             _logger.LogInformation(
-                "GRID-TARIFF: Seeded {RateCount} hourly rates + subscription for grid area {GridArea}",
+                "RSM-034: Seeded {RateCount} hourly rates + subscription for grid area {GridArea}",
                 tariffData.Rates.Count, tariffData.GridAreaCode);
         }
         else

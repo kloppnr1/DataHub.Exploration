@@ -291,7 +291,7 @@ public sealed class CimJsonParser : ICimParser
         return new Rsm001ResponseResult(correlationId, accepted, rejectionReason, rejectionCode);
     }
 
-    public GridTariffResult ParseGridTariff(string json)
+    public Rsm034PriceSeriesResult ParseRsm034PriceSeries(string json)
     {
         using var doc = JsonDocument.Parse(json);
 
@@ -319,7 +319,7 @@ public sealed class CimJsonParser : ICimParser
             electricityTaxRate = etax.GetProperty("ratePerKwh").GetDecimal();
         }
 
-        return new GridTariffResult(gridAreaCode, chargeOwnerId, validFrom, tariffType, rates, subscriptionType, amountPerMonth, electricityTaxRate);
+        return new Rsm034PriceSeriesResult(gridAreaCode, chargeOwnerId, validFrom, tariffType, rates, subscriptionType, amountPerMonth, electricityTaxRate);
     }
 
     private static TimeSpan GetStep(string resolution)

@@ -74,7 +74,7 @@ Source: CIM Webservice Interface (Dok. 22/03077-1); GitHub Energinet-DataHub/ARC
 | `GET /v1.0/cim/Timeseries` | RSM-012 (NotifyValidatedMeasureData) + RSM-014 (NotifyAggregatedMeasureData) |
 | `GET /v1.0/cim/Aggregations` | RSM-014 (NotifyAggregatedMeasureData) — ⚠ VERIFY: may overlap with Timeseries |
 | `GET /v1.0/cim/MasterData` | RSM-022 (GenericNotification for master data changes), RSM-004 ⚠ VERIFY |
-| `GET /v1.0/cim/Charges` | Charge/tariff price list notifications ⚠ VERIFY exact RSM |
+| `GET /v1.0/cim/Charges` | RSM-034 (Information om priser), RSM-031 (Information om pristilknytninger) |
 | `GET /v1.0/cim/all` | Peeks across all queues (returns first available message from any queue) |
 
 #### Dequeue Endpoint (DELETE — acknowledge and remove)
@@ -492,7 +492,7 @@ These processes handle wholesale settlement calculations and provide aggregated 
 | `GET /v1.0/cim/Timeseries` | RSM-014 (NotifyAggregatedMeasureData) | E31 | Receive |
 | `GET /v1.0/cim/Aggregations` | RSM-014 (aggregated only) ⚠ VERIFY | E31 | Receive |
 | `GET /v1.0/cim/MasterData` | RSM-004/007 (master data notifications) ⚠ VERIFY | ⚠ VERIFY | Receive |
-| `GET /v1.0/cim/Charges` | Charge/price list notifications ⚠ VERIFY | ⚠ VERIFY | Receive |
+| `GET /v1.0/cim/Charges` | RSM-034 (Information om priser), RSM-031 (Information om pristilknytninger) | D08/D18/D17 | Receive |
 | `GET /v1.0/cim/all` | All of the above | Mixed | Receive |
 | `DELETE /v1.0/cim/dequeue/{id}` | — | — | Acknowledge |
 
