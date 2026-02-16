@@ -26,6 +26,7 @@ public sealed class EffectuationService
     private readonly IDataHubClient _dataHubClient;
     private readonly IBrsRequestBuilder _brsBuilder;
     private readonly IMessageRepository _messageRepo;
+    private readonly SettlementTriggerService? _settlementTrigger;
     private readonly IClock _clock;
     private readonly ILogger<EffectuationService> _logger;
 
@@ -43,7 +44,8 @@ public sealed class EffectuationService
         IBrsRequestBuilder brsBuilder,
         IMessageRepository messageRepo,
         IClock clock,
-        ILogger<EffectuationService> logger)
+        ILogger<EffectuationService> logger,
+        SettlementTriggerService? settlementTrigger = null)
     {
         _connectionString = connectionString;
         _onboardingService = onboardingService;
@@ -53,6 +55,7 @@ public sealed class EffectuationService
         _messageRepo = messageRepo;
         _clock = clock;
         _logger = logger;
+        _settlementTrigger = settlementTrigger;
     }
 
     /// <summary>
@@ -319,7 +322,22 @@ public sealed class EffectuationService
                 processId);
         }
 
-        // 7. Create aconto invoice only for aconto payment model (uses its own transaction internally via InvoiceRepository)
+        // 7a. Settle any closed billing periods (metering data may already be stored from RSM-012)
+        if (_settlementTrigger is not null)
+        {
+            try
+            {
+                await _settlementTrigger.TrySettleAsync(meteringPointId, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "RSM-022: Settlement trigger failed for GSRN {Gsrn} — non-blocking",
+                    meteringPointId);
+            }
+        }
+
+        // 7b. Create aconto invoice only for aconto payment model, and only if the first period is still open
         if (paymentModel == "aconto")
         {
             try
@@ -327,25 +345,34 @@ public sealed class EffectuationService
                 var contract = await GetActiveContractAsync(conn, meteringPointId, ct);
                 var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, billingFrequency);
 
-                var quarterlyAmount = AcontoEstimator.EstimateQuarterlyAmount(
-                    annualConsumptionKwh: 4000m,
-                    expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
-                        averageSpotPriceOrePerKwh: 80m,
-                        marginOrePerKwh: 4m,
-                        systemTariffRate: 0.054m,
-                        transmissionTariffRate: 0.049m,
-                        electricityTaxRate: 0.008m,
-                        averageGridTariffRate: 0.20m));
-                var periodDays = periodEnd.DayNumber - effectiveDate.DayNumber;
-                var acontoAmount = Math.Round(quarterlyAmount * periodDays / 90m, 2);
+                if (periodEnd > _clock.Today)
+                {
+                    var quarterlyAmount = AcontoEstimator.EstimateQuarterlyAmount(
+                        annualConsumptionKwh: 4000m,
+                        expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
+                            averageSpotPriceOrePerKwh: 80m,
+                            marginOrePerKwh: 4m,
+                            systemTariffRate: 0.054m,
+                            transmissionTariffRate: 0.049m,
+                            electricityTaxRate: 0.008m,
+                            averageGridTariffRate: 0.20m));
+                    var periodDays = periodEnd.DayNumber - effectiveDate.DayNumber;
+                    var acontoAmount = Math.Round(quarterlyAmount * periodDays / 90m, 2);
 
-                await _invoiceService.CreateAcontoInvoiceAsync(
-                    customerId!.Value, contract?.PayerId, contract?.Id,
-                    meteringPointId, effectiveDate, periodEnd, acontoAmount, ct);
+                    await _invoiceService.CreateAcontoInvoiceAsync(
+                        customerId!.Value, contract?.PayerId, contract?.Id,
+                        meteringPointId, effectiveDate, periodEnd, acontoAmount, ct);
 
-                _logger.LogInformation(
-                    "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
-                    meteringPointId, effectiveDate, periodEnd, acontoAmount);
+                    _logger.LogInformation(
+                        "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
+                        meteringPointId, effectiveDate, periodEnd, acontoAmount);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "RSM-022: Skipped aconto for GSRN {Gsrn} — first period {Start} to {End} is already closed, settlement handles it",
+                        meteringPointId, effectiveDate, periodEnd);
+                }
             }
             catch (Exception ex)
             {
