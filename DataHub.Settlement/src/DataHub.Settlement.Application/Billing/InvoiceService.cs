@@ -81,6 +81,9 @@ public sealed class InvoiceService : IInvoiceService
 
         var invoice = await _invoiceRepo.CreateAsync(request, lines, ct);
 
+        // Auto-send settlement invoices
+        await SendInvoiceAsync(invoice.Id, ct);
+
         _logger.LogInformation(
             "Created settlement invoice {InvoiceId} for customer {CustomerId}, GSRN {Gsrn}, amount {Amount} DKK",
             invoice.Id, customerId, gsrn, invoice.TotalInclVat);
