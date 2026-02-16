@@ -469,6 +469,7 @@ export default {
   'spotPrices.from': 'From',
   'spotPrices.to': 'To',
   'spotPrices.latestData': 'Latest data',
+  'spotPrices.latest': 'Latest',
   'spotPrices.totalPrices': 'Data Points',
   'spotPrices.avgPrice': 'Avg Price',
   'spotPrices.minPrice': 'Min Price',

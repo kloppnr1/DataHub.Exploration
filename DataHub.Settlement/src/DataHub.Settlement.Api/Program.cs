@@ -834,42 +834,50 @@ app.MapGet("/api/messages/deliveries", async (IMessageRepository repo, Cancellat
 
 // --- Spot Prices (metering) ---
 
-// GET /api/metering/spot-prices — spot prices with date range filter + pagination
+// GET /api/metering/spot-prices — both DK1 and DK2 prices for a single date
 app.MapGet("/api/metering/spot-prices", async (
-    string? priceArea, string? from, string? to,
-    int? page, int? pageSize,
+    string? date,
     ISpotPriceRepository repo, CancellationToken ct) =>
 {
-    var area = priceArea ?? "DK1";
-    var toDate = !string.IsNullOrEmpty(to) && DateOnly.TryParse(to, out var toParsed) ? toParsed : DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
-    var fromDate = !string.IsNullOrEmpty(from) && DateOnly.TryParse(from, out var fromParsed) ? fromParsed : toDate.AddDays(-7);
-    var start = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-    var end = toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    DateOnly targetDate;
+    if (!string.IsNullOrEmpty(date) && DateOnly.TryParse(date, out var parsed))
+    {
+        targetDate = parsed;
+    }
+    else
+    {
+        // Default to latest date with data (check both areas)
+        var latestDk1 = await repo.GetLatestPriceDateAsync("DK1", ct);
+        var latestDk2 = await repo.GetLatestPriceDateAsync("DK2", ct);
+        var latest = latestDk1.HasValue && latestDk2.HasValue
+            ? (latestDk1.Value >= latestDk2.Value ? latestDk1.Value : latestDk2.Value)
+            : latestDk1 ?? latestDk2;
+        if (!latest.HasValue)
+            return Results.Ok(new { date = (DateOnly?)null, totalCount = 0,
+                avgPriceDk1 = 0m, minPriceDk1 = 0m, maxPriceDk1 = 0m,
+                avgPriceDk2 = 0m, minPriceDk2 = 0m, maxPriceDk2 = 0m,
+                items = Array.Empty<object>() });
+        targetDate = latest.Value;
+    }
 
-    var p = Math.Max(page ?? 1, 1);
-    var ps = Math.Clamp(pageSize ?? 200, 1, 500);
-
-    var result = await repo.GetPricesPagedAsync(area, start, end, p, ps, ct);
-    var totalPages = (int)Math.Ceiling((double)result.TotalCount / ps);
+    var result = await repo.GetPricesByDateAsync(targetDate, ct);
 
     return Results.Ok(new
     {
-        priceArea = area,
-        from = fromDate,
-        to = toDate,
+        date = targetDate,
         totalCount = result.TotalCount,
-        page = p,
-        pageSize = ps,
-        totalPages,
-        avgPrice = result.AvgPrice,
-        minPrice = result.MinPrice,
-        maxPrice = result.MaxPrice,
-        items = result.Items.Select(price => new
+        avgPriceDk1 = result.AvgPriceDk1,
+        minPriceDk1 = result.MinPriceDk1,
+        maxPriceDk1 = result.MaxPriceDk1,
+        avgPriceDk2 = result.AvgPriceDk2,
+        minPriceDk2 = result.MinPriceDk2,
+        maxPriceDk2 = result.MaxPriceDk2,
+        items = result.Items.Select(row => new
         {
-            timestamp = price.Timestamp,
-            priceArea = price.PriceArea,
-            pricePerKwh = price.PricePerKwh,
-            resolution = price.Resolution,
+            timestamp = row.Timestamp,
+            priceDk1 = row.PriceDk1,
+            priceDk2 = row.PriceDk2,
+            resolution = row.Resolution,
         }),
     });
 });

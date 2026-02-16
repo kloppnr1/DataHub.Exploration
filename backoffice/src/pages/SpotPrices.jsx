@@ -3,22 +3,6 @@ import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 import WattzonLoader from '../components/WattzonLoader';
 
-const PAGE_SIZE = 200;
-
-function formatDate(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function defaultFrom() {
-  return formatDate(new Date());
-}
-
-function defaultTo() {
-  const d = new Date();
-  d.setDate(d.getDate() + 2);
-  return formatDate(d);
-}
-
 function StatusIndicator({ status, t, lang }) {
   if (!status || !status.latestDate) {
     return (
@@ -66,49 +50,55 @@ function StatusIndicator({ status, t, lang }) {
   );
 }
 
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function SpotPrices() {
   const { t, lang } = useTranslation();
-  const [priceArea, setPriceArea] = useState('DK1');
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState(defaultTo);
-  const [page, setPage] = useState(1);
+  const [date, setDate] = useState(null); // null = let backend pick latest
   const [data, setData] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchData = useCallback((p) => {
+  const fetchData = useCallback(() => {
     setError(null);
     setLoading(true);
     Promise.all([
-      api.getSpotPrices({ priceArea, from, to, page: p, pageSize: PAGE_SIZE }),
+      api.getSpotPrices({ date: date ?? undefined }),
       api.getSpotPriceStatus(),
     ])
-      .then(([prices, st]) => { setData(prices); setStatus(st); })
+      .then(([prices, st]) => {
+        setData(prices);
+        setStatus(st);
+        // If we loaded without a date, store what the backend returned
+        if (!date && prices.date) setDate(prices.date);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [priceArea, from, to]);
+  }, [date]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); fetchData(1); }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Fetch when page changes (but not on filter change — handled above)
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
-    fetchData(newPage);
+  const goDay = (offset) => {
+    if (date) setDate(addDays(date, offset));
   };
+
+  const goToday = () => setDate(null);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
-  const totalPages = data?.totalPages ?? 1;
-  const avgPrice = data?.avgPrice ?? 0;
-  const minPrice = data?.minPrice ?? 0;
-  const maxPrice = data?.maxPrice ?? 0;
+
+  const displayDate = data?.date ?? date;
+  const formattedDate = displayDate
+    ? new Date(displayDate + 'T00:00:00').toLocaleDateString(lang === 'da' ? 'da-DK' : 'en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
 
   if (loading && !data) {
-    return (
-      <WattzonLoader message={t('spotPrices.loading')} />
-    );
+    return <WattzonLoader message={t('spotPrices.loading')} />;
   }
 
   return (
@@ -131,47 +121,30 @@ export default function SpotPrices() {
         <StatusIndicator status={status} t={t} lang={lang} />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-end gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('spotPrices.priceArea')}</label>
-          <div className="flex rounded-lg overflow-hidden border border-slate-300">
-            {['DK1', 'DK2'].map(area => (
-              <button
-                key={area}
-                onClick={() => setPriceArea(area)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  priceArea === area
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('spotPrices.from')}</label>
-          <input
-            type="date"
-            value={from}
-            onChange={e => setFrom(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('spotPrices.to')}</label>
-          <input
-            type="date"
-            value={to}
-            onChange={e => setTo(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-        </div>
+      {/* Date navigation */}
+      <div className="flex items-center gap-3 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+        <button
+          onClick={() => goDay(-1)}
+          className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          &larr; {t('common.previous')}
+        </button>
+        <div className="text-lg font-semibold text-slate-900">{formattedDate}</div>
+        <button
+          onClick={() => goDay(1)}
+          className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          {t('common.next')} &rarr;
+        </button>
+        <button
+          onClick={goToday}
+          className="px-3 py-2 text-sm font-medium text-teal-600 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+        >
+          {t('spotPrices.latest')}
+        </button>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats cards — DK1 and DK2 side by side */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '90ms' }}>
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
           <div className="text-sm font-medium text-slate-500 mb-1">{t('spotPrices.totalPrices')}</div>
@@ -179,17 +152,26 @@ export default function SpotPrices() {
         </div>
         <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
           <div className="text-sm font-medium text-teal-600 mb-1">{t('spotPrices.avgPrice')}</div>
-          <div className="text-3xl font-bold text-teal-700">{avgPrice.toFixed(2)}</div>
+          <div className="flex items-baseline gap-3">
+            <span className="text-xl font-bold text-teal-700">DK1: {(data?.avgPriceDk1 ?? 0).toFixed(2)}</span>
+            <span className="text-xl font-bold text-teal-600">DK2: {(data?.avgPriceDk2 ?? 0).toFixed(2)}</span>
+          </div>
           <div className="text-xs text-teal-500 mt-0.5">{t('spotPrices.unit')}</div>
         </div>
         <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl p-5 shadow-sm border border-emerald-100/50">
           <div className="text-sm font-medium text-emerald-600 mb-1">{t('spotPrices.minPrice')}</div>
-          <div className="text-3xl font-bold text-emerald-700">{minPrice.toFixed(2)}</div>
+          <div className="flex items-baseline gap-3">
+            <span className="text-xl font-bold text-emerald-700">DK1: {(data?.minPriceDk1 ?? 0).toFixed(2)}</span>
+            <span className="text-xl font-bold text-emerald-600">DK2: {(data?.minPriceDk2 ?? 0).toFixed(2)}</span>
+          </div>
           <div className="text-xs text-emerald-500 mt-0.5">{t('spotPrices.unit')}</div>
         </div>
         <div className="bg-gradient-to-br from-white to-rose-50/30 rounded-xl p-5 shadow-sm border border-rose-100/50">
           <div className="text-sm font-medium text-rose-600 mb-1">{t('spotPrices.maxPrice')}</div>
-          <div className="text-3xl font-bold text-rose-700">{maxPrice.toFixed(2)}</div>
+          <div className="flex items-baseline gap-3">
+            <span className="text-xl font-bold text-rose-700">DK1: {(data?.maxPriceDk1 ?? 0).toFixed(2)}</span>
+            <span className="text-xl font-bold text-rose-600">DK2: {(data?.maxPriceDk2 ?? 0).toFixed(2)}</span>
+          </div>
           <div className="text-xs text-rose-500 mt-0.5">{t('spotPrices.unit')}</div>
         </div>
       </div>
@@ -207,38 +189,34 @@ export default function SpotPrices() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colTimestamp')}</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colDate')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colHour')}</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPrice')}</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colPriceDkk')}</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">DK1 ({t('spotPrices.unit')})</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">DK2 ({t('spotPrices.unit')})</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('spotPrices.colResolution')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.length === 0 ? (
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <td colSpan="6" className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan="5" className="px-4 py-12 text-center text-slate-500">
                     {t('spotPrices.noPrices')}
                   </td>
                 </tr>
               ) : (
                 items.map((item) => {
                   const ts = new Date(item.timestamp);
-                  const dateStr = ts.toLocaleDateString(lang === 'da' ? 'da-DK' : 'en-GB');
                   const timeStr = ts.toLocaleTimeString(lang === 'da' ? 'da-DK' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
-                  const dkkPerMwh = item.pricePerKwh * 10;
                   return (
-                    <tr key={`${item.timestamp}-${item.priceArea}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={item.timestamp} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-600">
                         {ts.toISOString().slice(0, 16).replace('T', ' ')}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{dateStr}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{timeStr}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right font-semibold text-slate-900">
-                        {item.pricePerKwh.toFixed(4)}
+                        {item.priceDk1 != null ? item.priceDk1.toFixed(4) : '—'}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-slate-500">
-                        {dkkPerMwh.toFixed(2)}
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right font-semibold text-slate-900">
+                        {item.priceDk2 != null ? item.priceDk2.toFixed(4) : '—'}
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${
@@ -257,33 +235,12 @@ export default function SpotPrices() {
           </table>
         </div>
 
-        {/* Footer with pagination */}
+        {/* Footer */}
         {items.length > 0 && (
-          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200">
             <div className="text-sm text-slate-600">
               {t('common.totalItems', { count: totalCount, label: t('spotPrices.showingPrices') })}
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handlePageChange(Math.max(1, page - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('common.previous')}
-                </button>
-                <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  {page} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('common.next')}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

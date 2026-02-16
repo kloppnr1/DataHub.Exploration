@@ -87,6 +87,7 @@ public class SettlementDataLoaderTests
         public Task<decimal> GetPriceAsync(string priceArea, DateTime hour, CancellationToken ct) => Task.FromResult(0m);
         public Task<IReadOnlyList<SpotPriceRow>> GetPricesAsync(string priceArea, DateTime from, DateTime to, CancellationToken ct) => Task.FromResult(prices);
         public Task<SpotPricePagedResult> GetPricesPagedAsync(string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct) => Task.FromResult(new SpotPricePagedResult(prices, prices.Count, 0m, 0m, 0m));
+        public Task<SpotPriceDualResult> GetPricesByDateAsync(DateOnly date, CancellationToken ct) => Task.FromResult(new SpotPriceDualResult([], 0, 0, 0, 0, 0, 0, 0));
         public Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
         public Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
         public Task<SpotPriceStatus> GetStatusAsync(CancellationToken ct) => Task.FromResult(new SpotPriceStatus(null, null, false, "warning"));

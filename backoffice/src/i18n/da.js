@@ -469,6 +469,7 @@ export default {
   'spotPrices.from': 'Fra',
   'spotPrices.to': 'Til',
   'spotPrices.latestData': 'Seneste data',
+  'spotPrices.latest': 'Seneste',
   'spotPrices.totalPrices': 'Datapunkter',
   'spotPrices.avgPrice': 'Gns. pris',
   'spotPrices.minPrice': 'Min. pris',

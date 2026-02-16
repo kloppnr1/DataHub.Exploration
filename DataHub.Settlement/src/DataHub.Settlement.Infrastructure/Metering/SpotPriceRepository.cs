@@ -98,6 +98,51 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         return new SpotPricePagedResult(rows.ToList(), stats.TotalCount, stats.AvgPrice, stats.MinPrice, stats.MaxPrice);
     }
 
+    public async Task<SpotPriceDualResult> GetPricesByDateAsync(DateOnly date, CancellationToken ct)
+    {
+        var from = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var to = date.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        const string dataSql = """
+            SELECT
+                "timestamp" AS Timestamp,
+                MAX(CASE WHEN price_area = 'DK1' THEN price_per_kwh END) AS PriceDk1,
+                MAX(CASE WHEN price_area = 'DK2' THEN price_per_kwh END) AS PriceDk2,
+                MAX(resolution) AS Resolution
+            FROM metering.spot_price
+            WHERE "timestamp" >= @From AND "timestamp" < @To
+            GROUP BY "timestamp"
+            ORDER BY "timestamp"
+            """;
+
+        const string statsSql = """
+            SELECT
+                COALESCE(AVG(CASE WHEN price_area = 'DK1' THEN price_per_kwh END), 0) AS AvgPriceDk1,
+                COALESCE(MIN(CASE WHEN price_area = 'DK1' THEN price_per_kwh END), 0) AS MinPriceDk1,
+                COALESCE(MAX(CASE WHEN price_area = 'DK1' THEN price_per_kwh END), 0) AS MaxPriceDk1,
+                COALESCE(AVG(CASE WHEN price_area = 'DK2' THEN price_per_kwh END), 0) AS AvgPriceDk2,
+                COALESCE(MIN(CASE WHEN price_area = 'DK2' THEN price_per_kwh END), 0) AS MinPriceDk2,
+                COALESCE(MAX(CASE WHEN price_area = 'DK2' THEN price_per_kwh END), 0) AS MaxPriceDk2
+            FROM metering.spot_price
+            WHERE "timestamp" >= @From AND "timestamp" < @To
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var args = new { From = from, To = to };
+        var rows = (await conn.QueryAsync<SpotPriceDualRow>(
+            new CommandDefinition(dataSql, args, cancellationToken: ct))).ToList();
+
+        var stats = await conn.QuerySingleAsync<(decimal AvgPriceDk1, decimal MinPriceDk1, decimal MaxPriceDk1,
+            decimal AvgPriceDk2, decimal MinPriceDk2, decimal MaxPriceDk2)>(
+            new CommandDefinition(statsSql, args, cancellationToken: ct));
+
+        return new SpotPriceDualResult(rows, rows.Count,
+            stats.AvgPriceDk1, stats.MinPriceDk1, stats.MaxPriceDk1,
+            stats.AvgPriceDk2, stats.MinPriceDk2, stats.MaxPriceDk2);
+    }
+
     public async Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct)
     {
         const string sql = """

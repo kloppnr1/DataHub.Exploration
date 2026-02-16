@@ -13,6 +13,14 @@ public record SpotPricePagedResult(
     decimal MinPrice,
     decimal MaxPrice);
 
+public record SpotPriceDualRow(DateTime Timestamp, decimal? PriceDk1, decimal? PriceDk2, string Resolution);
+
+public record SpotPriceDualResult(
+    IReadOnlyList<SpotPriceDualRow> Items,
+    int TotalCount,
+    decimal AvgPriceDk1, decimal MinPriceDk1, decimal MaxPriceDk1,
+    decimal AvgPriceDk2, decimal MinPriceDk2, decimal MaxPriceDk2);
+
 public record SpotPriceStatus(
     DateOnly? LatestDate,
     DateTime? LastFetchedAt,

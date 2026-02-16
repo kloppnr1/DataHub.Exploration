@@ -253,6 +253,9 @@ public class SpotPriceFetchingServiceTests
             return Task.FromResult<DateOnly?>(date == default ? null : date);
         }
 
+        public Task<SpotPriceDualResult> GetPricesByDateAsync(DateOnly date, CancellationToken ct)
+            => Task.FromResult(new SpotPriceDualResult([], 0, 0, 0, 0, 0, 0, 0));
+
         public Task<SpotPriceStatus> GetStatusAsync(CancellationToken ct)
             => Task.FromResult(new SpotPriceStatus(null, null, false, "warning"));
     }

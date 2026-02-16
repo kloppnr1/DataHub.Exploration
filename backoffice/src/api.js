@@ -81,8 +81,8 @@ export const api = {
   getMessageStats: () => request(`/messages/stats`),
 
   // Spot Prices
-  getSpotPrices: ({ priceArea, from, to, page, pageSize } = {}) =>
-    request(`/metering/spot-prices${qs({ priceArea, from, to, page, pageSize })}`),
+  getSpotPrices: ({ date } = {}) =>
+    request(`/metering/spot-prices${qs({ date })}`),
   getSpotPriceStatus: () => request(`/metering/spot-prices/status`),
 
   // Aconto Payments
