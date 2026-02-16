@@ -19,10 +19,6 @@ function getDefaultPeriod(billingFrequency) {
   const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
   const fmt = (dt) => dt.toISOString().slice(0, 10);
   switch (billingFrequency) {
-    case 'daily': {
-      const start = new Date(y, m, d);
-      return { start: fmt(start), end: fmt(new Date(y, m, d + 1)) };
-    }
     case 'weekly': {
       const dow = today.getDay() || 7; // Sun=7
       const mon = new Date(y, m, d - dow + 1);

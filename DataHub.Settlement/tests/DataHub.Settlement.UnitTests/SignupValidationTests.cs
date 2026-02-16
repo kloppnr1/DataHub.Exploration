@@ -37,12 +37,14 @@ public class SignupValidationTests
         string cprCvr = "1234567890",
         string contactType = "private",
         string? mobile = "12345678",
-        string? billingFrequency = null) =>
+        string? billingFrequency = null,
+        string? paymentModel = null) =>
         new(DarId: null, CustomerName: customerName, CprCvr: cprCvr,
             ContactType: contactType, Email: "j@d.dk", Phone: "12345678",
             ProductId: InMemoryPortfolioRepo.DefaultProductId, Type: type,
             EffectiveDate: effectiveDate ?? new DateOnly(2026, 3, 1),
-            Gsrn: gsrn, Mobile: mobile, BillingFrequency: billingFrequency);
+            Gsrn: gsrn, Mobile: mobile, BillingFrequency: billingFrequency,
+            PaymentModel: paymentModel);
 
     // ── Move-in effective date (BRS-009) ──
 
@@ -212,7 +214,6 @@ public class SignupValidationTests
     // ── Billing frequency validation ──
 
     [Theory]
-    [InlineData("daily")]
     [InlineData("weekly")]
     [InlineData("monthly")]
     [InlineData("quarterly")]
@@ -235,6 +236,38 @@ public class SignupValidationTests
         var result = await sut.CreateSignupAsync(request, CancellationToken.None);
 
         result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Rejects_daily_billing_frequency()
+    {
+        var sut = CreateSut();
+        var request = MakeRequest(billingFrequency: "daily");
+
+        var act = () => sut.CreateSignupAsync(request, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ValidationException>()
+            .WithMessage("*billing frequency*");
+    }
+
+    // ── All 6 billing_frequency × payment_model combinations ──
+
+    [Theory]
+    [InlineData("weekly", "post_payment")]
+    [InlineData("weekly", "aconto")]
+    [InlineData("monthly", "post_payment")]
+    [InlineData("monthly", "aconto")]
+    [InlineData("quarterly", "post_payment")]
+    [InlineData("quarterly", "aconto")]
+    public async Task Accepts_all_valid_frequency_and_payment_model_combinations(string frequency, string model)
+    {
+        var sut = CreateSut();
+        var request = MakeRequest(billingFrequency: frequency, paymentModel: model);
+
+        var result = await sut.CreateSignupAsync(request, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.Status.Should().Be("registered");
     }
 
     [Theory]

@@ -1,6 +1,7 @@
 using Dapper;
 using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Domain;
+using DataHub.Settlement.Infrastructure.Settlement;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -55,29 +56,16 @@ public sealed class InvoicingService : BackgroundService
     {
         var dueRuns = await GetUninvoicedDueRunsAsync(ct);
 
-        foreach (var run in dueRuns)
+        // Split into direct payment (invoice individually) and aconto (group by period boundary)
+        var directRuns = dueRuns.Where(r => r.PaymentModel != "aconto").ToList();
+        var acontoRuns = dueRuns.Where(r => r.PaymentModel == "aconto").ToList();
+
+        // Direct payment: invoice each run individually (existing behavior)
+        foreach (var run in directRuns)
         {
             try
             {
                 var lines = await GetSettlementLinesAsync(run.SettlementRunId, run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
-
-                // For aconto customers, deduct prepaid amount from the settlement invoice
-                if (run.PaymentModel == "aconto")
-                {
-                    var totalAcontoPaid = await _acontoRepo.GetTotalPaidAsync(run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
-                    if (totalAcontoPaid > 0)
-                    {
-                        var deductionLine = new CreateInvoiceLineRequest(
-                            null, run.Gsrn, lines.Count + 1, "aconto_deduction",
-                            $"Aconto deduction — {run.PeriodStart:yyyy-MM-dd} to {run.PeriodEnd:yyyy-MM-dd}",
-                            0m, null, -totalAcontoPaid, 0m, -totalAcontoPaid);
-                        lines = lines.Append(deductionLine).ToList();
-
-                        _logger.LogInformation(
-                            "Deducting {Amount} DKK aconto for GSRN {Gsrn}, period {Start}–{End}",
-                            totalAcontoPaid, run.Gsrn, run.PeriodStart, run.PeriodEnd);
-                    }
-                }
 
                 await _invoiceService.CreateSettlementInvoiceAsync(
                     run.CustomerId, run.PayerId, run.ContractId,
@@ -93,6 +81,91 @@ public sealed class InvoicingService : BackgroundService
                 _logger.LogWarning(ex,
                     "Failed to create invoice for settlement run {RunId} — will retry next tick",
                     run.SettlementRunId);
+            }
+        }
+
+        // Aconto: group runs by (gsrn, aconto period) and create combined invoice at period boundary
+        var acontoGroups = acontoRuns
+            .GroupBy(r => (r.Gsrn, AcontoPeriodEnd: GetAcontoPeriodEnd(r.PeriodStart, r.BillingFrequency)))
+            .ToList();
+
+        foreach (var group in acontoGroups)
+        {
+            var today = _clock.Today;
+            var acontoPeriodEnd = group.Key.AcontoPeriodEnd;
+
+            // Only invoice when aconto period has ended
+            if (acontoPeriodEnd > today)
+                continue;
+
+            try
+            {
+                var runs = group.OrderBy(r => r.PeriodStart).ToList();
+                var first = runs.First();
+                var overallStart = runs.Min(r => r.PeriodStart);
+                var overallEnd = runs.Max(r => r.PeriodEnd);
+
+                // Aggregate settlement lines from all runs in this aconto period
+                var allLines = new List<CreateInvoiceLineRequest>();
+                foreach (var run in runs)
+                {
+                    var runLines = await GetSettlementLinesAsync(run.SettlementRunId, run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
+                    allLines.AddRange(runLines);
+                }
+
+                // Re-number lines
+                for (int i = 0; i < allLines.Count; i++)
+                    allLines[i] = allLines[i] with { SortOrder = i + 1 };
+
+                // Deduct total aconto paid in the aconto period
+                var totalAcontoPaid = await _acontoRepo.GetTotalPaidAsync(first.Gsrn, overallStart, acontoPeriodEnd, ct);
+                if (totalAcontoPaid > 0)
+                {
+                    allLines.Add(new CreateInvoiceLineRequest(
+                        null, first.Gsrn, allLines.Count + 1, "aconto_deduction",
+                        $"Aconto deduction — {overallStart:yyyy-MM-dd} to {acontoPeriodEnd:yyyy-MM-dd}",
+                        0m, null, -totalAcontoPaid, 0m, -totalAcontoPaid));
+
+                    _logger.LogInformation(
+                        "Deducting {Amount} DKK aconto for GSRN {Gsrn}, aconto period {Start}–{End}",
+                        totalAcontoPaid, first.Gsrn, overallStart, acontoPeriodEnd);
+                }
+
+                // Add new aconto prepayment line for next period (based on actual total)
+                var actualTotal = allLines.Sum(l => l.AmountInclVat);
+                if (actualTotal > 0)
+                {
+                    var nextPeriodEnd = GetAcontoPeriodEnd(acontoPeriodEnd, first.BillingFrequency);
+                    var acontoPrepayment = Math.Round(actualTotal, 2);
+
+                    allLines.Add(new CreateInvoiceLineRequest(
+                        null, first.Gsrn, allLines.Count + 1, "aconto_prepayment",
+                        $"Aconto prepayment — {acontoPeriodEnd:yyyy-MM-dd} to {nextPeriodEnd:yyyy-MM-dd}",
+                        0m, null, acontoPrepayment, 0m, acontoPrepayment));
+
+                    // Record aconto payment for next period
+                    await _acontoRepo.RecordPaymentAsync(first.Gsrn, acontoPeriodEnd, nextPeriodEnd, acontoPrepayment, ct);
+
+                    _logger.LogInformation(
+                        "Added aconto prepayment {Amount} DKK for GSRN {Gsrn}, next period {Start}–{End}",
+                        acontoPrepayment, first.Gsrn, acontoPeriodEnd, nextPeriodEnd);
+                }
+
+                // Create ONE combined invoice using the first run as reference
+                await _invoiceService.CreateSettlementInvoiceAsync(
+                    first.CustomerId, first.PayerId, first.ContractId,
+                    first.SettlementRunId, first.BillingPeriodId, first.Gsrn,
+                    overallStart, overallEnd, allLines, ct);
+
+                _logger.LogInformation(
+                    "Created combined aconto invoice for GSRN {Gsrn}, aconto period {Start}–{End}, {RunCount} runs",
+                    first.Gsrn, overallStart, acontoPeriodEnd, runs.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to create aconto invoice for GSRN {Gsrn} — will retry next tick",
+                    group.Key.Gsrn);
             }
         }
     }
@@ -146,9 +219,16 @@ public sealed class InvoicingService : BackgroundService
             return today > quarterEnd;
         }
 
-        // Weekly and monthly: due once the period has ended (periodEnd is exclusive)
+        // Weekly, daily, and monthly: due once the period has ended (periodEnd is exclusive)
         return periodEnd <= today;
     }
+
+    /// <summary>
+    /// Returns the exclusive end date of the aconto period containing the given date.
+    /// Monthly → first of next month. Quarterly → first of next quarter.
+    /// </summary>
+    internal static DateOnly GetAcontoPeriodEnd(DateOnly date, string acontoFrequency)
+        => BillingPeriodCalculator.GetFirstPeriodEnd(date, acontoFrequency);
 
     private static DateOnly GetQuarterEnd(DateOnly date)
     {

@@ -535,7 +535,6 @@ export default function SignupNew() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.invoicingInterval')}</label>
               <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} className={INPUT}>
-                <option value="daily">{t('signupNew.intervalDaily')}</option>
                 <option value="weekly">{t('signupNew.intervalWeekly')}</option>
                 <option value="monthly">{t('signupNew.intervalMonthly')}</option>
                 <option value="quarterly">{t('signupNew.intervalQuarterly')}</option>

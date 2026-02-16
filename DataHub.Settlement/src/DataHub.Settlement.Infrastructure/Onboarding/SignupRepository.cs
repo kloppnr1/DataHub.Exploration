@@ -292,7 +292,7 @@ public sealed class SignupRepository : ISignupRepository
                    COALESCE(c.cpr_cvr, s.customer_cpr_cvr) AS cpr_cvr,
                    COALESCE(c.contact_type, s.customer_contact_type) AS contact_type,
                    s.product_id, p.name AS product_name,
-                   s.process_request_id, s.billing_frequency, s.created_at, s.updated_at,
+                   s.process_request_id, s.billing_frequency, s.payment_model, s.created_at, s.updated_at,
                    s.corrected_from_id, orig.signup_number AS corrected_from_signup_number
             FROM portfolio.signup s
             LEFT JOIN portfolio.customer c ON c.id = s.customer_id

@@ -134,7 +134,6 @@ public sealed class EffectuationService
             customerId = signup.CustomerId;
             paymentModel = signup.PaymentModel;
             billingFrequency = signup.BillingFrequency;
-
             // Create/link customer if not yet linked
             if (customerId is null && !string.IsNullOrEmpty(signup.CustomerCprCvr))
             {
@@ -326,7 +325,7 @@ public sealed class EffectuationService
             try
             {
                 var contract = await GetActiveContractAsync(conn, meteringPointId, ct);
-                var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, billingFrequency!);
+                var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, billingFrequency);
 
                 var quarterlyAmount = AcontoEstimator.EstimateQuarterlyAmount(
                     annualConsumptionKwh: 4000m,

@@ -43,7 +43,6 @@ export default {
   'common.totalItems': '{count} {label}',
 
   // ── Billing frequency & payment model (shared display values) ──
-  'billing.daily': 'Daglig',
   'billing.weekly': 'Ugentlig',
   'billing.monthly': 'Månedlig',
   'billing.quarterly': 'Kvartalsvis',
@@ -205,7 +204,6 @@ export default {
   'signupNew.creating': 'Opretter...',
   'signupNew.invoicingInterval': 'Faktureringsinterval',
   'signupNew.invoicingIntervalHelper': 'Hvor ofte kunden faktureres. Ugentlige perioder følger mandag–søndag.',
-  'signupNew.intervalDaily': 'Daglig',
   'signupNew.intervalWeekly': 'Ugentlig',
   'signupNew.intervalMonthly': 'Månedlig',
   'signupNew.intervalQuarterly': 'Kvartalsvis',
@@ -256,6 +254,7 @@ export default {
   'signupDetail.darId': 'DAR ID',
   'signupDetail.product': 'Produkt',
   'signupDetail.invoicingInterval': 'Faktureringsinterval',
+  'signupDetail.paymentModel': 'Betalingsmodel',
   'signupDetail.created': 'Oprettet',
   'signupDetail.customer': 'Kunde',
   'signupDetail.name': 'Navn',

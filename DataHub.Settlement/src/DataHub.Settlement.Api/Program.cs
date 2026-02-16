@@ -275,6 +275,8 @@ app.MapGet("/api/signups/{id:guid}", async (Guid id, ISignupRepository repo, Can
         detail.ProductId,
         detail.ProductName,
         detail.ProcessRequestId,
+        detail.BillingFrequency,
+        detail.PaymentModel,
         detail.CreatedAt,
         detail.UpdatedAt,
         detail.CorrectedFromId,

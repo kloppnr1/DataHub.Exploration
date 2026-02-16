@@ -90,8 +90,8 @@ public record CustomerBalance(
     decimal TotalPaid,
     decimal TotalOutstanding,
     decimal TotalOverdue,
-    int InvoiceCount,
-    int OverdueCount);
+    long InvoiceCount,
+    long OverdueCount);
 
 public record CustomerLedgerEntry(
     DateTime Date,

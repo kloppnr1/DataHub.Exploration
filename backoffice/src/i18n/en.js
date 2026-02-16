@@ -43,7 +43,6 @@ export default {
   'common.totalItems': '{count} {label}',
 
   // ── Billing frequency & payment model (shared display values) ──
-  'billing.daily': 'Daily',
   'billing.weekly': 'Weekly',
   'billing.monthly': 'Monthly',
   'billing.quarterly': 'Quarterly',
@@ -205,7 +204,6 @@ export default {
   'signupNew.creating': 'Creating...',
   'signupNew.invoicingInterval': 'Invoicing interval',
   'signupNew.invoicingIntervalHelper': 'How often the customer is invoiced. Weekly periods align Monday–Sunday.',
-  'signupNew.intervalDaily': 'Daily',
   'signupNew.intervalWeekly': 'Weekly',
   'signupNew.intervalMonthly': 'Monthly',
   'signupNew.intervalQuarterly': 'Quarterly',
@@ -256,6 +254,7 @@ export default {
   'signupDetail.darId': 'DAR ID',
   'signupDetail.product': 'Product',
   'signupDetail.invoicingInterval': 'Invoicing Interval',
+  'signupDetail.paymentModel': 'Payment Model',
   'signupDetail.created': 'Created',
   'signupDetail.customer': 'Customer',
   'signupDetail.name': 'Name',

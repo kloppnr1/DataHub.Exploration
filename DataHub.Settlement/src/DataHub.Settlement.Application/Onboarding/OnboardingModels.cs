@@ -92,6 +92,7 @@ public record SignupDetail(
     string ProductName,
     Guid? ProcessRequestId,
     string BillingFrequency,
+    string PaymentModel,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     Guid? CorrectedFromId,

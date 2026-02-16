@@ -114,25 +114,100 @@ public class InvoicingServiceTests
         InvoicingService.IsPeriodDue("weekly", periodEnd, today).Should().BeFalse();
     }
 
-    // ── Daily ──
+    // ── GetAcontoPeriodEnd uses BillingFrequency (not a separate AcontoFrequency) ──
 
-    [Fact]
-    public void IsPeriodDue_daily_due_next_day()
+    [Theory]
+    [InlineData("weekly")]
+    [InlineData("monthly")]
+    [InlineData("quarterly")]
+    public void GetAcontoPeriodEnd_accepts_all_valid_billing_frequencies(string frequency)
     {
-        // Daily period: Jan 15–Jan 16 (exclusive). Today = Jan 16 — due.
-        var periodEnd = new DateOnly(2025, 1, 16);
-        var today = new DateOnly(2025, 1, 16);
+        var date = new DateOnly(2026, 2, 15);
 
-        InvoicingService.IsPeriodDue("daily", periodEnd, today).Should().BeTrue();
+        var result = InvoicingService.GetAcontoPeriodEnd(date, frequency);
+
+        result.Should().BeAfter(date);
     }
 
     [Fact]
-    public void IsPeriodDue_daily_not_due_same_day()
+    public void GetAcontoPeriodEnd_monthly_returns_first_of_next_month()
     {
-        // Daily period: Jan 15–Jan 16 (exclusive). Today = Jan 15 — not due.
-        var periodEnd = new DateOnly(2025, 1, 16);
-        var today = new DateOnly(2025, 1, 15);
+        var date = new DateOnly(2026, 2, 15);
 
-        InvoicingService.IsPeriodDue("daily", periodEnd, today).Should().BeFalse();
+        var result = InvoicingService.GetAcontoPeriodEnd(date, "monthly");
+
+        result.Should().Be(new DateOnly(2026, 3, 1));
+    }
+
+    [Fact]
+    public void GetAcontoPeriodEnd_quarterly_returns_first_of_next_quarter()
+    {
+        var date = new DateOnly(2026, 2, 15);
+
+        var result = InvoicingService.GetAcontoPeriodEnd(date, "quarterly");
+
+        result.Should().Be(new DateOnly(2026, 4, 1));
+    }
+
+    [Fact]
+    public void GetAcontoPeriodEnd_weekly_returns_next_monday()
+    {
+        // Feb 15 2026 is a Sunday
+        var date = new DateOnly(2026, 2, 15);
+
+        var result = InvoicingService.GetAcontoPeriodEnd(date, "weekly");
+
+        result.Should().Be(new DateOnly(2026, 2, 16)); // Monday
+        result.DayOfWeek.Should().Be(DayOfWeek.Monday);
+    }
+
+    [Fact]
+    public void GetAcontoPeriodEnd_chained_quarterly_gives_successive_quarters()
+    {
+        // Simulates the aconto flow: first period boundary → next period boundary
+        var start = new DateOnly(2026, 1, 15);
+        var firstEnd = InvoicingService.GetAcontoPeriodEnd(start, "quarterly");
+        var secondEnd = InvoicingService.GetAcontoPeriodEnd(firstEnd, "quarterly");
+
+        firstEnd.Should().Be(new DateOnly(2026, 4, 1));
+        secondEnd.Should().Be(new DateOnly(2026, 7, 1));
+    }
+
+    [Fact]
+    public void GetAcontoPeriodEnd_chained_monthly_gives_successive_months()
+    {
+        var start = new DateOnly(2026, 1, 15);
+        var firstEnd = InvoicingService.GetAcontoPeriodEnd(start, "monthly");
+        var secondEnd = InvoicingService.GetAcontoPeriodEnd(firstEnd, "monthly");
+
+        firstEnd.Should().Be(new DateOnly(2026, 2, 1));
+        secondEnd.Should().Be(new DateOnly(2026, 3, 1));
+    }
+
+    [Fact]
+    public void GetAcontoPeriodEnd_chained_weekly_gives_successive_weeks()
+    {
+        var start = new DateOnly(2026, 2, 16); // Monday
+        var firstEnd = InvoicingService.GetAcontoPeriodEnd(start, "weekly");
+        var secondEnd = InvoicingService.GetAcontoPeriodEnd(firstEnd, "weekly");
+
+        firstEnd.Should().Be(new DateOnly(2026, 2, 23)); // next Monday
+        secondEnd.Should().Be(new DateOnly(2026, 3, 2)); // Monday after that
+    }
+
+    // ── UninvoicedRun record no longer has AcontoFrequency field ──
+
+    [Fact]
+    public void UninvoicedRun_uses_BillingFrequency_for_all_fields()
+    {
+        // Verify the record shape — no AcontoFrequency parameter
+        var run = new InvoicingService.UninvoicedRun(
+            Guid.NewGuid(), Guid.NewGuid(), "571313100000012345",
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1),
+            Guid.NewGuid(), null, Guid.NewGuid(),
+            "quarterly", "aconto");
+
+        run.BillingFrequency.Should().Be("quarterly");
+        run.PaymentModel.Should().Be("aconto");
     }
 }

@@ -230,6 +230,7 @@ export default function SignupDetail() {
           <Field label={t('signupDetail.darId')} value={<span className="font-mono text-xs text-slate-400 break-all">{signup.darId}</span>} />
           <Field label={t('signupDetail.product')} value={signup.productName} />
           <Field label={t('signupDetail.invoicingInterval')} value={t(`billing.${signup.billingFrequency}`) || signup.billingFrequency} />
+          <Field label={t('signupDetail.paymentModel')} value={t(`billing.${signup.paymentModel}`) || signup.paymentModel} />
           <Field label={t('signupDetail.created')} value={new Date(signup.createdAt).toLocaleString('da-DK')} />
         </div>
       </div>

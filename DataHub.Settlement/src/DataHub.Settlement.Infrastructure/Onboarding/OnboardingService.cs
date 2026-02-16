@@ -161,8 +161,8 @@ public sealed class OnboardingService : IOnboardingService
 
         // 8b. Validate billing frequency
         var billingFrequency = request.BillingFrequency ?? "monthly";
-        if (billingFrequency is not ("daily" or "weekly" or "monthly" or "quarterly"))
-            throw new ValidationException($"Invalid billing frequency '{billingFrequency}'. Must be 'daily', 'weekly', 'monthly', or 'quarterly'.");
+        if (billingFrequency is not ("weekly" or "monthly" or "quarterly"))
+            throw new ValidationException($"Invalid billing frequency '{billingFrequency}'. Must be 'weekly', 'monthly', or 'quarterly'.");
 
         // 8c. Validate payment model
         var paymentModel = request.PaymentModel ?? "post_payment";
