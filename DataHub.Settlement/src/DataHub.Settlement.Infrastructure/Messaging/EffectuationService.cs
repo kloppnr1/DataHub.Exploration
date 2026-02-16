@@ -389,7 +389,7 @@ public sealed class EffectuationService
             {
                 var rsm027 = _brsBuilder.BuildRsm027(meteringPointId, customerName!, cprCvr!, datahubCorrelationId!);
                 await _dataHubClient.SendRequestAsync(ProcessTypes.CustomerDataUpdate, rsm027, ct);
-                await _messageRepo.RecordOutboundRequestAsync("RSM-027", meteringPointId, datahubCorrelationId!, "sent", rsm027, ct);
+                await _messageRepo.RecordOutboundRequestAsync(RsmMessageTypes.CustomerDataUpdate, meteringPointId, datahubCorrelationId!, "sent", rsm027, ct);
                 _logger.LogInformation("RSM-022: Sent RSM-027 customer data update for {Gsrn}", meteringPointId);
             }
             catch (Exception ex)
