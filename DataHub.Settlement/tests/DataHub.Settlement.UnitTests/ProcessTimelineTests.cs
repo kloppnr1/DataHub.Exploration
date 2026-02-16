@@ -346,25 +346,31 @@ public class ProcessTimelineTests
     //  Helpers — QueuePollerService wiring with no-op stubs
     // ══════════════════════════════════════════════════════════════
 
-    private QueuePollerService CreatePoller(ICimParser parser) =>
-        new(
-            _dataHubClient, parser,
-            new ThrowMeteringRepo(),
+    private QueuePollerService CreatePoller(ICimParser parser)
+    {
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser,
             new ThrowPortfolioRepo(),
             _processRepo,
             new ThrowSignupRepo(),
             NullOnboardingService.Instance,
             new ThrowTariffRepo(),
-            new ThrowBrsBuilder(),
-            new ThrowMessageRepo(),
             _clock,
-            new NullMessageLog(),
-            new NullInvoiceService(),
             new EffectuationService(
                 "Host=localhost", NullOnboardingService.Instance, new NullInvoiceService(),
                 _dataHubClient, new ThrowBrsBuilder(), new ThrowMessageRepo(),
                 _clock, NullLogger<EffectuationService>.Instance),
+            NullLogger<MasterDataMessageHandler>.Instance);
+
+        return new QueuePollerService(
+            _dataHubClient, parser,
+            new ThrowMeteringRepo(),
+            new ThrowPortfolioRepo(),
+            new ThrowTariffRepo(),
+            new NullMessageLog(),
+            masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
+    }
 
     /// <summary>Stub parser that returns a preconfigured RSM-001 result.</summary>
     private sealed class StubCimParser(Rsm001ResponseResult rsm001ResponseResult) : ICimParser

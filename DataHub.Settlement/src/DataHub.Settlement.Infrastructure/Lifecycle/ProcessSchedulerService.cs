@@ -126,6 +126,7 @@ public sealed class ProcessSchedulerService : BackgroundService
                     ProcessTypes.SupplierSwitch => RsmMessageTypes.Request,
                     ProcessTypes.MoveIn => RsmMessageTypes.Request,
                     ProcessTypes.EndOfSupply => RsmMessageTypes.EndOfSupply,
+                    ProcessTypes.MoveOut => RsmMessageTypes.EndOfSupply,
                     _ => process.ProcessType,
                 };
                 var outboundStatus = response.Accepted ? "acknowledged_ok" : "acknowledged_error";
