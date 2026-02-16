@@ -25,7 +25,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// instead of unconditionally creating aconto invoices for them.
 /// </summary>
 [Collection("Database")]
-public class EffectuationSettlementTests
+public class EffectuationSettlementTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000099999";
     private const string GridAreaCode = "344";

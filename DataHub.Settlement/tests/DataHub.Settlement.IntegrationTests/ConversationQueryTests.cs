@@ -11,7 +11,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// include all messages for a process using a single correlation ID (including cancel messages).
 /// </summary>
 [Collection("Database")]
-public class ConversationQueryTests
+public class ConversationQueryTests : IClassFixture<TestDatabase>
 {
     private readonly ProcessRepository _processRepo;
     private readonly MessageRepository _messageRepo;

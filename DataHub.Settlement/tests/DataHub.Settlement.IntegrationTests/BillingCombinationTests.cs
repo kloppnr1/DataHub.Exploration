@@ -30,7 +30,7 @@ namespace DataHub.Settlement.IntegrationTests;
 ///   4. Aconto invoices have settlement lines + deduction + prepayment
 /// </summary>
 [Collection("Database")]
-public class BillingCombinationTests
+public class BillingCombinationTests : IClassFixture<TestDatabase>
 {
     private readonly PortfolioRepository _portfolio;
     private readonly TariffRepository _tariffRepo;

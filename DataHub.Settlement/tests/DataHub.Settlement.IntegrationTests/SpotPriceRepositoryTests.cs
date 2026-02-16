@@ -6,7 +6,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public class SpotPriceRepositoryTests
+public class SpotPriceRepositoryTests : IClassFixture<TestDatabase>
 {
     private readonly SpotPriceRepository _sut = new(TestDatabase.ConnectionString);
     private readonly TestDatabase _db;

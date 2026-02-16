@@ -29,7 +29,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// verifying end-to-end from portfolio setup through invoicing.
 /// </summary>
 [Collection("Database")]
-public class AcontoSettlementSyncTests
+public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
 {
     private const string GsrnPostPayment = "571313100000090001";
     private const string GsrnAconto = "571313100000090002";

@@ -11,7 +11,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Requires TimescaleDB running via docker compose.
 /// </summary>
 [Collection("Database")]
-public class DatabaseSchemaTests : IAsyncLifetime
+public class DatabaseSchemaTests : IClassFixture<TestDatabase>, IAsyncLifetime
 {
     private NpgsqlConnection _connection = null!;
 

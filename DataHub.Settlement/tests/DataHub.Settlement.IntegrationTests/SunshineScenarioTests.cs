@@ -28,7 +28,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Uses FakeDataHubClient (no HTTP, no external dependencies beyond TimescaleDB).
 /// </summary>
 [Collection("Database")]
-public class SunshineScenarioTests
+public class SunshineScenarioTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000012345";
 

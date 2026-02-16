@@ -21,7 +21,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Tests for the RSM-024 cancel flow and RSM-004/D11 auto-cancel via QueuePollerService.
 /// </summary>
 [Collection("Database")]
-public class CancelFlowTests
+public class CancelFlowTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000067890";
 

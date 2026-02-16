@@ -5,7 +5,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public sealed class ConcurrentOperationsTests
+public sealed class ConcurrentOperationsTests : IClassFixture<TestDatabase>
 {
     private readonly SimulationService _sut = new(TestDatabase.ConnectionString);
 

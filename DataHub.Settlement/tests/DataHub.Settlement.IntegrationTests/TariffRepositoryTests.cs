@@ -7,7 +7,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public class TariffRepositoryTests
+public class TariffRepositoryTests : IClassFixture<TestDatabase>
 {
     private readonly TariffRepository _sut;
     private readonly PortfolioRepository _portfolio;

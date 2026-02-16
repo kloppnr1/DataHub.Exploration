@@ -19,7 +19,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public class QueuePollerTests
+public class QueuePollerTests : IClassFixture<TestDatabase>
 {
     private readonly MeteringDataRepository _meteringRepo;
     private readonly PortfolioRepository _portfolioRepo;

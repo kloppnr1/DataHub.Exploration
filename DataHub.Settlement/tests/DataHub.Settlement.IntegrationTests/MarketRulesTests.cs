@@ -8,7 +8,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public sealed class MarketRulesTests
+public sealed class MarketRulesTests : IClassFixture<TestDatabase>
 {
     private static readonly string Conn = TestDatabase.ConnectionString;
     private static readonly CancellationToken Ct = CancellationToken.None;

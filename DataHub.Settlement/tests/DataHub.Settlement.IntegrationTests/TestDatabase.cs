@@ -35,6 +35,8 @@ public sealed class TestDatabase : IAsyncLifetime
 
     public NpgsqlConnection CreateConnection() => new(ConnectionString);
 
+    public static async Task ResetAsync() => await TruncateTablesAsync();
+
     private static async Task TruncateTablesAsync()
     {
         await using var conn = new NpgsqlConnection(ConnectionString);

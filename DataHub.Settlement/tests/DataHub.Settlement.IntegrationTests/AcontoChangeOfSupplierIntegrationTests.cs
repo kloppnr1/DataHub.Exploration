@@ -6,7 +6,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public sealed class AcontoChangeOfSupplierIntegrationTests
+public sealed class AcontoChangeOfSupplierIntegrationTests : IClassFixture<TestDatabase>
 {
     private readonly TestClock _clock = new() { Today = new DateOnly(2024, 12, 20) };
 

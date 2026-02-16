@@ -28,7 +28,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Covers two audit gaps: BRS-009 (move-in) path and SettlementOrchestrationService → SettlementResultStore.
 /// </summary>
 [Collection("Database")]
-public class MoveInSettlementTests
+public class MoveInSettlementTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000054321";
     private const string CprCvr = "1234567890";

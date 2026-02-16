@@ -23,7 +23,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// Tests the correction workflow: original settlement → revised metering data → correction delta.
 /// </summary>
 [Collection("Database")]
-public class CorrectionWorkflowTests
+public class CorrectionWorkflowTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000098765";
 

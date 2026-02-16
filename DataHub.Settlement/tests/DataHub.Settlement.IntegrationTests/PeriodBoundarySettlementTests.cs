@@ -23,7 +23,7 @@ namespace DataHub.Settlement.IntegrationTests;
 /// with the exclusive periodEnd convention.
 /// </summary>
 [Collection("Database")]
-public class PeriodBoundarySettlementTests
+public class PeriodBoundarySettlementTests : IClassFixture<TestDatabase>
 {
     private const string Gsrn = "571313100000097531";
 

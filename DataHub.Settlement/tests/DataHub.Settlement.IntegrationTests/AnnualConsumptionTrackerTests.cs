@@ -5,7 +5,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 [Collection("Database")]
-public class AnnualConsumptionTrackerTests
+public class AnnualConsumptionTrackerTests : IClassFixture<TestDatabase>
 {
     private readonly AnnualConsumptionTracker _sut = new(TestDatabase.ConnectionString);
 
