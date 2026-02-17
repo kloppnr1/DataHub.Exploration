@@ -91,8 +91,10 @@ public sealed class InvoicingService : BackgroundService
             var today = _clock.Today;
             var acontoPeriodEnd = group.Key.AcontoPeriodEnd;
 
-            // Only invoice when aconto period has ended
-            if (acontoPeriodEnd > today)
+            // For active contracts: only invoice when aconto period has ended
+            // For ended contracts (offboarding): invoice immediately — this is the final reconciliation
+            var isContractEnded = group.Any(r => r.ContractEndDate.HasValue);
+            if (!isContractEnded && acontoPeriodEnd > today)
                 continue;
 
             try
@@ -129,8 +131,9 @@ public sealed class InvoicingService : BackgroundService
                 }
 
                 // Add new aconto prepayment line for next period (based on actual total)
+                // Skip if contract is ended — no next period for a departing customer
                 var actualTotal = allLines.Sum(l => l.AmountInclVat);
-                if (actualTotal > 0)
+                if (actualTotal > 0 && !isContractEnded)
                 {
                     var nextPeriodEnd = GetAcontoPeriodEnd(acontoPeriodEnd, first.BillingFrequency);
                     var acontoPrepayment = Math.Round(actualTotal, 2);
@@ -143,6 +146,12 @@ public sealed class InvoicingService : BackgroundService
                     _logger.LogInformation(
                         "Added aconto prepayment {Amount} DKK for GSRN {Gsrn}, next period {Start}–{End}",
                         acontoPrepayment, first.Gsrn, acontoPeriodEnd, nextPeriodEnd);
+                }
+                else if (isContractEnded)
+                {
+                    _logger.LogInformation(
+                        "Final aconto reconciliation for GSRN {Gsrn} — no next-period prepayment (contract ended)",
+                        first.Gsrn);
                 }
 
                 // Create ONE invoice — lines determine what it is
@@ -204,11 +213,13 @@ public sealed class InvoicingService : BackgroundService
                     c.payer_id,
                     c.id AS contract_id,
                     c.billing_frequency,
-                    c.payment_model
+                    c.payment_model,
+                    c.end_date AS contract_end_date
                 FROM settlement.settlement_run sr
                 JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
                 JOIN portfolio.contract c ON c.gsrn = sr.metering_point_id
-                    AND c.end_date IS NULL
+                    AND c.start_date <= bp.period_end
+                    AND (c.end_date IS NULL OR c.end_date >= bp.period_start)
                 WHERE sr.status = 'completed'
                   AND NOT EXISTS (
                       SELECT 1 FROM billing.invoice i
@@ -285,7 +296,8 @@ public sealed class InvoicingService : BackgroundService
         Guid? PayerId,
         Guid ContractId,
         string BillingFrequency,
-        string PaymentModel);
+        string PaymentModel,
+        DateOnly? ContractEndDate = null);
 
     private record SettlementLineRow(Guid Id, string ChargeType, decimal TotalKwh, decimal TotalAmount, decimal VatAmount);
 }
