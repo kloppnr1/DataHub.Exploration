@@ -1,6 +1,6 @@
 # Implementation Plan
 
-An agile, MVP-driven plan for building the DataHub settlement system. Each MVP delivers a working, demonstrable result — not a layer of infrastructure. Testing against DataHub is the biggest technical risk, so the DataHub simulator grows incrementally alongside the MVPs.
+An agile, phase-driven plan for building Wattzon. Each phase delivers a working, demonstrable result — not a layer of infrastructure. Testing against DataHub is the biggest technical risk, so the DataHub simulator grows incrementally alongside each phase.
 
 ---
 
@@ -23,28 +23,28 @@ Energinet provides test environments (Actor Test, Preprod), but:
 
 ---
 
-## Approach: MVPs, Not Phases
+## Approach: Incremental Phases, Not Layers
 
 Instead of building the system in horizontal layers (first all integration, then all portfolio, then all settlement), we build **vertical slices** that each deliver a working end-to-end result.
 
 ```
-Traditional (waterfall)              Our approach (MVP)
+Traditional (waterfall)              Our approach (Incremental)
 ──────────────────────               ──────────────────
-Phase 1: Integration                 MVP 1: One correct invoice
+Phase 1: Integration                 Phase 1: One correct invoice
 Phase 2: Portfolio                     (happy path: OAuth → RSM-012 → settlement)
-Phase 3: Settlement                  MVP 2: Full customer lifecycle
+Phase 3: Settlement                  Phase 2: Full customer lifecycle
 Phase 4: Lifecycle                     (happy path: onboarding → offboarding)
-Phase 5: Reconciliation              MVP 3: DataHub integration + edge cases
+Phase 5: Reconciliation              Phase 3: DataHub integration + edge cases
 Phase 6: Validation                    (Actor Test, corrections, reconciliation, elvarme, solar)
-                                     MVP 4: Production
+                                     Phase 4: Production
                                        (real customers, ERP, portal, scale)
 ```
 
 **Why this matters:**
-- Each MVP is **demo-able** — you can show a stakeholder a calculated invoice after MVP 1, not after 20 weeks
-- **Feedback loops are short** — if the settlement calculation is wrong, you discover it in MVP 1
+- Each phase is **demo-able** — you can show a stakeholder a calculated invoice after Phase 1, not after 20 weeks
+- **Feedback loops are short** — if the settlement calculation is wrong, you discover it in Phase 1
 - **Risk is front-loaded** — the biggest unknowns (DataHub communication + correct settlement) are resolved first
-- The simulator and test suite **grow with each MVP** — build what you need, when you need it
+- The simulator and test suite **grow with each phase** — build what you need, when you need it
 
 ---
 
@@ -87,14 +87,14 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Simulator grows with each MVP
+### Simulator grows with each phase
 
-| MVP | Simulator capabilities |
-|-----|----------------------|
-| **MVP 1** | In-process `FakeDataHubClient` only. Supports: OAuth2 (mock), Timeseries queue (RSM-012), MasterData queue (RSM-022), Charges queue, BRS-001 `SendRequestAsync` (returns RSM-001 accepted), Dequeue. Loads CIM JSON fixture files from disk. No HTTP, no Docker dependency. |
-| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle" |
-| **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
-| **MVP 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
+| Phase | Simulator capabilities |
+|-------|----------------------|
+| **Phase 1** | In-process `FakeDataHubClient` only. Supports: OAuth2 (mock), Timeseries queue (RSM-012), MasterData queue (RSM-022), Charges queue, BRS-001 `SendRequestAsync` (returns RSM-001 accepted), Dequeue. Loads CIM JSON fixture files from disk. No HTTP, no Docker dependency. |
+| **Phase 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle" |
+| **Phase 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
+| **Phase 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
 
 ### Test fixture library
 
@@ -203,7 +203,7 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 ---
 
-## MVP 1: Sunshine Scenario — One Customer, One Correct Invoice
+## Phase 1: Sunshine Scenario — One Customer, One Correct Invoice
 
 **Goal:** Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch, metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
 
@@ -271,13 +271,13 @@ Golden Master #2: Partial period (mid-month start)
 
 ---
 
-## MVP 2: Full Customer Lifecycle
+## Phase 2: Full Customer Lifecycle
 
 **Goal:** Handle a customer's full lifecycle — offboarding, cancellations, rejections, aconto, and final settlement. Everything that happens after the sunshine path. A customer can go through every state in the system.
 
 **Delivered outcome:** Run the "full lifecycle" simulator scenario — a customer goes through onboarding, operation, and offboarding. Aconto customers get quarterly combined invoices. Final settlement produces the correct closing invoice.
 
-**Builds on MVP 1:** MVP 1 delivers the sunshine path (signup → switch → data → settlement). MVP 2 adds everything else.
+**Builds on Phase 1:** Phase 1 delivers the sunshine path (signup → switch → data → settlement). Phase 2 adds everything else.
 
 ### What to build
 
@@ -462,9 +462,9 @@ Golden Master #9: Tariff change mid-billing period
 
 ---
 
-## MVP 4: Production
+## Phase 4: Production
 
-**Goal:** Go live with real customers. ERP integration, payment services, customer portal, and progressive migration from pilot to full portfolio. The system is already validated against real DataHub (MVP 3) — this MVP is about production readiness.
+**Goal:** Go live with real customers. ERP integration, payment services, customer portal, and progressive migration from pilot to full portfolio. The system is already validated against real DataHub (Phase 3) — this phase is about production readiness.
 
 **Delivered outcome:** All customers billed through the system. Real invoices sent. Customer portal live. System validated at scale.
 
@@ -530,8 +530,8 @@ IDataHubClient
 ```
 
 Three implementations:
-- `FakeDataHubClient` — in-memory, for unit/domain tests (MVP 1)
-- `SimulatorDataHubClient` — points to Docker simulator, for integration tests (MVP 2+)
+- `FakeDataHubClient` — in-memory, for unit/domain tests (Phase 1)
+- `SimulatorDataHubClient` — points to Docker simulator, for integration tests (Phase 2+)
 - `RealDataHubClient` — points to DataHub (Actor Test / Preprod / Prod)
 
 Switching between them is a configuration change, not a code change.
@@ -597,10 +597,10 @@ Push to main
 |-----|-------|----------------|------------|
 | **1** | One correct invoice | Happy path: DataHub connection → RSM-012 ingestion → settlement → verified result | — |
 | **2** | Full customer lifecycle | Happy path: all BRS processes (BRS-001/002/003/005/009/010/044). Onboarding → operation → offboarding → final settlement | MVP 1 |
-| **3** | DataHub integration + edge cases | Real DataHub validation (Actor Test). Then: corrections, BRS-011, reconciliation, elvarme, solar, error handling | MVP 2 + Actor Test access |
-| **4** | Production | ERP + payment + portal. Pilot (10-50 customers) → full migration. Scale | MVP 3 |
+| **3** | DataHub integration + edge cases | Real DataHub validation (Actor Test). Then: corrections, BRS-011, reconciliation, elvarme, solar, error handling | Phase 2 + Actor Test access |
+| **4** | Production | ERP + payment + portal. Pilot (10-50 customers) → full migration. Scale | Phase 3 |
 
-**Critical path:** Actor Test access. Apply during MVP 1. If access is delayed, MVP 2 proceeds against the simulator, and DataHub integration shifts to MVP 3 (as soon as access is granted).
+**Critical path:** Actor Test access. Apply during Phase 1. If access is delayed, Phase 2 proceeds against the simulator, and DataHub integration shifts to Phase 3 (as soon as access is granted).
 
 ---
 

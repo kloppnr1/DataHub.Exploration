@@ -1,6 +1,6 @@
-# Proposed Architecture: Settlement System for DataHub 3
+# Proposed Architecture: Wattzon Settlement System for DataHub 3
 
-> **📋 Note:** This is the original architecture proposal created before MVP 1 implementation.
+> **📋 Note:** This is the original architecture proposal created before Phase 1 implementation.
 > For the **current, as-built architecture**, see [ARCHITECTURE.md](../../DataHub.Settlement/ARCHITECTURE.md).
 > This document is preserved for historical context and to show the evolution of design decisions.
 

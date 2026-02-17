@@ -1,6 +1,6 @@
-# DataHub.Settlement Documentation Index
+# Wattzon Documentation Index
 
-**Welcome to the DataHub.Settlement documentation.** This index helps you navigate 18 comprehensive documents covering business context, architecture, implementation, and integration.
+**Welcome to the Wattzon documentation.** This index helps you navigate 18 comprehensive documents covering business context, architecture, implementation, and integration.
 
 ---
 
@@ -19,7 +19,7 @@ Start with [README.md](../README.md) → [Settlement Overview](1-getting-started
 [DDQ Business Processes](4-integration/datahub3-ddq-business-processes.md) → [Authentication & Security](4-integration/datahub3-authentication-security.md)
 
 **📋 Planning work?**
-[Next Phase Plan](5-planning/next-phase-plan.md) → [Implementation Status](5-planning/mvp1-implementation-plan.md)
+[Next Phase Plan](5-planning/next-phase-plan.md) → [Implementation Plan](5-planning/mvp1-implementation-plan.md)
 
 ---
 
@@ -97,7 +97,7 @@ This repository contains **two web applications** with different purposes:
 
 ### 5. Implementation & Planning
 - **[Next Phase Plan](5-planning/next-phase-plan.md)** ⭐ - Current development priorities and roadmap
-- **[MVP1 Implementation Plan](5-planning/mvp1-implementation-plan.md)** - Original implementation tasks (completed)
+- **[Phase 1 Implementation Plan](5-planning/mvp1-implementation-plan.md)** - Original implementation tasks (completed)
 - **[Implementation Plan](5-planning/datahub3-implementation-plan.md)** - Phased delivery approach
 - **[Proposed Architecture](5-planning/datahub3-proposed-architecture.md)** - Historical design proposal (see ARCHITECTURE.md for current)
 

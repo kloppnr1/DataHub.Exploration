@@ -1,4 +1,4 @@
-# DataHub Settlement System
+# Wattzon
 
 A settlement system for a Danish electricity supplier (elleverandør) integrating with Energinet's DataHub 3 — the central market hub that coordinates all electricity suppliers, grid companies, and metering data in Denmark.
 

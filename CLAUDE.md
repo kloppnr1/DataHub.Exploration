@@ -60,7 +60,7 @@ All docs are in `/home/user/Wattzon/docs/` organized by category:
 - `2-business-context/` — Settlement overview, market rules, billing, customer lifecycle, edge cases
 - `3-architecture/` — Database model, class diagrams, sequence diagrams
 - `4-integration/` — DataHub queues, BRS/RSM reference, RSM-012 format, auth
-- `5-planning/` — Next phase plan, MVP plans, proposed architecture
+- `5-planning/` — Next phase plan, implementation plans, proposed architecture
 - `DataHub.Settlement/ARCHITECTURE.md` — Current system design decisions (primary technical doc)
 
 ### Golden Master Tests

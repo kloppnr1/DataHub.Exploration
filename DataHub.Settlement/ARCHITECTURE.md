@@ -1,11 +1,11 @@
 # DataHub.Settlement — Architecture & Design Rationale
 
-> **📋 Historical Context:** For the original architecture proposal (pre-MVP 1), see [docs/5-planning/datahub3-proposed-architecture.md](../docs/5-planning/datahub3-proposed-architecture.md).
-> This document reflects the **as-built architecture** after MVP 1-3 implementation.
+> **📋 Historical Context:** For the original architecture proposal, see [docs/5-planning/datahub3-proposed-architecture.md](../docs/5-planning/datahub3-proposed-architecture.md).
+> This document reflects the **current as-built architecture** after initial implementation phases.
 
 ## Overview
 
-DataHub.Settlement is an electricity settlement platform for the Danish energy market. It integrates with Energinet's DataHub — the central hub that coordinates all electricity suppliers, grid companies, and metering operators in Denmark — to handle customer onboarding, metering data collection, and billing.
+Wattzon is an electricity settlement platform for the Danish energy market. It integrates with Energinet's DataHub — the central hub that coordinates all electricity suppliers, grid companies, and metering operators in Denmark — to handle customer onboarding, metering data collection, and billing.
 
 It handles the full customer lifecycle: a customer signs up with a supplier, DataHub confirms the switch, hourly metering data arrives daily, and the system calculates what the customer owes based on spot prices, grid tariffs, taxes, and subscriptions.
 

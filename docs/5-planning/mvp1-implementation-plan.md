@@ -1,4 +1,4 @@
-# MVP 1: Sunshine Scenario — Implementation Plan
+# Phase 1: Sunshine Scenario — Implementation Plan
 
 Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch (BRS-001), metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
 
@@ -8,7 +8,7 @@ Prove the entire sunshine path works end-to-end — from customer signup, throug
 
 ## Simulator Strategy
 
-MVP 1 uses an **in-process fake** (`FakeDataHubClient`) behind the same `IDataHubClient` interface the real client will implement. No HTTP server, no Docker networking — just fixture-loaded queues in memory.
+Phase 1 uses an **in-process fake** (`FakeDataHubClient`) behind the same `IDataHubClient` interface the real client will implement. No HTTP server, no Docker networking — just fixture-loaded queues in memory.
 
 The fake supports:
 - Timeseries queue (RSM-012 from fixture files)
@@ -19,12 +19,12 @@ The fake supports:
 - Fake token endpoint (returns a hardcoded JWT)
 - State reset between tests
 
-The fake does **not** support Aggregations, error injection (401, 503, rejections), or HTTP transport. Those come in MVP 2-3.
+The fake does **not** support Aggregations, error injection (401, 503, rejections), or HTTP transport. Those come in later phases.
 
 The `IDataHubClient` abstraction means the transition from fake → HTTP simulator → real DataHub is a configuration change, not a rewrite. Three implementations over time:
 
-| Implementation | MVP | Description |
-|---------------|-----|-------------|
+| Implementation | Phase | Description |
+|---------------|-------|-------------|
 | `FakeDataHubClient` | 1 | In-process, fixture-loaded. No HTTP. Fast. |
 | `SimulatorDataHubClient` | 2 | HTTP client pointing at standalone Docker simulator |
 | `RealDataHubClient` | 3 | HTTP client pointing at DataHub B2B API with OAuth2 |
@@ -33,7 +33,7 @@ The `IDataHubClient` abstraction means the transition from fake → HTTP simulat
 
 ## Observability
 
-MVP 1 includes the **.NET Aspire Dashboard** for runtime monitoring — no custom UI code needed.
+Phase 1 includes the **.NET Aspire Dashboard** for runtime monitoring — no custom UI code needed.
 
 The Aspire Dashboard runs as a Docker container alongside TimescaleDB. The .NET worker and API services export telemetry via OpenTelemetry (OTLP), and the dashboard collects and displays it.
 
@@ -48,7 +48,7 @@ The Aspire Dashboard runs as a Docker container alongside TimescaleDB. The .NET 
 - Configure `OTEL_EXPORTER_OTLP_ENDPOINT` to point at the dashboard container
 - Dashboard accessible at `http://localhost:18888`
 
-This replaces the need for any custom UI in MVP 1. When the system runs, you open the dashboard to see what's happening — which messages are being processed, how long settlement takes, and any errors.
+This replaces the need for any custom UI in Phase 1. When the system runs, you open the dashboard to see what's happening — which messages are being processed, how long settlement takes, and any errors.
 
 ---
 
@@ -89,7 +89,7 @@ flowchart TD
 | # | Component | What it proves |
 |---|-----------|---------------|
 | 1 | **Solution structure + Docker Compose** | .NET solution builds, TimescaleDB starts, Aspire Dashboard shows logs/traces, CI pipeline runs |
-| 2 | **Database schema (MVP 1 subset)** | Migrations create all needed tables, hypertable enabled |
+| 2 | **Database schema (Phase 1 subset)** | Migrations create all needed tables, hypertable enabled |
 | 3 | **IDataHubClient + FakeDataHubClient** | Peek/dequeue lifecycle works, BRS-001 accepted, fixture loading |
 | 4 | **CIM JSON parser (RSM-012)** | Raw CIM JSON → domain model (GSRN, period, resolution, points) |
 | 5 | **Metering data storage** | Parsed data persisted in hypertable, upsert for corrections |
@@ -176,10 +176,10 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 
 ---
 
-## Simulator Evolution (Post-MVP 1)
+## Simulator Evolution (Post-Phase 1)
 
-| MVP | Simulator change |
-|-----|-----------------|
+| Phase | Simulator change |
+|-------|-----------------|
 | 2 | **Standalone HTTP simulator introduced.** Error responses (rejections, 403). Offboarding scenarios. Aconto flows |
 | 3 | Error injection (401, 503, malformed). Correction scenarios. Aggregations queue. Parallel with real Actor Test |
 | 4 | Performance: 80K metering points, realistic timing |
@@ -206,20 +206,20 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 
 ---
 
-## What MVP 1 Does NOT Include
+## What Phase 1 Does NOT Include
 
 | Feature | Deferred to |
 |---------|-------------|
-| Offboarding (BRS-002, BRS-010) | MVP 2 |
-| Cancellations / rejections (RSM-002 cancel, RSM-001 rejected) | MVP 2 |
-| Aconto calculation and settlement | MVP 2 |
-| Standalone HTTP DataHub simulator | MVP 2 |
-| Invoice generation (PDF/document) | MVP 2 |
-| Metering data corrections (delta detection) | MVP 3 |
-| Reconciliation (RSM-014) | MVP 3 |
-| Elvarme / solar (E18) | MVP 3 |
-| Real DataHub communication (Actor Test) | MVP 3 |
-| ERP integration, customer portal | MVP 4 |
+| Offboarding (BRS-002, BRS-010) | Phase 2 |
+| Cancellations / rejections (RSM-002 cancel, RSM-001 rejected) | Phase 2 |
+| Aconto calculation and settlement | Phase 2 |
+| Standalone HTTP DataHub simulator | Phase 2 |
+| Invoice generation (PDF/document) | Phase 2 |
+| Metering data corrections (delta detection) | Phase 3 |
+| Reconciliation (RSM-014) | Phase 3 |
+| Elvarme / solar (E18) | Phase 3 |
+| Real DataHub communication (Actor Test) | Phase 3 |
+| ERP integration, customer portal | Phase 4 |
 
 ---
 

@@ -1,14 +1,14 @@
-# Next Development Phase: MVP 3 Completion + MVP 4 Foundation
+# Next Development Phase: Core Completion + Production Foundation
 
-Plan for the next phase of DataHub.Settlement development. MVP 3 delivered the core edge-case calculations (corrections, elvarme, solar, erroneous switch — all verified by golden master tests), but several integration-level features and hardening work remain incomplete. MVP 4 introduces production readiness concerns.
+Plan for the next phase of Wattzon development. The core edge-case calculations (corrections, elvarme, solar, erroneous switch — all verified by golden master tests) have been delivered, but several integration-level features and hardening work remain incomplete. This phase introduces production readiness concerns.
 
-This phase bridges the two: close out MVP 3 gaps, then lay the MVP 4 foundation.
+This phase bridges the two: close out core gaps, then lay the production foundation.
 
 ---
 
 ## Current State Assessment
 
-### MVP 3 — What's Done
+### Core Features — What's Done
 
 | Feature | Status | Evidence |
 |---------|--------|----------|
@@ -24,7 +24,7 @@ This phase bridges the two: close out MVP 3 gaps, then lay the MVP 4 foundation.
 | Missing spot price validation | Complete | `SpotPriceValidator.cs` |
 | All 10 golden master tests | Passing | GM#1–GM#10 |
 
-### MVP 3 — What's Missing
+### Core Features — What's Missing
 
 | Feature | Gap | Priority |
 |---------|-----|----------|
@@ -42,14 +42,14 @@ This phase bridges the two: close out MVP 3 gaps, then lay the MVP 4 foundation.
 The phase is split into two tracks that can overlap. The **Onboarding API** (B1) is the top priority — it is the entry point for all sales channels and must be built first to establish the API-first integration pattern that everything else depends on.
 
 ```
-Track A: MVP 3 Completion (close the gaps)
+Track A: Core Completion (close the gaps)
   A1. Aggregations persistence & reconciliation comparison
   A2. Simulator error injection scenarios
   A3. BRS-011 erroneous move
   A4. Concurrent edge-case integration tests
   A5. RSM-015/016 historical data requests
 
-Track B: MVP 4 Foundation (production readiness)
+Track B: Production Foundation (production readiness)
   B1. Onboarding API — sales channel entry point          ★ TOP PRIORITY
   B2. Settlement result export API
   B3. Invoice generation model
@@ -62,7 +62,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-## Track A: MVP 3 Completion
+## Track A: Core Completion
 
 ### A1. Aggregations Queue Persistence & Reconciliation Comparison
 
