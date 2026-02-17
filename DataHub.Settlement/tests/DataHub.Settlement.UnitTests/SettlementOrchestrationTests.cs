@@ -375,5 +375,8 @@ public class SettlementOrchestrationTests
 
         public Task<bool> HasSettlementRunAsync(string gsrn, DateOnly periodStart, DateOnly periodEnd, CancellationToken ct)
             => Task.FromResult(SettledPeriods.Contains((gsrn, periodStart, periodEnd)));
+
+        public Task<IReadOnlyList<AffectedSettlementPeriod>> GetAffectedSettlementPeriodsAsync(string gsrn, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
+            => Task.FromResult<IReadOnlyList<AffectedSettlementPeriod>>(Array.Empty<AffectedSettlementPeriod>());
     }
 }

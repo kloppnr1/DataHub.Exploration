@@ -88,6 +88,7 @@ builder.Services.AddSingleton<CorrectionEngine>();
 builder.Services.AddSingleton<ICorrectionRepository>(new CorrectionRepository(connectionString));
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
 builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
+builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
 builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
 builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
 builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));

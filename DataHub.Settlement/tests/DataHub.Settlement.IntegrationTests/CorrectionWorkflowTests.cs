@@ -171,7 +171,8 @@ public class CorrectionWorkflowTests : IClassFixture<TestDatabase>
         var correctionEngine = new CorrectionEngine();
         var correctionService = new CorrectionService(
             correctionEngine, correctionRepo, _meteringRepo,
-            _spotPriceRepo, _tariffRepo, _portfolio, _billingRepo);
+            _spotPriceRepo, _tariffRepo, _portfolio, _billingRepo,
+            resultStore, Microsoft.Extensions.Logging.Abstractions.NullLogger<CorrectionService>.Instance);
 
         var correctionRequest = new TriggerCorrectionRequest(Gsrn, periodStart, periodEnd, "Integration test correction");
         var correctionResult = await correctionService.TriggerCorrectionAsync(correctionRequest, ct);

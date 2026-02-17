@@ -34,3 +34,5 @@ public record CorrectionBatchDetail(
 public record CorrectionLineDetail(Guid Id, string ChargeType, decimal DeltaKwh, decimal DeltaAmount);
 
 public record TriggerCorrectionRequest(string MeteringPointId, DateOnly PeriodStart, DateOnly PeriodEnd, string? Note);
+
+public record AffectedSettlementPeriod(Guid SettlementRunId, DateOnly PeriodStart, DateOnly PeriodEnd);

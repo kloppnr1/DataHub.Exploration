@@ -110,6 +110,36 @@ public sealed class SettlementResultStore : ISettlementResultStore
                 cancellationToken: ct));
     }
 
+    public async Task<IReadOnlyList<AffectedSettlementPeriod>> GetAffectedSettlementPeriodsAsync(
+        string gsrn, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT sr.id AS settlement_run_id, bp.period_start, bp.period_end
+            FROM settlement.settlement_run sr
+            JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
+            WHERE sr.metering_point_id = @Gsrn
+              AND bp.period_start < @ToDate
+              AND bp.period_end > @FromDate
+            ORDER BY bp.period_start
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var rows = await conn.QueryAsync<AffectedPeriodRow>(
+            new CommandDefinition(sql,
+                new
+                {
+                    Gsrn = gsrn,
+                    FromDate = DateOnly.FromDateTime(fromUtc.Date),
+                    ToDate = DateOnly.FromDateTime(toUtc.Date).AddDays(1),
+                },
+                cancellationToken: ct));
+
+        return rows.Select(r => new AffectedSettlementPeriod(
+            r.SettlementRunId,
+            DateOnly.FromDateTime(r.PeriodStart),
+            DateOnly.FromDateTime(r.PeriodEnd))).ToList();
+    }
+
     /// <summary>
     /// Allocates total VAT proportionally across settlement lines, ensuring the sum equals totalVat exactly.
     /// The last line absorbs any rounding remainder to prevent off-by-penny discrepancies.
@@ -141,4 +171,11 @@ public sealed class SettlementResultStore : ISettlementResultStore
 
         return vatAmounts;
     }
+}
+
+internal class AffectedPeriodRow
+{
+    public Guid SettlementRunId { get; set; }
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
 }

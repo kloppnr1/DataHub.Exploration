@@ -2,6 +2,7 @@ using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Parsing;
+using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Infrastructure.Settlement;
 using Microsoft.Extensions.Logging;
 
@@ -12,18 +13,21 @@ public sealed class TimeseriesMessageHandler : IMessageHandler
     private readonly ICimParser _parser;
     private readonly IMeteringDataRepository _meteringRepo;
     private readonly SettlementTriggerService? _settlementTrigger;
+    private readonly ICorrectionService? _correctionService;
     private readonly ILogger<TimeseriesMessageHandler> _logger;
 
     public TimeseriesMessageHandler(
         ICimParser parser,
         IMeteringDataRepository meteringRepo,
         ILogger<TimeseriesMessageHandler> logger,
-        SettlementTriggerService? settlementTrigger = null)
+        SettlementTriggerService? settlementTrigger = null,
+        ICorrectionService? correctionService = null)
     {
         _parser = parser;
         _meteringRepo = meteringRepo;
         _logger = logger;
         _settlementTrigger = settlementTrigger;
+        _correctionService = correctionService;
     }
 
     public QueueName Queue => QueueName.Timeseries;
@@ -32,6 +36,8 @@ public sealed class TimeseriesMessageHandler : IMessageHandler
     {
         var seriesList = _parser.ParseRsm012(message.RawPayload);
         var processedGsrns = new HashSet<string>();
+        // Track time range of changed readings per GSRN for auto-correction
+        var changedRanges = new Dictionary<string, (DateTime Min, DateTime Max)>();
 
         foreach (var series in seriesList)
         {
@@ -62,11 +68,28 @@ public sealed class TimeseriesMessageHandler : IMessageHandler
             if (changedCount > 0)
             {
                 _logger.LogInformation(
-                    "Detected {ChangedCount} corrected readings for {Gsrn} — correction settlement may be needed",
+                    "Detected {ChangedCount} corrected readings for {Gsrn} — triggering auto-correction",
                     changedCount, series.MeteringPointId);
+
+                // Track min/max timestamps of the points in this series for correction range
+                var timestamps = validPoints.Select(p => p.Timestamp).ToList();
+                var min = timestamps.Min();
+                var max = timestamps.Max();
+
+                if (changedRanges.TryGetValue(series.MeteringPointId, out var existing))
+                {
+                    changedRanges[series.MeteringPointId] = (
+                        existing.Min < min ? existing.Min : min,
+                        existing.Max > max ? existing.Max : max);
+                }
+                else
+                {
+                    changedRanges[series.MeteringPointId] = (min, max);
+                }
             }
         }
 
+        // Trigger normal settlement for new data
         if (_settlementTrigger is not null)
         {
             foreach (var gsrn in processedGsrns)
@@ -78,6 +101,28 @@ public sealed class TimeseriesMessageHandler : IMessageHandler
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogWarning(ex, "RSM-012 triggered settlement failed for GSRN {Gsrn}", gsrn);
+                }
+            }
+        }
+
+        // Trigger auto-corrections for changed readings
+        if (_correctionService is not null)
+        {
+            foreach (var (gsrn, range) in changedRanges)
+            {
+                try
+                {
+                    var count = await _correctionService.TriggerAutoCorrectionsAsync(gsrn, range.Min, range.Max, ct);
+                    if (count > 0)
+                    {
+                        _logger.LogInformation(
+                            "Auto-correction: {Count} correction(s) created for GSRN {Gsrn}",
+                            count, gsrn);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "Auto-correction failed for GSRN {Gsrn}", gsrn);
                 }
             }
         }

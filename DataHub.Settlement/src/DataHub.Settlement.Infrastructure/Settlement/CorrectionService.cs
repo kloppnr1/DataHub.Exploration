@@ -3,6 +3,7 @@ using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
+using Microsoft.Extensions.Logging;
 
 namespace DataHub.Settlement.Infrastructure.Settlement;
 
@@ -15,6 +16,8 @@ public sealed class CorrectionService : ICorrectionService
     private readonly ITariffRepository _tariffRepo;
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly IBillingRepository _billingRepo;
+    private readonly ISettlementResultStore _resultStore;
+    private readonly ILogger<CorrectionService> _logger;
 
     public CorrectionService(
         CorrectionEngine engine,
@@ -23,7 +26,9 @@ public sealed class CorrectionService : ICorrectionService
         ISpotPriceRepository spotPriceRepo,
         ITariffRepository tariffRepo,
         IPortfolioRepository portfolioRepo,
-        IBillingRepository billingRepo)
+        IBillingRepository billingRepo,
+        ISettlementResultStore resultStore,
+        ILogger<CorrectionService> logger)
     {
         _engine = engine;
         _correctionRepo = correctionRepo;
@@ -32,6 +37,8 @@ public sealed class CorrectionService : ICorrectionService
         _tariffRepo = tariffRepo;
         _portfolioRepo = portfolioRepo;
         _billingRepo = billingRepo;
+        _resultStore = resultStore;
+        _logger = logger;
     }
 
     public async Task<CorrectionBatchDetail> TriggerCorrectionAsync(TriggerCorrectionRequest request, CancellationToken ct)
@@ -111,5 +118,102 @@ public sealed class CorrectionService : ICorrectionService
         // 9. Return detail
         var detail = await _correctionRepo.GetCorrectionAsync(batchId, ct);
         return detail!;
+    }
+
+    public async Task<int> TriggerAutoCorrectionsAsync(string gsrn, DateTime changesFromUtc, DateTime changesToUtc, CancellationToken ct)
+    {
+        var affectedPeriods = await _resultStore.GetAffectedSettlementPeriodsAsync(gsrn, changesFromUtc, changesToUtc, ct);
+
+        if (affectedPeriods.Count == 0)
+        {
+            _logger.LogDebug("GSRN {Gsrn}: no settled periods affected by changes {From}-{To}", gsrn, changesFromUtc, changesToUtc);
+            return 0;
+        }
+
+        var contract = await _portfolioRepo.GetActiveContractAsync(gsrn, ct);
+        if (contract is null)
+        {
+            _logger.LogWarning("GSRN {Gsrn}: no active contract, skipping auto-correction", gsrn);
+            return 0;
+        }
+
+        var product = await _portfolioRepo.GetProductAsync(contract.ProductId, ct);
+        if (product is null)
+        {
+            _logger.LogWarning("GSRN {Gsrn}: product {ProductId} not found, skipping auto-correction", gsrn, contract.ProductId);
+            return 0;
+        }
+
+        var meteringPoint = (await _portfolioRepo.GetMeteringPointsForCustomerAsync(contract.CustomerId, ct))
+            .FirstOrDefault(mp => mp.Gsrn == gsrn);
+        if (meteringPoint is null)
+        {
+            _logger.LogWarning("GSRN {Gsrn}: metering point not found, skipping auto-correction", gsrn);
+            return 0;
+        }
+
+        var correctionCount = 0;
+
+        foreach (var period in affectedPeriods)
+        {
+            try
+            {
+                var from = period.PeriodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                var to = period.PeriodEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+                var changes = await _meteringRepo.GetChangesAsync(gsrn, from, to, ct);
+                if (changes.Count == 0)
+                    continue;
+
+                var deltas = changes.Select(c => new ConsumptionDelta(c.Timestamp, c.PreviousKwh, c.NewKwh)).ToList();
+
+                var spotPrices = await _spotPriceRepo.GetPricesAsync(meteringPoint.PriceArea, from, to, ct);
+                var gridTariffRates = await _tariffRepo.GetRatesAsync(meteringPoint.GridAreaCode, "grid", period.PeriodStart, ct);
+                var systemRates = await _tariffRepo.GetRatesAsync(meteringPoint.GridAreaCode, "system", period.PeriodStart, ct);
+                var transmissionRates = await _tariffRepo.GetRatesAsync(meteringPoint.GridAreaCode, "transmission", period.PeriodStart, ct);
+
+                if (systemRates.Count == 0 || transmissionRates.Count == 0)
+                {
+                    _logger.LogWarning("GSRN {Gsrn}: missing tariff rates for period {Start}-{End}, skipping", gsrn, period.PeriodStart, period.PeriodEnd);
+                    continue;
+                }
+
+                var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(period.PeriodStart, ct);
+                if (electricityTaxRate is null)
+                {
+                    _logger.LogWarning("GSRN {Gsrn}: no electricity tax for {Date}, skipping", gsrn, period.PeriodStart);
+                    continue;
+                }
+
+                var correctionRequest = new CorrectionRequest(
+                    gsrn, period.PeriodStart, period.PeriodEnd, deltas, spotPrices, gridTariffRates,
+                    systemRates[0].PricePerKwh, transmissionRates[0].PricePerKwh, electricityTaxRate.Value,
+                    product.MarginOrePerKwh / 100m, (product.SupplementOrePerKwh ?? 0m) / 100m);
+
+                var result = _engine.Calculate(correctionRequest);
+
+                if (result.Total == 0m)
+                {
+                    _logger.LogDebug("GSRN {Gsrn}: correction for {Start}-{End} is zero, skipping", gsrn, period.PeriodStart, period.PeriodEnd);
+                    continue;
+                }
+
+                var batchId = Guid.NewGuid();
+                await _correctionRepo.StoreCorrectionAsync(batchId, result, period.SettlementRunId, "auto", null, ct);
+
+                _logger.LogInformation(
+                    "Auto-correction triggered for GSRN {Gsrn}: {Start} to {End}, delta {Total} DKK",
+                    gsrn, period.PeriodStart, period.PeriodEnd, result.Total);
+
+                correctionCount++;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Auto-correction failed for GSRN {Gsrn} period {Start}-{End}",
+                    gsrn, period.PeriodStart, period.PeriodEnd);
+            }
+        }
+
+        return correctionCount;
     }
 }
