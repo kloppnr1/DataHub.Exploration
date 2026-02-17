@@ -823,4 +823,17 @@ export default {
   'outstanding.colOverdue': 'Overdue',
   'outstanding.colInvoiceCount': 'Invoices',
   'outstanding.noOutstanding': 'No outstanding balances.',
+
+  // ── Simulator ──
+  'nav.simulator': 'Simulator',
+  'simulator.title': 'Simulator',
+  'simulator.subtitle': 'Trigger simulated DataHub events.',
+  'simulator.correctionTitle': 'Correction Data (RSM-012)',
+  'simulator.correctionDesc': 'Send corrected metering data to the DataHub simulator.',
+  'simulator.gsrn': 'GSRN',
+  'simulator.date': 'Date',
+  'simulator.sendButton': 'Send Correction Data',
+  'simulator.sending': 'Sending...',
+  'simulator.success': 'Correction data enqueued successfully',
+  'simulator.explanation': 'Sends updated metering data for the specified date, simulating DataHub re-metering. If a settlement run exists for this period, auto-correction will be triggered.',
 };

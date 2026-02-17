@@ -138,4 +138,7 @@ export const api = {
   getCustomerBalance: (customerId) => request(`/billing/customers/${customerId}/balance`),
   getCustomerLedger: (customerId) => request(`/billing/customers/${customerId}/ledger`),
   getOutstandingCustomers: () => request('/billing/outstanding'),
+
+  // Simulator
+  triggerCorrectionData: (data) => request('/simulator/correction-data', { method: 'POST', body: JSON.stringify(data) }),
 };

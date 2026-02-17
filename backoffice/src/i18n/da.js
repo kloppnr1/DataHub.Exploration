@@ -823,4 +823,17 @@ export default {
   'outstanding.colOverdue': 'Forfaldent',
   'outstanding.colInvoiceCount': 'Fakturaer',
   'outstanding.noOutstanding': 'Ingen udestående saldi.',
+
+  // ── Simulator ──
+  'nav.simulator': 'Simulator',
+  'simulator.title': 'Simulator',
+  'simulator.subtitle': 'Udløs simulerede DataHub-hændelser.',
+  'simulator.correctionTitle': 'Korrektionsdata (RSM-012)',
+  'simulator.correctionDesc': 'Send korrigerede måledata til DataHub-simulatoren.',
+  'simulator.gsrn': 'GSRN',
+  'simulator.date': 'Dato',
+  'simulator.sendButton': 'Send korrektionsdata',
+  'simulator.sending': 'Sender...',
+  'simulator.success': 'Korrektionsdata sat i kø',
+  'simulator.explanation': 'Sender opdaterede måledata for den angivne dato, som simulerer DataHub-genmåling. Hvis der findes en afregningskørsel for denne periode, vil automatisk korrektion blive udløst.',
 };

@@ -1214,6 +1214,81 @@ app.MapPost("/api/processes/move-out", async (ProcessInitRequest request, IProce
     return Results.Ok(new { process.Id, process.ProcessType, process.Gsrn, process.Status, process.EffectiveDate });
 });
 
+// POST /api/simulator/correction-data — trigger simulated correction RSM-012 data
+app.MapPost("/api/simulator/correction-data", async (SimulatorCorrectionRequest request, IConfiguration config, IHttpClientFactory httpClientFactory) =>
+{
+    var dataHubBase = config["DataHub:BaseUrl"]
+        ?? throw new InvalidOperationException("DataHub:BaseUrl is not configured.");
+
+    var day = DateOnly.ParseExact(request.Date, "yyyy-MM-dd");
+    var start = new DateTimeOffset(day.Year, day.Month, day.Day, 6, 0, 0, TimeSpan.Zero);
+    var end = start.AddHours(10);
+
+    var points = new List<object>();
+    for (var i = 1; i <= 10; i++)
+        points.Add(new { position = i, quantity = 0.650m, quality = "A01" });
+
+    var registrationTime = end.AddHours(12).ToString("O");
+
+    var payload = new
+    {
+        MarketDocument = new
+        {
+            mRID = $"msg-rsm012-corr-{Guid.NewGuid():N}",
+            type = "E66",
+            Process = new { ProcessType = "E23" },
+            Sender_MarketParticipant = new
+            {
+                mRID = "5790001330552",
+                MarketRole = new { type = "DGL" },
+            },
+            Receiver_MarketParticipant = new
+            {
+                mRID = "5790002000000",
+                MarketRole = new { type = "DDQ" },
+            },
+            createdDateTime = registrationTime,
+            Series = new[]
+            {
+                new
+                {
+                    mRID = $"txn-{Guid.NewGuid():N}",
+                    MarketEvaluationPoint = new { mRID = request.Gsrn, type = "E17" },
+                    Product = "8716867000030",
+                    Quantity_Measure_Unit = new { name = "KWH" },
+                    Registration_DateAndOrTime = new { dateTime = registrationTime },
+                    Period = new
+                    {
+                        resolution = "PT1H",
+                        timeInterval = new { start = start.ToString("O"), end = end.ToString("O") },
+                        Point = points,
+                    },
+                },
+            },
+        },
+    };
+
+    var enqueueBody = new
+    {
+        Queue = "Timeseries",
+        MessageType = "RSM-012",
+        CorrelationId = Guid.NewGuid().ToString(),
+        Payload = System.Text.Json.JsonSerializer.Serialize(payload),
+    };
+
+    using var client = httpClientFactory.CreateClient();
+    client.BaseAddress = new Uri(dataHubBase);
+    var response = await client.PostAsJsonAsync("/admin/enqueue", enqueueBody);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        return Results.Problem($"Simulator enqueue failed ({response.StatusCode}): {body}");
+    }
+
+    return Results.Ok(new { success = true, gsrn = request.Gsrn, date = request.Date });
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
@@ -1221,6 +1296,7 @@ app.Run();
 record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);
 record CreditNoteRequest(string? Notes);
 record SettlementPreviewRequest(DateOnly PeriodStart, DateOnly PeriodEnd);
+record SimulatorCorrectionRequest(string Gsrn, string Date);
 
 class InboundMessageInfoRow
 {

@@ -20,6 +20,7 @@ import DeadLetterDetail from './pages/DeadLetterDetail';
 import CorrectionDetail from './pages/CorrectionDetail';
 import Processes from './pages/Processes';
 import ProcessDetail from './pages/ProcessDetail';
+import Simulator from './pages/Simulator';
 import InvoiceList from './pages/InvoiceList';
 import InvoiceDetail from './pages/InvoiceDetail';
 import OutstandingOverview from './pages/OutstandingOverview';
@@ -100,6 +101,7 @@ export default function App() {
             <Route path="/datahub/messages/dead-letters/:id" element={<DeadLetterDetail />} />
             <Route path="/datahub/processes" element={<Processes />} />
             <Route path="/datahub/processes/:id" element={<ProcessDetail />} />
+            <Route path="/simulator" element={<Simulator />} />
           </Route>
         </Routes>
       </BrowserRouter>
