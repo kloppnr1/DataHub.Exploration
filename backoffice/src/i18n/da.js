@@ -836,4 +836,23 @@ export default {
   'simulator.sending': 'Sender...',
   'simulator.success': 'Korrektionsdata sat i kø',
   'simulator.explanation': 'Sender opdaterede måledata for den angivne dato, som simulerer DataHub-genmåling. Hvis der findes en afregningskørsel for denne periode, vil automatisk korrektion blive udløst.',
+
+  // Offboarding simulation
+  'simulator.offboard.title': 'Offboarding (RSM-004)',
+  'simulator.offboard.desc': 'Simulér en offboarding-hændelse — leverandørskift, fraflytning eller ophør af forsyning.',
+  'simulator.offboard.customer': 'Kunde',
+  'simulator.offboard.selectCustomer': 'Vælg kunde…',
+  'simulator.offboard.meteringPoints': 'målepunkter',
+  'simulator.offboard.meteringPoint': 'Målepunkt',
+  'simulator.offboard.processType': 'Hændelsestype',
+  'simulator.offboard.typeSupplierSwitch': 'Leverandørskift (E03)',
+  'simulator.offboard.typeOtherSupplier': 'Anden leverandør overtager (E01)',
+  'simulator.offboard.typeMoveOut': 'Fraflytning (D31)',
+  'simulator.offboard.typeEndOfSupply': 'Ophør af forsyning (E20)',
+  'simulator.offboard.typeForcedTransfer': 'Tvungen overdragelse (D31)',
+  'simulator.offboard.effectiveDate': 'Ikrafttrædelsesdato',
+  'simulator.offboard.sendButton': 'Start offboarding',
+  'simulator.offboard.success': 'RSM-004 sat i kø',
+  'simulator.offboard.reasonCode': 'Årsagskode',
+  'simulator.offboard.explanation': 'Sender en RSM-004-besked til DataHub-simulatoren, som simulerer at en ekstern hændelse stopper forsyningen. Worker vil behandle beskeden og starte offboarding med slutafregning.',
 };

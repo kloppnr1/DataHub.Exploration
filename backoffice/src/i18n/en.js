@@ -836,4 +836,23 @@ export default {
   'simulator.sending': 'Sending...',
   'simulator.success': 'Correction data enqueued successfully',
   'simulator.explanation': 'Sends updated metering data for the specified date, simulating DataHub re-metering. If a settlement run exists for this period, auto-correction will be triggered.',
+
+  // Offboarding simulation
+  'simulator.offboard.title': 'Offboarding (RSM-004)',
+  'simulator.offboard.desc': 'Simulate an offboarding event — supplier switch, move-out, or end of supply.',
+  'simulator.offboard.customer': 'Customer',
+  'simulator.offboard.selectCustomer': 'Select customer…',
+  'simulator.offboard.meteringPoints': 'metering points',
+  'simulator.offboard.meteringPoint': 'Metering Point',
+  'simulator.offboard.processType': 'Event Type',
+  'simulator.offboard.typeSupplierSwitch': 'Supplier Switch (E03)',
+  'simulator.offboard.typeOtherSupplier': 'Other Supplier Takeover (E01)',
+  'simulator.offboard.typeMoveOut': 'Move-Out (D31)',
+  'simulator.offboard.typeEndOfSupply': 'End of Supply (E20)',
+  'simulator.offboard.typeForcedTransfer': 'Forced Transfer (D31)',
+  'simulator.offboard.effectiveDate': 'Effective Date',
+  'simulator.offboard.sendButton': 'Start Offboarding',
+  'simulator.offboard.success': 'RSM-004 enqueued successfully',
+  'simulator.offboard.reasonCode': 'Reason Code',
+  'simulator.offboard.explanation': 'Sends an RSM-004 message to the DataHub simulator, simulating an external event stopping supply. The Worker will process the message and start offboarding with final settlement.',
 };

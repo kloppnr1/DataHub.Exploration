@@ -141,4 +141,6 @@ export const api = {
 
   // Simulator
   triggerCorrectionData: (data) => request('/simulator/correction-data', { method: 'POST', body: JSON.stringify(data) }),
+  getSimulatorCustomers: () => request('/simulator/customers'),
+  triggerOffboard: (data) => request('/simulator/offboard', { method: 'POST', body: JSON.stringify(data) }),
 };

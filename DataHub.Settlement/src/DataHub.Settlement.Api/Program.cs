@@ -1292,6 +1292,81 @@ app.MapPost("/api/simulator/correction-data", async (SimulatorCorrectionRequest 
     return Results.Ok(new { success = true, gsrn = request.Gsrn, date = request.Date });
 });
 
+// GET /api/simulator/customers — list customers with metering points for simulator dropdowns
+app.MapGet("/api/simulator/customers", async (IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var customers = await repo.GetCustomersAsync(ct);
+    var result = new List<object>();
+    foreach (var c in customers)
+    {
+        var mps = await repo.GetMeteringPointsForCustomerAsync(c.Id, ct);
+        result.Add(new
+        {
+            id = c.Id,
+            name = c.Name,
+            meteringPoints = mps.Select(mp => new { gsrn = mp.Gsrn, type = mp.Type, gridArea = mp.GridAreaCode }).ToList()
+        });
+    }
+    return Results.Ok(result);
+});
+
+// POST /api/simulator/offboard — simulate an offboarding RSM-004 (supplier switch / end of supply / move-out / forced transfer)
+app.MapPost("/api/simulator/offboard", async (SimulatorOffboardRequest request, IConfiguration config, IHttpClientFactory httpClientFactory) =>
+{
+    var validReasons = new Dictionary<string, (string code, string text)>
+    {
+        ["supplier_switch"] = ("E03", "Leverandørskift — forsyning ophører"),
+        ["end_of_supply"] = ("E20", "Ophør af forsyning"),
+        ["move_out"] = ("D31", "Fraflytning — tvungen overdragelse"),
+        ["forced_transfer"] = ("D31", "Overdragelse af målepunkt"),
+        ["other_supplier"] = ("E01", "Anden leverandør overtager"),
+    };
+
+    if (!validReasons.TryGetValue(request.ProcessType, out var reason))
+        return Results.BadRequest(new { error = $"Unknown process type: {request.ProcessType}. Valid: {string.Join(", ", validReasons.Keys)}" });
+
+    var dataHubBase = config["DataHub:BaseUrl"]
+        ?? throw new InvalidOperationException("DataHub:BaseUrl is not configured.");
+
+    var effectiveDate = DateOnly.ParseExact(request.EffectiveDate, "yyyy-MM-dd");
+    var effectiveDateIso = new DateTimeOffset(effectiveDate.Year, effectiveDate.Month, effectiveDate.Day, 0, 0, 0, TimeSpan.Zero).ToString("O");
+
+    var payload = new
+    {
+        MarketDocument = new
+        {
+            mRID = $"msg-rsm004-sim-{Guid.NewGuid():N}",
+            type = "E44",
+            MktActivityRecord = new
+            {
+                MarketEvaluationPoint = new { mRID = request.Gsrn },
+                Reason = new { code = reason.code, text = reason.text },
+                Period = new { timeInterval = new { start = effectiveDateIso } },
+            },
+        },
+    };
+
+    var enqueueBody = new
+    {
+        Queue = "MasterData",
+        MessageType = "RSM-004",
+        CorrelationId = Guid.NewGuid().ToString(),
+        Payload = System.Text.Json.JsonSerializer.Serialize(payload),
+    };
+
+    using var client = httpClientFactory.CreateClient();
+    client.BaseAddress = new Uri(dataHubBase);
+    var response = await client.PostAsJsonAsync("/admin/enqueue", enqueueBody);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        return Results.Problem($"Simulator enqueue failed ({response.StatusCode}): {body}");
+    }
+
+    return Results.Ok(new { success = true, gsrn = request.Gsrn, processType = request.ProcessType, effectiveDate = request.EffectiveDate, reasonCode = reason.code });
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
@@ -1300,6 +1375,7 @@ record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);
 record CreditNoteRequest(string? Notes);
 record SettlementPreviewRequest(DateOnly PeriodStart, DateOnly PeriodEnd);
 record SimulatorCorrectionRequest(string Gsrn, string Date);
+record SimulatorOffboardRequest(string Gsrn, string ProcessType, string EffectiveDate);
 
 class InboundMessageInfoRow
 {
