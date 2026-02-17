@@ -76,11 +76,15 @@ public sealed class SimulatorState
             if (pe.Enqueued || pe.EffectiveDate > today) continue;
             pe.Enqueued = true;
 
-            // Deliver grid tariff data for new grid areas (like real DataHub)
+            // Deliver tariff data for new grid areas (like real DataHub)
             if (_knownGridAreas.Add(pe.GridArea))
             {
                 EnqueueMessage("Charges", "RSM-034", null,
                     ScenarioLoader.BuildGridTariffJson(pe.GridArea, "5790001089030", pe.EffectiveDate));
+                EnqueueMessage("Charges", "RSM-034", null,
+                    ScenarioLoader.BuildSystemTariffJson(pe.GridArea, "5790000432752", pe.EffectiveDate));
+                EnqueueMessage("Charges", "RSM-034", null,
+                    ScenarioLoader.BuildTransmissionTariffJson(pe.GridArea, "5790000432752", pe.EffectiveDate));
             }
 
             EnqueueMessage("MasterData", "RSM-022", pe.CorrelationId,

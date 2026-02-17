@@ -205,6 +205,12 @@ public sealed class SimulationService
         await tariffRepo.SeedSubscriptionAsync("344", "grid", 49.00m, new DateOnly(2025, 1, 1), ct);
         await tariffRepo.SeedElectricityTaxAsync(0.008m, new DateOnly(2025, 1, 1), ct);
 
+        // Energinet system + transmission tariffs (flat rates)
+        var systemRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.054m)).ToList();
+        var transmissionRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.049m)).ToList();
+        await tariffRepo.SeedGridTariffAsync("344", "system", new DateOnly(2025, 1, 1), systemRates, ct);
+        await tariffRepo.SeedGridTariffAsync("344", "transmission", new DateOnly(2025, 1, 1), transmissionRates, ct);
+
         var prices = new List<SpotPriceRow>();
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         for (var i = 0; i < 744; i++)
@@ -845,6 +851,10 @@ public sealed class SimulationService
                 _ => 0.06m,
             })).ToList();
             await tariffRepo.SeedGridTariffAsync("344", "grid", new DateOnly(2025, 1, 1), gridRates, ct);
+            var systemRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.054m)).ToList();
+            var transmissionRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.049m)).ToList();
+            await tariffRepo.SeedGridTariffAsync("344", "system", new DateOnly(2025, 1, 1), systemRates, ct);
+            await tariffRepo.SeedGridTariffAsync("344", "transmission", new DateOnly(2025, 1, 1), transmissionRates, ct);
 
             // Subscription has no unique constraint — check before inserting
             await using (var conn = new NpgsqlConnection(_connectionString))
@@ -1518,6 +1528,10 @@ public sealed class SimulationService
                 _ => 0.06m,
             })).ToList();
             await tariffRepo.SeedGridTariffAsync("344", "grid", new DateOnly(2025, 1, 1), gridRates, ct);
+            var systemRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.054m)).ToList();
+            var transmissionRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.049m)).ToList();
+            await tariffRepo.SeedGridTariffAsync("344", "system", new DateOnly(2025, 1, 1), systemRates, ct);
+            await tariffRepo.SeedGridTariffAsync("344", "transmission", new DateOnly(2025, 1, 1), transmissionRates, ct);
 
             await using (var conn = new NpgsqlConnection(_connectionString))
             {
@@ -1950,6 +1964,10 @@ public sealed class SimulationService
             >= 17 and <= 20 => 0.54m, _ => 0.06m,
         })).ToList();
         await tariffRepo.SeedGridTariffAsync("344", "grid", effectiveDate, gridRates, ct);
+        var systemRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.054m)).ToList();
+        var transmissionRates = Enumerable.Range(1, 24).Select(h => new TariffRateRow(h, 0.049m)).ToList();
+        await tariffRepo.SeedGridTariffAsync("344", "system", effectiveDate, systemRates, ct);
+        await tariffRepo.SeedGridTariffAsync("344", "transmission", effectiveDate, transmissionRates, ct);
 
         await using (var conn = new NpgsqlConnection(_connectionString))
         {

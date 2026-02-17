@@ -479,6 +479,62 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
+    internal static string BuildSystemTariffJson(string gridAreaCode, string chargeOwnerId, DateOnly validFrom)
+    {
+        // Energinet system tariff — flat rate (DKK/kWh)
+        var rates = new List<object>();
+        for (int h = 0; h < 24; h++)
+            rates.Add(new { hour = h + 1, pricePerKwh = 0.054m });
+
+        var doc = new
+        {
+            GridTariff = new
+            {
+                gridAreaCode,
+                chargeOwnerId,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+                tariffType = "system",
+                rates,
+            },
+            Subscription = new
+            {
+                gridAreaCode,
+                subscriptionType = "system",
+                amountPerMonth = 0.00m,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildTransmissionTariffJson(string gridAreaCode, string chargeOwnerId, DateOnly validFrom)
+    {
+        // Energinet transmission tariff — flat rate (DKK/kWh)
+        var rates = new List<object>();
+        for (int h = 0; h < 24; h++)
+            rates.Add(new { hour = h + 1, pricePerKwh = 0.049m });
+
+        var doc = new
+        {
+            GridTariff = new
+            {
+                gridAreaCode,
+                chargeOwnerId,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+                tariffType = "transmission",
+                rates,
+            },
+            Subscription = new
+            {
+                gridAreaCode,
+                subscriptionType = "transmission",
+                amountPerMonth = 0.00m,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
     internal static string BuildRsm001AcceptJson(string correlationId)
     {
         var doc = new
